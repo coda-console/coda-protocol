@@ -18,6 +18,13 @@ function directory(files = {}) {
 }
 const settings = { properties: { 'kit.size': { type: 'string' }, 'kit.count': { type: 'integer', default: 1 }, 'kit.key': { type: 'string', writeOnly: true } } };
 
+test('an agent declares external lifecycle ownership without changing the default for existing agents', () => {
+  const agent = { id: 'a', displayName: 'A', icon: { light: 'icon.pdf' }, command: 'run' };
+  for (const extra of [{}, { lifecycle: 'managed' }, { lifecycle: 'external' }])
+    assert.equal(manifestProblem({ contributes: { agents: [{ ...agent, ...extra }] } }), null);
+  assert.match(manifestProblem({ contributes: { agents: [{ ...agent, lifecycle: 'persistent' }] } }), /lifecycle/);
+});
+
 test('the schemas are one of Coda\'s types each, beside the manifest\'s, a setting\'s and what they share', () => {
   assert.equal(TYPES.length, 22);
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);

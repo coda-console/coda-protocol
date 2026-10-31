@@ -11,7 +11,11 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": ["schemas", "validate.mjs", "docs"],
+  "files": [
+    "schemas",
+    "validate.mjs",
+    "docs"
+  ],
   "exports": {
     "./validate": "./validate.mjs",
     "./schemas/*": "./schemas/*",

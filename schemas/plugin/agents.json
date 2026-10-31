@@ -17,6 +17,11 @@
         "additionalProperties": false
       },
       "command": {"$ref": "common.json#/$defs/command"},
+      "lifecycle": {
+        "description": "生命周期归属。默认 managed：Coda 按轮次接管委派与回话；external：外部自主运行，Coda 观测活动，消息只委派参数，结果须按请求明确回传。",
+        "type": "string",
+        "enum": ["managed", "external"]
+      },
       "modes": {
         "description": "审批档位的说法：title 不超过 10 字，unset 不超过 20 字，note 不超过 100 字，auto、full 各不超过 200 字",
         "type": "object",
