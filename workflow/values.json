@@ -81,7 +81,10 @@
     "Input": {
       "type": "object",
       "properties": {
-        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "name 不合法：须为字母开头的字母、数字、「_」"},
+        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "not": {"enum": ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "__proto__", "constructor", "hasOwnProperty", "isPrototypeOf",
+            "propertyIsEnumerable", "toLocaleString", "toString", "valueOf"]},
+          "description": "name 不合法：须为字母开头的字母、数字、「_」，且不是 JavaScript 对象自带的名字（如 constructor、toString、__proto__）：运行按名字记和取输入"},
         "type": {"enum": ["string", "boolean", "number", "branch"], "description": "type 只能是 string、boolean、number、branch"},
         "label": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "label 须为 1–40 个字"},
         "defaultFrom": {"enum": ["session.branch"], "description": "defaultFrom 只能是 session.branch"}
