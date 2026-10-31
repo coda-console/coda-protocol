@@ -1,5 +1,5 @@
 {
-  "description": "Coda 的 BPMN 方言里共用的名字：流程种类、Coda 自己发的事件、步骤失败时抛出的错误码、表达式按名字读的运行变量",
+  "description": "Coda 的 BPMN 方言里共用的名字：流程种类、Coda 自己发的事件、步骤失败时抛出的错误码、表达式按名字读的运行变量，以及运行的输入能是哪些类型、从会话的哪里取值（inputs.sources：来源 → 它能给的类型）",
   "kinds": {
     "deploy": "部署后端与服务；只跑合并进默认分支的提交",
     "preview": "发布预览版客户端；只跑合并进默认分支的提交",
@@ -16,5 +16,9 @@
   },
   "userMessage": "^user\\.[a-z][a-z0-9-]{0,39}$",
   "stepFailed": "STEP_FAILED",
-  "variables": ["inputs", "run", "github", "vars"]
+  "variables": ["inputs", "run", "github", "vars"],
+  "inputs": {
+    "types": ["string", "boolean", "number", "branch"],
+    "sources": {"session.branch": ["branch", "string"]}
+  }
 }

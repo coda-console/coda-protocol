@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schema/bpmn/1.0/values.json",
+  "title": "流程里每个 coda: 值能写什么",
+  "description": "$defs 按 moddle.json 的类型名，各是那个类型的属性（和它套着的 coda: 元素）组成的对象的 schema；「<BPMN 类型>.children」是一个元素的 extensionElements 里各种 coda: 元素按名字成组的 schema。x-feel：值是 FEEL（「=」开头是一个表达式，否则文字里每个 {{ … }} 是一个），按这份流程里的名字读得通；x-duration：ISO 8601 时长，不为负；x-number：文字换算成数字是个有限的数",
+  "$defs": {
+    "ProcessProperties": {
+      "type": "object",
+      "properties": {
+        "concurrency": {"type": "string", "minLength": 1, "maxLength": 200, "description": "coda:concurrency 须为 1–200 个字符"},
+        "key": {"type": "string", "pattern": "\\S", "maxLength": 4000, "x-feel": {"names": ["inputs", "github", "vars"]}, "description": "coda:key 须为 1–4000 个字符"},
+        "title": {"type": "string", "pattern": "\\S", "maxLength": 200, "x-feel": true, "description": "coda:title 须为 1–200 个字符"},
+        "kind": {"enum": ["deploy", "preview", "release", "check", "premerge"], "description": "coda:kind 只能是 deploy、preview、release、check、premerge"},
+        "agents": {"type": "string", "pattern": "^[\\s,]*[a-z][a-z0-9-]{0,39}(?:[\\s,]+[a-z][a-z0-9-]{0,39})*[\\s,]*$",
+          "description": "coda:agents 写 Agent 的 ID，用逗号或空格分隔（小写字母、数字和「-」，以字母开头，至多 40 个字符），不能为空"}
+      }
+    },
+    "ScriptTaskProperties": {
+      "type": "object",
+      "properties": {
+        "audience": {"const": "user", "description": "coda:audience 只能是 user"},
+        "group": {"type": "string", "pattern": "^\\S{1,100}$", "description": "coda:group 须为 1–100 个非空白字符的组名"},
+        "timeout": {"type": "number", "exclusiveMinimum": 0, "maximum": 1440, "description": "coda:timeout 须为 0–1440 之间的分钟数"},
+        "cancelTimeout": {"type": "number", "exclusiveMinimum": 0, "maximum": 1440, "description": "coda:cancelTimeout 须为 0–1440 之间的分钟数"},
+        "checkout": {"enum": ["true", "false"], "description": "coda:checkout 只能是 true 或 false"},
+        "retry": {"type": "string", "pattern": "^[1-5]$", "description": "coda:retry 是失败后最多再试几次，须为 1 到 5 的整数"}
+      }
+    },
+    "RunsOnProperties": {
+      "type": "object",
+      "properties": {
+        "runsOn": {"type": "string", "pattern": "^\\s*[a-z0-9][a-z0-9._-]{0,39}\\s*(?:,\\s*[a-z0-9][a-z0-9._-]{0,39}\\s*){0,9}$",
+          "description": "coda:runsOn 写逗号分隔的标签（小写字母、数字与 . _ -，至多 10 个），如 linux,x64"}
+      }
+    },
+    "LoopProperties": {
+      "type": "object",
+      "properties": {
+        "inputCollection": {"type": "string", "pattern": "^\\s*=", "x-feel": true, "description": "coda:inputCollection 须为「=」开头的 FEEL 表达式，如 =inputs.targets"},
+        "inputElement": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "not": {"enum": ["inputs", "run", "github", "vars", "loopCounter"]},
+          "description": "coda:inputElement 须为字母开头的字母、数字、「_」，且不是 inputs、run、github、vars、loopCounter 或节点、消息的 id"}
+      },
+      "allOf": [
+        {"if": {"required": ["inputCollection"]}, "then": {"required": ["inputElement"], "description": "写 coda:inputElement，给每份拿到的元素起个名字"}},
+        {"if": {"required": ["inputElement"]}, "then": {"required": ["inputCollection"], "description": "coda:inputElement 只配合 coda:inputCollection"}}
+      ]
+    },
+    "FlowNodeProperties": {
+      "type": "object",
+      "properties": {
+        "status": {"type": "string", "pattern": "\\S", "maxLength": 200, "x-feel": true, "description": "coda:status 须为 1–200 个字符"},
+        "expect": {"type": "string", "anyOf": [{"pattern": "^\\s*=", "maxLength": 200}, {"maxLength": 200, "x-duration": true}], "x-feel": true,
+          "description": "coda:expect 须为 ISO 8601 时长，如 PT1H，或读出时长的表达式"}
+      }
+    },
+    "StartEventProperties": {
+      "type": "object",
+      "properties": {
+        "reportTo": {"type": "string",
+          "anyOf": [{"pattern": "^\\s*=\\s*vars(?:\\.[A-Za-z0-9_-]+)+\\s*$"},
+            {"pattern": "^\\s*(?:coda://threads/|coda\\+space://[^/#]+/threads/)?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:#(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|command:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}))?\\s*$"}],
+          "description": "coda:reportTo 写会话引用（coda://threads/<会话 UUID>），或只读插件设置的表达式，如 =vars.maintenance.reportTo"},
+        "reportOn": {"enum": ["failure", "always"], "description": "coda:reportOn 只能是 failure、always"},
+        "scope": {"enum": ["project", "machine"], "description": "coda:scope 只能是 project、machine"}
+      },
+      "if": {"required": ["reportOn"]},
+      "then": {"required": ["reportTo"], "description": "写了 coda:reportOn 就要写 coda:reportTo（结果交给谁）"}
+    },
+    "EndEventProperties": {
+      "type": "object",
+      "properties": {
+        "notify": {"type": "string", "anyOf": [{"enum": ["true", "false"]}, {"pattern": "^\\s*="}], "x-feel": true, "description": "coda:notify 须为 true、false 或一个表达式"}
+      }
+    },
+    "UserTaskProperties": {
+      "type": "object",
+      "properties": {
+        "assignee": {"enum": ["agent", "user"], "description": "coda:assignee 只能是 agent（先交给发起会话的 Agent，它停下后转给用户）或 user（直接交给用户）"}
+      }
+    },
+    "Input": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "name 不合法：须为字母开头的字母、数字、「_」"},
+        "type": {"enum": ["string", "boolean", "number", "branch"], "description": "type 只能是 string、boolean、number、branch"},
+        "label": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "label 须为 1–40 个字"},
+        "defaultFrom": {"enum": ["session.branch"], "description": "defaultFrom 只能是 session.branch"}
+      },
+      "required": ["name"],
+      "allOf": [
+        {"if": {"required": ["defaultFrom"]}, "then": {"properties": {"type": {"enum": ["branch", "string"], "description": "defaultFrom=\"session.branch\" 只用于 type 为 branch、string 的参数"}}}},
+        {"if": {"required": ["type"], "properties": {"type": {"const": "number"}}},
+          "then": {"properties": {"default": {"pattern": "^\\s*[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$", "x-number": true, "description": "default 须为数字"}}}}
+      ]
+    },
+    "Env": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "名字不合法：须为字母开头的字母、数字、「_」"},
+        "value": {"type": "string", "maxLength": 20000, "x-feel": true, "not": {"pattern": "\\$\\{\\{"},
+          "description": "value 不超过 20000 字；这里的表达式以「=」开头，如 =inputs.name，不写 ${{ … }}"}
+      },
+      "required": ["name", "value"]
+    },
+    "Output": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "名字不合法：须为字母开头的字母、数字、「_」"},
+        "value": {"type": "string", "maxLength": 4000, "x-feel": true, "description": "value 不超过 4000 字"}
+      },
+      "required": ["name"]
+    },
+    "Param": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "名字不合法：须为字母开头的字母、数字、「_」"},
+        "value": {"type": "string", "maxLength": 4000, "x-feel": true, "description": "value 不超过 4000 字"}
+      },
+      "required": ["name", "value"]
+    },
+    "Inspect": {
+      "type": "object",
+      "properties": {
+        "label": {"type": "string", "pattern": "\\S", "maxLength": 100, "description": "label 须为 1–100 个字"},
+        "type": {"enum": ["string", "number", "boolean", "timestamp"], "description": "type 只能是 string、number、boolean、timestamp"},
+        "phase": {"enum": ["input", "output"], "description": "phase 须为 input 或 output"},
+        "value": {"type": "string", "pattern": "^\\s*=", "x-feel": true, "description": "value 须为「=」开头的表达式，如 =approval-facts.given"}
+      },
+      "required": ["label", "type", "phase", "value"]
+    },
+    "Choice": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$", "not": {"const": "handback"}, "description": "id 须为字母开头的字母、数字、「_」「-」，不能是 handback"},
+        "name": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "name 须为 1–40 个字"},
+        "detail": {"type": "string", "maxLength": 200, "x-feel": true, "description": "detail 不超过 200 字"},
+        "choices": {"type": "array", "maxItems": 6, "description": "最多 6 个按住出现的选项"},
+        "options": {"type": "array", "maxItems": 12, "x-unique-by": ["id"], "description": "最多 12 个勾选项"}
+      },
+      "required": ["id", "name"],
+      "allOf": [{"description": "勾选项（coda:option）只能属于没有嵌套 choice 的外层 choice", "not": {"required": ["choices", "options"]}}]
+    },
+    "NestedChoice": {
+      "allOf": [{"$ref": "#/$defs/Choice"}],
+      "properties": {
+        "primary": {"const": false, "description": "只有最外层的选项能是主按钮"},
+        "choices": {"maxItems": 0, "description": "按住出现的选项里不能再嵌套"},
+        "options": {"maxItems": 0, "description": "勾选项（coda:option）只能属于没有嵌套 choice 的外层 choice"}
+      }
+    },
+    "Option": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$", "description": "须有不重复的 id（字母开头的字母、数字、「_」「-」）"},
+        "name": {"type": "string", "pattern": "\\S", "maxLength": 40, "x-feel": true, "description": "name 须为 1–40 个字"},
+        "detail": {"type": "string", "maxLength": 200, "x-feel": true, "description": "detail 不超过 200 字"},
+        "shown": {"type": "string", "pattern": "^\\s*=", "x-feel": true, "description": "coda:shown 须为表达式（以 = 开头）"},
+        "default": {"type": "string", "anyOf": [{"enum": ["true", "false"]}, {"pattern": "^\\s*="}], "x-feel": true, "description": "default 须为 true、false 或表达式"}
+      },
+      "required": ["id", "name"]
+    },
+    "Process.children": {
+      "type": "object",
+      "properties": {
+        "input": {"type": "array", "x-unique-by": ["name"], "description": "coda:input 的 name 不能重复"}
+      }
+    },
+    "UserTask.children": {
+      "type": "object",
+      "properties": {
+        "choice": {"type": "array", "maxItems": 6, "x-unique-by": [{"key": "id", "nested": "choices"}],
+          "contains": {"type": "object", "properties": {"primary": {"const": true}}, "required": ["primary"]}, "minContains": 0, "maxContains": 1,
+          "description": "最多 6 个 coda:choice，最多一个主按钮；所有答复的 id（包括按住出现的）不重复"}
+      }
+    }
+  }
+}
