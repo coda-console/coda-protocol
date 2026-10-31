@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/wait.json",
+  "type": "object",
+  "description": "params 须为对象",
+  "properties": {
+    "sessionId": {
+      "allOf": [
+        {
+          "type": "string",
+          "description": "缺 sessionId",
+          "minLength": 1
+        },
+        {
+          "type": "string",
+          "description": "sessionId 须为不超过 200 字的文本",
+          "x-length": 200
+        }
+      ]
+    },
+    "waitId": {
+      "allOf": [
+        {
+          "type": "string",
+          "description": "缺 waitId",
+          "minLength": 1
+        },
+        {
+          "type": "string",
+          "description": "waitId 须为不超过 200 字的文本",
+          "x-length": 200
+        }
+      ]
+    },
+    "state": {
+      "enum": [
+        "waiting",
+        "handling",
+        "done",
+        "failed",
+        "cancelled"
+      ],
+      "description": "state 只能是 waiting、handling、done、failed、cancelled"
+    },
+    "kind": {
+      "type": "string",
+      "description": "kind 须为不超过 50 字的文本",
+      "x-length": 50
+    },
+    "title": {
+      "type": "string",
+      "description": "title 须为不超过 500 字的文本",
+      "x-length": 500
+    },
+    "detail": {
+      "type": "string",
+      "description": "detail 须为不超过 4000 字的文本",
+      "x-length": 4000
+    },
+    "childSessionId": {
+      "type": "string",
+      "description": "childSessionId 须为不超过 200 字的文本",
+      "x-length": 200
+    },
+    "model": {
+      "type": "string",
+      "description": "model 须为不超过 200 字的文本",
+      "x-length": 200
+    },
+    "outputFile": {
+      "type": "string",
+      "description": "outputFile 须为不超过 4096 字的文本",
+      "x-length": 4096
+    },
+    "toolCallId": {
+      "type": "string",
+      "description": "toolCallId 须为不超过 200 字的文本",
+      "x-length": 200
+    },
+    "stoppable": {
+      "type": "boolean",
+      "description": "stoppable 须为 true 或 false"
+    },
+    "recurring": {
+      "type": "boolean",
+      "description": "recurring 须为 true 或 false"
+    },
+    "at": {
+      "type": "string",
+      "description": "at 读不出时间",
+      "format": "date-parse"
+    }
+  },
+  "required": [
+    "sessionId",
+    "waitId",
+    "state"
+  ]
+}

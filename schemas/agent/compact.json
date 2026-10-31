@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/compact.json",
+  "description": "压缩上下文的一来一回，不是一轮；额外答复字段由宿主忽略。",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "description": "params 须为对象",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "description": "缺 sessionId",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "sessionId"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "description": "压缩答复须为对象",
+      "properties": {
+        "compacted": {
+          "type": "boolean",
+          "description": "compacted 须为 true 或 false"
+        },
+        "reason": {
+          "type": "string",
+          "description": "没压的原因，给人看"
+        },
+        "before": {
+          "type": "number",
+          "description": "before 须为有限数"
+        },
+        "after": {
+          "type": "number",
+          "description": "after 须为有限数"
+        }
+      },
+      "required": [
+        "compacted"
+      ]
+    }
+  }
+}

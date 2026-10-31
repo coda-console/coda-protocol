@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/agent-capabilities.json",
+  "type": "object",
+  "description": "_meta 须为对象",
+  "properties": {
+    "coda": {
+      "type": "object",
+      "description": "_meta.coda 须为对象",
+      "properties": {
+        "waits": {
+          "type": "object",
+          "description": "waits 能力用对象声明（通常为 {}）",
+          "properties": {}
+        },
+        "compact": {
+          "type": "object",
+          "description": "compact 能力用对象声明（通常为 {}）",
+          "properties": {}
+        },
+        "remote": {
+          "type": "object",
+          "description": "remote 能力用对象声明（通常为 {}）",
+          "properties": {}
+        }
+      }
+    }
+  }
+}

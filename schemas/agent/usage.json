@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/usage.json",
+  "type": "object",
+  "description": "须为不超过 4096 字节的 JSON 对象",
+  "x-json": {
+    "schema": {
+      "type": "object",
+      "description": "须为不超过 4096 字节的 JSON 对象"
+    },
+    "maxBytes": 4096
+  }
+}

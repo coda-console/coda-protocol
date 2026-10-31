@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/failure.json",
+  "type": "object",
+  "description": "执行失败须为对象",
+  "properties": {
+    "kind": {
+      "enum": [
+        "quota_exhausted",
+        "service_unavailable"
+      ],
+      "description": "kind 只能是 quota_exhausted 或 service_unavailable"
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "if": {
+    "properties": {
+      "kind": {
+        "const": "service_unavailable"
+      }
+    },
+    "required": [
+      "kind"
+    ],
+    "type": "object"
+  },
+  "then": {
+    "type": "object",
+    "description": "服务暂不可用须说明输入是否已接收",
+    "properties": {
+      "input": {
+        "enum": [
+          "accepted",
+          "not_accepted"
+        ],
+        "description": "input 只能是 accepted 或 not_accepted"
+      },
+      "retryAfterMs": {
+        "type": "number",
+        "minimum": 0,
+        "description": "retryAfterMs 须为非负有限数"
+      }
+    },
+    "required": [
+      "input"
+    ]
+  },
+  "$comment": "quota_exhausted 不检查 input 或 retryAfterMs；原 agentFailure 对额度不足只检查 kind。"
+}

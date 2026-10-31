@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/steering.json",
+  "description": "生态的 _session/steering 扩展中 Coda 使用的部分；prompt 的内容块仍交 ACP SDK 校验。",
+  "$defs": {
+    "capabilities": {
+      "type": "object",
+      "description": "initialize 的 _meta 须为对象",
+      "properties": {
+        "steering": {
+          "type": "object",
+          "description": "steering 须为对象",
+          "properties": {
+            "supported": {
+              "type": "boolean",
+              "description": "supported 须为 true 或 false"
+            }
+          }
+        }
+      }
+    },
+    "params": {
+      "type": "object",
+      "description": "插话参数须为对象",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "description": "缺 sessionId",
+          "minLength": 1
+        },
+        "prompt": {
+          "description": "与 session/prompt 相同，由 ACP SDK 校验；Coda 发一个文本块"
+        },
+        "_meta": {
+          "type": "object",
+          "description": "_meta 须为对象",
+          "properties": {
+            "steering": {
+              "type": "object",
+              "description": "steering 须为对象",
+              "properties": {
+                "idleBehavior": {
+                  "const": "promptRequired",
+                  "description": "idleBehavior 须为 promptRequired"
+                }
+              },
+              "required": [
+                "idleBehavior"
+              ]
+            }
+          },
+          "required": [
+            "steering"
+          ]
+        }
+      },
+      "required": [
+        "sessionId",
+        "prompt",
+        "_meta"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "description": "插话答复须为对象",
+      "properties": {
+        "outcome": {
+          "enum": [
+            "injected",
+            "promptRequired"
+          ],
+          "description": "插话须回答 injected 或 promptRequired；其他结果的投递状态未知"
+        },
+        "reason": {
+          "description": "原因由 Agent 给出，Coda 只按 outcome 判断投递结果"
+        }
+      },
+      "required": [
+        "outcome"
+      ]
+    }
+  }
+}

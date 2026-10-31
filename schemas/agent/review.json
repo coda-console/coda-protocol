@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/review.json",
+  "type": "object",
+  "description": "审核须为对象",
+  "properties": {
+    "state": {
+      "enum": [
+        "reviewing",
+        "approved",
+        "denied"
+      ],
+      "description": "state 只能是 reviewing、approved、denied"
+    },
+    "reason": {
+      "type": "string",
+      "description": "reason 须为不超过 4000 字的文本",
+      "x-length": 4000
+    },
+    "risk": {
+      "description": "不认识的 risk 不记；不因此丢弃审核。已知值见 $defs/risk。"
+    }
+  },
+  "required": [
+    "state"
+  ],
+  "$defs": {
+    "risk": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "risk 只能是 low、medium、high 或 critical"
+    }
+  }
+}

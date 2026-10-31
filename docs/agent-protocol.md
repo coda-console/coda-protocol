@@ -7,6 +7,47 @@ Coda 就知道这个 Agent 在一轮之外还在做什么，如实显示、不�
 
 **改协议**：本文在 `coda-console/coda-protocol`，与插件清单的类型（`schemas/`）同一个仓库、同一个版本（npm 包 `@coda-console/protocol`）。Coda 与公开仓库 `coda-console/coda-plugins` 的契约检查包都依赖这个包：改协议就在这里开 PR，发布新版本后两边各自升依赖。检查要换判定方式时（新的请求怎么发、怎样算合格），另给 coda-plugins 开 PR 改检查本身。文中提到的 Coda 文档与源码在 Coda 的仓库里。
 
+## 可执行的形状定义
+
+扩展的字段、必填项和取值以 [`schemas/agent/`](../schemas/agent/) 为准（JSON Schema draft 2020-12，
+`$id` 为 `https://coda.pub/schemas/agent/v1/<文件>`）。本文解释方向、生命周期与处理方式；
+[`messages.json`](../schemas/agent/messages.json) 是方法到 schema 的数据索引，标明请求／通知与方向。
+ACP 的消息、内容块、会话指令和能力由 ACP SDK 校验，这里只补 Coda 的部分，不代替 ACP 校验。
+
+| 扩展或位置 | schema |
+| --- | --- |
+| `_coda/wait` 通知参数 | [wait.json](../schemas/agent/wait.json) |
+| `_coda/wait/stop` 参数、答复 | [wait-stop.json](../schemas/agent/wait-stop.json) 的 `$defs/params`、`$defs/result` |
+| `_coda/session/compact` 参数、答复 | [compact.json](../schemas/agent/compact.json) 的 `$defs/params`、`$defs/result` |
+| `_coda/remote/code` 参数、答复 | [remote-code.json](../schemas/agent/remote-code.json) 的 `$defs/params`、`$defs/result` |
+| `_coda/remote` 参数、答复 | [remote.json](../schemas/agent/remote.json) 的 `$defs/params`、`$defs/result` |
+| `clientCapabilities._meta`、`agentCapabilities._meta` 的 Coda 声明 | [client-capabilities.json](../schemas/agent/client-capabilities.json)、[agent-capabilities.json](../schemas/agent/agent-capabilities.json) |
+| `_session/steering` 的 Coda 约定 | [steering.json](../schemas/agent/steering.json) 的 `$defs/params`、`$defs/result`、`$defs/capabilities`（initialize 顶层 `_meta`）；`prompt` 内容仍由 ACP SDK 校验 |
+| `error.data._meta.coda.failure` | [failure.json](../schemas/agent/failure.json) |
+| 工具更新的 `_meta.coda.review` | [review.json](../schemas/agent/review.json)；已知风险值见 `$defs/risk` |
+| 用量更新的 `_meta.coda` | [usage.json](../schemas/agent/usage.json) |
+| 配置选项的 `_meta.coda.default` | [default.json](../schemas/agent/default.json)（传入 `_meta.coda` 对象） |
+
+`@coda-console/protocol/agent` 导出 `agentMessageProblem(method, params)`、`agentResultProblem(method, result)`、
+`agentCapabilitiesProblem(meta, party = 'agent')` 和 `agentValueProblem(ref, value, where)`，合法返回 `null`，
+不合则返回「位置：schema 的 description」。前两个函数也接受第三个 `where`；能力校验接受第三个 `where`，
+`meta` 是能力声明的整个 `_meta`（缺省合法），`party` 是 `agent` 或 `client`；`ref` 是上述文件名，可带 `#/$defs/…`。
+不认识的方法返回问题，调用方须先按 `AGENT_METHODS` 区分 ACP、Coda 扩展和其他扩展；通知没有答复 schema。
+`AGENT_SCHEMAS` 导出按文件名索引的同一份 schema。
+
+保留现有接收规则：未知键允许并且不改写；活动的 `kind` 不限于本文列出的词，文本上限用 `x-length` 按 UTF-16 长度计算；
+`date-parse` format 沿用 `Date.parse`，发送端仍应使用 ISO 8601。`x-json` 复用流程的 JSON 字节预算检查。
+API 接受 [json.json](../schemas/agent/json.json) 所述的 JSON 值，额外以显式栈检查不在 JSON 中的值（非有限数字、循环引用等），不设不必要的嵌套层数或数组长度上限。
+Coda 过去静默丢弃的值，契约检查现在可得到具体位置；过去没有独立报错的字段补了 description，已有报错沿用原句，
+不把原始输入拼入错误（避免巨大值或深层对象导致报错本身失败）。
+
+**校验不是整理或运行状态判断**：审核未知 `risk` 不影响整条审核有效，宿主仍只保存 `$defs/risk` 接受的值；
+额度不足只按 `kind` 判断，不校验也不采用它附带的 `input`／`retryAfterMs`；压缩答复的未知字段照样允许，
+宿主仍只保存已知字段、裁剪原因，畸形答复仍按原有兜底处理，不应把整个答复的校验失败改成执行失败。
+压缩的 `before`／`after` 沿用有限数要求，不新增整数或非负限制。能力声明 schema 描述对象声明，
+不代替能力探测：未声明、不合法的声明仍按宿主原有方式处理（旧 `supportsRemote` 还把数组视为声明，不能直接用 schema 替换该谓词）。
+会话归属、能力是否协商、活动是否存在／终结、调用起因、轮次、顺序、重试、超时、绑定码有效期和授权仍由 Coda 处理。
+
 ## 生命周期归属
 
 插件在 `contributes.agents[]` 声明 `lifecycle`，默认 `managed`；外部自主运行的 Bot 声明 `external`。
@@ -58,7 +99,7 @@ ACP 只允许在一轮（`session/prompt`）进行时交互。Agent 在两轮之
   之后 `config_option_update` 与 `session/set_config_option`、`session/set_model` 的结果改了它，以改后的为准。Coda 每轮开始前把会话设置设给 Agent，
   再读当前模型记作这一轮的实际模型；读不到就拒绝这一轮（「适配器未报告实际模型」），不发 `session/prompt`。
 - **设置**：会话设置里选了的模型、推理强度与模式，每轮开始前设给 Agent；没选的保持会话现状。当前模式是空字符串表示还没有选模式（Agent 按它自己的配置），按没有设置显示。模型或推理强度的选择型配置项里，
-  可以有一项带 `_meta.coda.default: true`，表示交给 Agent 自己的默认：会话设置里没选时，Coda 把配置项切回这一项。这一项不进模型或强度的列表，
+  可以有一项带 `_meta.coda.default: true`（[default.json](../schemas/agent/default.json)），表示交给 Agent 自己的默认：会话设置里没选时，Coda 把配置项切回这一项。这一项不进模型或强度的列表，
   当前值是它时按没有设置显示。
 - **其他配置项**：模型、推理强度与模式之外的配置项，Coda 原样列给用户：选择型是一组选项，开关型（`type: boolean`）是一个开关；Coda 在 `initialize` 的
   `clientCapabilities.session.configOptions.boolean` 里声明接受开关型。会话设置里按配置项 ID 给的值，每轮开始前设给 Agent；当前模型没有这一项就不设。
@@ -72,6 +113,8 @@ ACP 只允许在一轮（`session/prompt`）进行时交互。Agent 在两轮之
   只取版本号式的字符（字母、数字与 `.+()-_` 空格，至多 64 个），其他写法不记。不报不影响会话。
 
 ## 会话指令
+
+本节形状由 ACP SDK 的 `systemPrompt` schema 定义，不在 Coda schema 中重复。
 
 Coda 给每个会话一份指令：回复怎样在 Mac 与 iPhone 上显示、默认回复语言，再接目录启用的插件说明（插件（Coda 的 docs/plugins.md）的 `contributes.instructions`），
 正文在 `backend/src/components/session-config/client-instructions.mjs`。它走 ACP 的 [`systemPrompt`](https://agentclientprotocol.com/protocol/draft/session-setup#system-prompt-unstable)（unstable），
@@ -94,6 +137,8 @@ Coda 的 MCP 服务器只提供工具，不带 `instructions`。
 
 ## 插话
 
+Coda 使用的形状见 [steering.json](../schemas/agent/steering.json)；`prompt` 内容块仍使用 ACP schema。
+
 用户在一轮进行中「立即插话」时，支持插话的 Agent 把这条消息加进正在进行的一轮，不打断它；不支持的，Coda 停止这一轮，
 在它结束后把消息作为下一轮送出（会话行为契约（Coda 的 docs/session-contracts.md「发送行为」））。父会话给正为它跑一轮的子会话发消息（`send`）时同样插话；
 不支持的 Agent，这条消息只排到这一轮结束，Coda 不为它停止（工具面（Coda 的 docs/subagent-design.md「工具面」））。插话用生态里已有的 `_session/steering` 扩展：
@@ -113,6 +158,8 @@ Coda 的 MCP 服务器只提供工具，不带 `instructions`。
 ```
 
 ## 执行失败
+
+扩展值的形状见 [failure.json](../schemas/agent/failure.json)。
 
 插件负责将上游错误归为通用类别，Coda 负责显示与重试策略；Coda 不依赖 Agent 名字、错误文字或私有上游错误码。
 `session/prompt` 的 JSON-RPC 错误通过 `error.data._meta.coda.failure` 报告类别。标准 `error.message` 保留可读的失败原因；
@@ -166,6 +213,8 @@ Coda 统一按 15、30、60 秒退避，每次执行最多重试三次，沿用�
 
 ## 用量里的数据
 
+扩展对象及大小限制见 [usage.json](../schemas/agent/usage.json)。
+
 Agent 在 `session/update` 的 `usage_update` 里可以带 `_meta.coda`：一个 JSON 对象，放生命周期流程用得着的数据。Coda 不解释里面的字段，
 原样作为会话事实 `usage` 交给生命周期流程（Coda 的 docs/workflows.md「生命周期流程」），由流程（通常是同一个插件带的）读、判断。
 
@@ -181,6 +230,8 @@ Agent 在 `session/update` 的 `usage_update` 里可以带 `_meta.coda`：一个
   `cacheTtl`（缓存时长，`PT1H` 或 `PT5M`）、`compactedAt`（最近一次压缩的时刻）。
 
 ## 工具调用的审核
+
+审核的形状与已知风险值见 [review.json](../schemas/agent/review.json)。
 
 Agent 运行一个工具调用之前自己做的检查（如 Codex 的自动审核：按风险决定放不放行），是这个调用的一部分：
 在这个调用的 `tool_call` 或 `tool_call_update` 里带 `_meta.coda.review`，不另报一个工具调用。它不是[审批](#acp-部分)：审批由用户回答，审核由 Agent 自己判断。
@@ -200,6 +251,8 @@ Agent 运行一个工具调用之前自己做的检查（如 Codex 的自动审�
 - 两端客户端在调用上写「审核中」或「审核未通过」，放行的不另加标记；点开调用看审核的结果、风险与理由。
 
 ## 压缩上下文
+
+参数和答复见 [compact.json](../schemas/agent/compact.json)，声明见 [agent-capabilities.json](../schemas/agent/agent-capabilities.json)。
 
 Coda 可以请 Agent 压缩会话的上下文（同 Claude Code 的 `/compact`），由生命周期流程的 `compact-session`（Coda 的 docs/workflows.md「coda-的动作」） 发起；
 什么时候压、值不值得压由流程按[用量里的数据](#用量里的数据)判断，Agent 只执行。
@@ -237,6 +290,8 @@ Coda 存的就是这段文字，两端客户端显示时按看的那台设备的
 
 ### 能力协商
 
+声明形状见 [client-capabilities.json](../schemas/agent/client-capabilities.json) 与 [agent-capabilities.json](../schemas/agent/agent-capabilities.json)。
+
 - Coda 在 `initialize` 的 `clientCapabilities` 里总是带 `_meta.coda.waits: {}`。没看到它的客户端不认识这条扩展，Agent 不应对它发 `_coda/wait`。
 - Agent 在 `initialize` 结果的 `agentCapabilities` 里带 `_meta.coda.waits: {}`，表示它会登记。这只是声明：Coda 把它记在托管握手里，
   健康检查（`GET /v1/health` 的会话项 `waits`）报出来；不声明的 Agent 发来的 `_coda/wait` 也照收。
@@ -246,6 +301,8 @@ Coda 存的就是这段文字，两端客户端显示时按看的那台设备的
 ```
 
 ### `_coda/wait`
+
+通知参数及所有字段上限见 [wait.json](../schemas/agent/wait.json)。
 
 Agent 发给 Coda 的通知（没有 `id`，不回复），和 `session/update` 走同一个顺序：说在前面的先处理。
 
@@ -291,6 +348,8 @@ Agent 发给 Coda 的通知（没有 `id`，不回复），和 `session/update` 
 
 ### `_coda/wait/stop`
 
+请求参数和答复见 [wait-stop.json](../schemas/agent/wait-stop.json)。
+
 Coda 发给 Agent 的请求，参数 `{ "sessionId": …, "waitId": … }`，Agent 回 `{}`。只对声明了 `stoppable` 的活动发：
 用户点了任务或子 Agent 的停止、父会话取消这次调用（含已经交回、还在为补交跟进的）时它树下的项。
 回复只表示收到；Coda 不当它已经停了，直到 Agent 随后用 `_coda/wait` 报它结束（通常是 `cancelled`）。
@@ -323,6 +382,8 @@ Coda 发给 Agent 的请求，参数 `{ "sessionId": …, "waitId": … }`，Age
    所以 Agent 恢复会话时可以把还在等的东西重报一遍：同一个 `waitId` 再报 `waiting` 不会多登记一项。
 
 ## 远端入口
+
+绑定码与转交请求的形状分别见 [remote-code.json](../schemas/agent/remote-code.json)、[remote.json](../schemas/agent/remote.json)。
 
 有的 Agent 不在这台机器上干活：它是别处的一个 Bot（比如 Grok Bot，在它自己的云电脑上），会话里的适配器只是它的代言。
 Bot 需要随时进到自己的会话里来：说话、调 Coda 的工具、开一轮。远端入口给它一条只通往这个会话的路。

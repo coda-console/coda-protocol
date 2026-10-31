@@ -5,7 +5,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 - **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v1/<文件>`）。`plugin.json` 是整份清单，`setting.json` 是一项设置的声明。插件写的合乎它用到的类型就对；写给别的插件扩展点的键由那个插件声明，扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
 - **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是流程种类、Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
-- **Agent 接入协议**（`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
+- **Agent 接入扩展**（`schemas/agent/`、`agent.mjs`、`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
 
 流程方言的 **结构规则**从 1.8.0 起也由 `readWorkflow` / `workflowProblem` 检查。`workflow/structure.json` 声明支持的顶层元素与不支持的流程元素、各位置的事件定义、`coda:` 属性的位置限制、任务与多实例的局部写法、脚本数量、定时间隔和生命周期等待类型。`rules` 使用 JSON Schema 检查节点的无环投影（原始标量属性与父级、事件种类等固定事实），复用 `newAjv()` 和已有关键字；`moddle.json` 的 `extends` 仍声明属性可附着的基础类型。`CODA_STRUCTURE` 导出同一份表。新增局部规则改数据，不增加校验器分支。
 
@@ -62,6 +62,31 @@ fieldsProblem(JSON.parse(fieldsJSON), 'ask');
 ## 项目中的多选选项
 
 设置的 `items.anyOf` 选项可附带 `workflowKind`（`check`、`premerge`、`deploy`、`preview`、`release`）。全局设置显示全部选项；项目设置只显示该项目有的流程类别，未写此字段的选项始终显示。宿主负责按项目提供可选项，流程执行时仍需按运行的提交判断可用操作。
+
+## Agent 接入扩展
+
+从 1.9.0 起，[Agent 协议正文](docs/agent-protocol.md#可执行的形状定义)引用 `schemas/agent/` 的可执行定义：
+活动报告与停止、上下文压缩、远端入口、双方能力声明、插话的 Coda 约定、执行失败、工具审核、用量数据和默认选项标记。
+`messages.json` 是方向与参数／答复 schema 的索引；ACP 本身仍由 ACP SDK 校验。
+
+```js
+import {
+  agentMessageProblem, agentResultProblem,
+  agentCapabilitiesProblem, agentValueProblem,
+  AGENT_METHODS, AGENT_SCHEMAS,
+} from '@coda-console/protocol/agent';
+
+agentMessageProblem('_coda/wait', {
+  sessionId: 's1', waitId: 'build', state: 'waiting',
+}); // null, or "location: schema description"
+agentResultProblem('_coda/session/compact', { compacted: true });
+agentCapabilitiesProblem({ coda: { waits: {}, compact: {} } }, 'agent');
+agentValueProblem('review.json', review, '工具的审核');
+```
+
+校验不修改输入。未知扩展键保留；活动文本长度沿用 UTF-16，日期沿用 `Date.parse`，用量数据按 JSON 的 UTF-8 字节数限制。
+深层／大型 JSON 用显式栈检查，非有限数字与循环引用不会通过。会话归属、活动状态迁移、调用起因、协商、超时、重试和授权仍由宿主判断；
+丢弃未知风险值、压缩答复的裁剪与兜底等整理也留在 Coda。详见正文的兼容性与接入说明。
 
 ## 谁在用
 
