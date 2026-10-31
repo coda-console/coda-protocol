@@ -162,8 +162,14 @@ function keywords(ajv) {
   });
 }
 
-const ajv = new Ajv2020({ allErrors: false, verbose: true, passContext: true, strict: true, strictTypes: false, strictRequired: false, allowUnionTypes: true });
-keywords(ajv);
+// An Ajv as these schemas are checked with, the keywords above in it: also for the schemas of the protocol's other parts
+// (workflow.mjs), which add their own keywords to it.
+export function newAjv() {
+  const made = new Ajv2020({ allErrors: false, verbose: true, passContext: true, strict: true, strictTypes: false, strictRequired: false, allowUnionTypes: true });
+  keywords(made);
+  return made;
+}
+const ajv = newAjv();
 for (const schema of Object.values(SCHEMAS)) ajv.addSchema(schema);
 // The validators of the schemas here, by file.
 const compiled = new Map();
@@ -197,7 +203,7 @@ const nodes = function* (node) {
   yield node;
   for (const child of Object.values(node)) yield* nodes(child);
 };
-function described(error, { roots = true, schemas = [] } = {}) {
+export function described(error, { roots = true, schemas = [] } = {}) {
   if (!error.parentSchema) return undefined;
   if (error.parentSchema.description) return roots || !error.parentSchema.$id ? error.parentSchema.description : undefined;
   const steps = error.schemaPath.replace(/^#\//, '').split('/').map(unescape).slice(0, -1);
