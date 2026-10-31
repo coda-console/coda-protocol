@@ -4,8 +4,14 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 - **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v1/<文件>`）。`plugin.json` 是整份清单，`setting.json` 是一项设置的声明。插件写的合乎它用到的类型就对；写给别的插件扩展点的键由那个插件声明，扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
-- **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是流程种类、Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。流程的结构对不对（元素与事件、连接、补偿、走不到的步骤、事件启动），现在仍由 Coda 读流程时检查。
+- **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是流程种类、Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
 - **Agent 接入协议**（`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
+
+流程方言的 **结构规则**从 1.8.0 起也由 `readWorkflow` / `workflowProblem` 检查。`workflow/structure.json` 声明支持的顶层元素与不支持的流程元素、各位置的事件定义、`coda:` 属性的位置限制、任务与多实例的局部写法、脚本数量、定时间隔和生命周期等待类型。`rules` 使用 JSON Schema 检查节点的无环投影（原始标量属性与父级、事件种类等固定事实），复用 `newAjv()` 和已有关键字；`moddle.json` 的 `extends` 仍声明属性可附着的基础类型。`CODA_STRUCTURE` 导出同一份表。新增局部规则改数据，不增加校验器分支。
+
+`structure.mjs` 的固定检查处理数据表无法单独表达的关系：事件子流程与顺序流、连接事件按作用域配对、事件网关的出口、补偿关联、经过子流程与边界事件的可达性、事件启动以及生命周期的「聋状态」。Coda 的事件名通过 `dialect.json` 的 `eventRoles` 读取；等待动作与节点类型也来自数据表。ISO 8601 重复间隔用 `@0dep/piso` 解析，脚本变量边界用固定的词法扫描检查，条件和 documentation 用同一份 FEEL 检查。图和嵌套树使用显式栈与 Map/Set，不递归、不把大数组展开成函数参数。报错尽量保留 Coda 的原位置与原话。
+
+读取定义时原有的 Coda 结构规则已全部纳入协议。Coda 接入 1.8.0 后，`parseBpmn` 只需调用 `readWorkflow`，再把 `root` 编译成引擎、任务、调度和图所需的结构；运行时才能知道的表达式结果、动态字段引用、调度设置实际值及能力是否存在，仍由宿主在运行时检查。
 
 流程方言的 **卡片字段**由 `workflow/fields.json` 定义：七种字段各能写哪些属性、必填项、文字长度与单行限制、路径与网址、视图参数、输入框与密钥选项；`values.json` 的 `Field` 引用它，`Fields` 声明读出 JSON 字段列表的表达式，`UserTask.children` 限定最多 12 个静态字段、id 不重复，以及全部字段已知时答复的 `fields` 只能引用输入字段（含按住出现的答复）。
 
@@ -59,7 +65,7 @@ fieldsProblem(JSON.parse(fieldsJSON), 'ask');
 
 ## 谁在用
 
-- **Coda**：读插件时用它校验清单，再整理成自己的结构；只另看插件身份（ID、设置名在 ID 之下），以及装到一台机器上才知道的（来源、已装插件的冲突）。读流程时先用 `readWorkflow` 按方言解析，再查每个值。
+- **Coda**：读插件时用它校验清单，再整理成自己的结构；只另看插件身份（ID、设置名在 ID 之下），以及装到一台机器上才知道的（来源、已装插件的冲突）。读流程时用 `readWorkflow` 同时校验方言、值与结构，再编译成引擎需要的数据。
 - **coda-plugins 的契约检查包**（`@coda-console/plugin-check`）：在写插件的地方用同一个校验器判清单。
 
 ## 版本

@@ -1,0 +1,920 @@
+{
+  "description": "流程结构：支持的元素、事件位置、局部节点规则与属性位置。rules 对 structure.mjs 的无环节点投影运行 JSON Schema；跨节点引用、配对、可达性与生命周期等待由固定图检查负责。",
+  "unsupported": {
+    "bpmn:SendTask": "Coda 的消息是外部来的事件，流程只收不发；流程里互相通知用信号（signal）",
+    "bpmn:BusinessRuleTask": "Coda 不带决策表：判断写成网关的条件，或一个 scriptTask",
+    "bpmn:ComplexGateway": "引擎不运行复杂网关：写成包容网关，各出口带条件",
+    "bpmn:DataObject": "数据按任务结果与变量传递（见「表达式」），不写数据对象",
+    "bpmn:DataObjectReference": "数据按任务结果与变量传递（见「表达式」），不写数据对象",
+    "bpmn:DataStoreReference": "数据按任务结果与变量传递（见「表达式」），不写数据对象",
+    "bpmn:ImplicitThrowEvent": "它不是流程里的元素",
+    "bpmn:ChoreographyTask": "协作图的元素不在流程里运行",
+    "bpmn:SubChoreography": "协作图的元素不在流程里运行",
+    "bpmn:CallChoreography": "协作图的元素不在流程里运行"
+  },
+  "events": {
+    "start": [
+      "Message",
+      "Timer"
+    ],
+    "eventStart": [
+      "Message",
+      "Timer",
+      "Signal",
+      "Conditional",
+      "Error",
+      "Escalation"
+    ],
+    "innerStart": [],
+    "bpmn:EndEvent": [
+      "Error",
+      "Terminate",
+      "Signal",
+      "Escalation",
+      "Compensate",
+      "Cancel"
+    ],
+    "bpmn:IntermediateCatchEvent": [
+      "Timer",
+      "Message",
+      "Signal",
+      "Conditional",
+      "Link"
+    ],
+    "bpmn:IntermediateThrowEvent": [
+      "Signal",
+      "Escalation",
+      "Link",
+      "Compensate"
+    ],
+    "bpmn:BoundaryEvent": [
+      "Error",
+      "Timer",
+      "Message",
+      "Signal",
+      "Escalation",
+      "Conditional",
+      "Compensate",
+      "Cancel"
+    ]
+  },
+  "eventNames": {
+    "start": "流程的开始事件",
+    "eventStart": "事件子流程的开始事件",
+    "innerStart": "子流程的开始事件",
+    "bpmn:EndEvent": "结束事件",
+    "bpmn:IntermediateCatchEvent": "中间捕获事件",
+    "bpmn:IntermediateThrowEvent": "中间抛出事件",
+    "bpmn:BoundaryEvent": "边界事件"
+  },
+  "kindNames": {
+    "Message": "消息",
+    "Timer": "计时器",
+    "Signal": "信号",
+    "Conditional": "条件",
+    "Error": "出错",
+    "Escalation": "升级",
+    "Terminate": "终止",
+    "Link": "连接",
+    "Compensate": "补偿",
+    "Cancel": "取消"
+  },
+  "topLevel": [
+    "bpmn:Process",
+    "bpmn:Error",
+    "bpmn:Signal",
+    "bpmn:Escalation",
+    "bpmn:Message"
+  ],
+  "id": {
+    "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$",
+    "description": "id 须为字母开头的字母、数字、「_」「-」"
+  },
+  "requiredEvents": [
+    "eventStart",
+    "bpmn:IntermediateCatchEvent",
+    "bpmn:BoundaryEvent"
+  ],
+  "eventSuffix": {
+    "start": "；运行里发生的信号、条件、出错或升级，交给事件子流程（triggeredByEvent）",
+    "innerStart": "；只有最外层的开始事件能带计时器或消息，子流程里要等事件，用中间捕获事件或事件子流程"
+  },
+  "throwing": [
+    "bpmn:IntermediateThrowEvent",
+    "bpmn:EndEvent"
+  ],
+  "steps": [
+    "bpmn:ScriptTask",
+    "bpmn:ServiceTask",
+    "bpmn:UserTask",
+    "bpmn:CallActivity"
+  ],
+  "maxScripts": 50,
+  "schedule": {
+    "maxLength": 200,
+    "minMilliseconds": 300000,
+    "settingsPattern": "^\\s*=\\s*vars(\\.[A-Za-z0-9_-]+)+\\s*$",
+    "description": "定时开始只接受无限重复、无结束时间、间隔至少 5 分钟；表达式只读插件设置。"
+  },
+  "lifecycle": {
+    "waitTypes": [
+      "bpmn:ReceiveTask",
+      "bpmn:IntermediateCatchEvent",
+      "bpmn:CallActivity",
+      "bpmn:ScriptTask"
+    ],
+    "waitActions": [
+      "run-workflows"
+    ],
+    "description": "这些节点会等待；其余带计时边界的非子流程节点也会等待。生命周期流程的等待必须能收会话事实。"
+  },
+  "userMessages": {
+    "prefix": "user.",
+    "maxLabelLength": 40
+  },
+  "inputFields": [
+    "text",
+    "secret"
+  ],
+  "rules": [
+    {
+      "description": "coda:expect 只写在子流程上",
+      "schema": {
+        "properties": {
+          "subprocess": {
+            "const": true
+          }
+        }
+      },
+      "when": {
+        "required": [
+          "expect"
+        ]
+      }
+    },
+    {
+      "description": "coda:optional 只写在最外层的子流程上（事件子流程不是阶段）",
+      "schema": {
+        "allOf": [
+          {
+            "properties": {
+              "subprocess": {
+                "const": true
+              },
+              "top": {
+                "const": true
+              }
+            }
+          },
+          {
+            "not": {
+              "properties": {
+                "triggeredByEvent": {
+                  "const": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "when": {
+        "required": [
+          "optional"
+        ]
+      }
+    },
+    {
+      "description": "coda:notify 只写在流程最外层的结束事件上",
+      "schema": {
+        "properties": {
+          "type": {
+            "const": "bpmn:EndEvent"
+          },
+          "top": {
+            "const": true
+          }
+        }
+      },
+      "when": {
+        "required": [
+          "notify"
+        ]
+      }
+    },
+    {
+      "description": "coda:reportTo、coda:reportOn、coda:scope 只写在定时开始事件上（由会话发起的运行交给发起它的会话）",
+      "schema": {
+        "properties": {
+          "position": {
+            "const": "start"
+          },
+          "eventKind": {
+            "const": "Timer"
+          }
+        }
+      },
+      "when": {
+        "anyOf": [
+          {
+            "required": [
+              "reportTo"
+            ]
+          },
+          {
+            "required": [
+              "reportOn"
+            ]
+          },
+          {
+            "required": [
+              "scope"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "description": "脚本步骤写成 <scriptTask scriptFormat=\"bash\">，脚本放在 <script> 里；serviceTask 只用于 coda:action",
+      "schema": {
+        "required": [
+          "action"
+        ]
+      },
+      "on": [
+        "bpmn:ServiceTask"
+      ],
+      "when": {
+        "properties": {
+          "hasScriptExtension": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "description": "serviceTask 是 Coda 自己做的一步，须写 coda:action；脚本步骤写成 scriptTask",
+      "schema": {
+        "required": [
+          "action"
+        ]
+      },
+      "on": [
+        "bpmn:ServiceTask"
+      ]
+    },
+    {
+      "description": "coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:checkout、coda:retry 等（要为一段占组用 hold-group）",
+      "schema": {
+        "allOf": [
+          {
+            "properties": {
+              "hasScriptExtension": {
+                "const": false
+              }
+            }
+          },
+          {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "audience"
+                  ]
+                },
+                {
+                  "required": [
+                    "group"
+                  ]
+                },
+                {
+                  "required": [
+                    "timeout"
+                  ]
+                },
+                {
+                  "required": [
+                    "cancelTimeout"
+                  ]
+                },
+                {
+                  "required": [
+                    "workingDirectory"
+                  ]
+                },
+                {
+                  "required": [
+                    "checkout"
+                  ]
+                },
+                {
+                  "required": [
+                    "retry"
+                  ]
+                },
+                {
+                  "required": [
+                    "implementation"
+                  ],
+                  "properties": {
+                    "implementation": {
+                      "minLength": 1
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "on": [
+        "bpmn:ServiceTask"
+      ]
+    },
+    {
+      "description": "callActivity 的 calledElement 写要调用的能力或流程名（小写字母、数字和「-」，以字母开头）",
+      "schema": {
+        "required": [
+          "calledElement"
+        ],
+        "properties": {
+          "calledElement": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          }
+        }
+      },
+      "on": [
+        "bpmn:CallActivity"
+      ]
+    },
+    {
+      "description": "scriptTask 写 scriptFormat=\"bash\"（脚本由 bash -e 执行）",
+      "schema": {
+        "required": [
+          "scriptFormat"
+        ],
+        "properties": {
+          "scriptFormat": {
+            "const": "bash"
+          }
+        }
+      },
+      "on": [
+        "bpmn:ScriptTask"
+      ]
+    },
+    {
+      "description": "脚本放在 scriptTask 的 <script> 里，不写 coda:script",
+      "schema": {
+        "properties": {
+          "hasScriptExtension": {
+            "const": false
+          }
+        }
+      },
+      "on": [
+        "bpmn:ScriptTask"
+      ]
+    },
+    {
+      "description": "scriptTask 需要 <script>",
+      "schema": {
+        "required": [
+          "script"
+        ],
+        "properties": {
+          "script": {
+            "pattern": "\\S"
+          }
+        }
+      },
+      "on": [
+        "bpmn:ScriptTask"
+      ]
+    },
+    {
+      "description": "脚本过长",
+      "schema": {
+        "properties": {
+          "script": {
+            "x-length": 20000
+          }
+        }
+      },
+      "on": [
+        "bpmn:ScriptTask"
+      ]
+    },
+    {
+      "description": "coda:output 只写在自动步骤与结束事件上",
+      "schema": {
+        "properties": {
+          "type": {
+            "enum": [
+              "bpmn:ScriptTask",
+              "bpmn:EndEvent"
+            ]
+          }
+        }
+      },
+      "when": {
+        "properties": {
+          "hasOutputs": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "description": "脚本步骤的 coda:output 只写 name，值由脚本写进 $GITHUB_OUTPUT",
+      "schema": {
+        "properties": {
+          "outputHasValue": {
+            "const": false
+          }
+        }
+      },
+      "on": [
+        "bpmn:ScriptTask"
+      ]
+    },
+    {
+      "description": "documentation 过长",
+      "schema": {
+        "properties": {
+          "documentation": {
+            "x-length": 4000
+          }
+        }
+      },
+      "on": [
+        "bpmn:UserTask"
+      ]
+    },
+    {
+      "description": "有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee=\"user\"",
+      "schema": {
+        "required": [
+          "assignee"
+        ],
+        "properties": {
+          "assignee": {
+            "const": "user"
+          }
+        }
+      },
+      "on": [
+        "bpmn:UserTask"
+      ],
+      "when": {
+        "properties": {
+          "hasInputFields": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "description": "不支持标准循环（standardLoopCharacteristics）：重复做一件事写成连回去的连线加网关，按集合或次数做多份写多实例",
+      "schema": {
+        "properties": {
+          "loopType": {
+            "const": "bpmn:MultiInstanceLoopCharacteristics"
+          }
+        }
+      },
+      "when": {
+        "required": [
+          "loopType"
+        ]
+      },
+      "at": "path"
+    },
+    {
+      "description": "多实例只写在任务、子流程与 callActivity 上",
+      "schema": {
+        "allOf": [
+          {
+            "properties": {
+              "type": {
+                "enum": [
+                  "bpmn:Task",
+                  "bpmn:ManualTask",
+                  "bpmn:ScriptTask",
+                  "bpmn:ServiceTask",
+                  "bpmn:UserTask",
+                  "bpmn:ReceiveTask",
+                  "bpmn:CallActivity",
+                  "bpmn:SubProcess",
+                  "bpmn:Transaction",
+                  "bpmn:AdHocSubProcess"
+                ]
+              }
+            }
+          },
+          {
+            "not": {
+              "properties": {
+                "triggeredByEvent": {
+                  "const": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "when": {
+        "required": [
+          "loopType"
+        ]
+      },
+      "at": "path"
+    },
+    {
+      "description": "多实例要写做几份：coda:inputCollection（按集合，每份一个元素）或 loopCardinality（次数）",
+      "schema": {
+        "anyOf": [
+          {
+            "required": [
+              "collection"
+            ]
+          },
+          {
+            "required": [
+              "cardinality"
+            ]
+          }
+        ]
+      },
+      "when": {
+        "required": [
+          "loopType"
+        ]
+      },
+      "at": "path"
+    },
+    {
+      "description": "loopCardinality 写非负整数，或「=」开头的 FEEL 表达式",
+      "schema": {
+        "properties": {
+          "cardinality": {
+            "pattern": "^(?:\\s*=|\\d+$)"
+          }
+        }
+      },
+      "when": {
+        "required": [
+          "cardinality"
+        ]
+      },
+      "at": "path"
+    },
+    {
+      "description": "completionCondition 须为「=」开头的 FEEL 表达式，如 =deploy.ok",
+      "schema": {
+        "properties": {
+          "loopCompletion": {
+            "pattern": "^\\s*="
+          }
+        }
+      },
+      "when": {
+        "required": [
+          "loopCompletion"
+        ]
+      },
+      "at": "path"
+    },
+    {
+      "description": "completionCondition 须为「=」开头的 FEEL 表达式",
+      "schema": {
+        "properties": {
+          "completion": {
+            "pattern": "^\\s*="
+          }
+        }
+      },
+      "on": [
+        "bpmn:AdHocSubProcess"
+      ],
+      "when": {
+        "required": [
+          "completion"
+        ]
+      }
+    },
+    {
+      "description": "自由子流程里不写开始、结束事件：里面没有进线的节点都会开始",
+      "schema": {
+        "properties": {
+          "hasStartOrEnd": {
+            "const": false
+          }
+        }
+      },
+      "on": [
+        "bpmn:AdHocSubProcess"
+      ]
+    },
+    {
+      "description": "出错开始的事件子流程总是打断它所在的范围，不写 isInterrupting=\"false\"",
+      "schema": {
+        "not": {
+          "properties": {
+            "isInterrupting": {
+              "const": false
+            }
+          }
+        }
+      },
+      "when": {
+        "properties": {
+          "position": {
+            "const": "eventStart"
+          },
+          "eventKind": {
+            "const": "Error"
+          }
+        }
+      },
+      "at": "path"
+    },
+    {
+      "description": "事件子流程的计时器写 timeDuration 或 timeDate，从它所在的范围开始时算起",
+      "schema": {
+        "properties": {
+          "hasTimeCycle": {
+            "const": false
+          }
+        }
+      },
+      "when": {
+        "properties": {
+          "position": {
+            "const": "eventStart"
+          },
+          "eventKind": {
+            "const": "Timer"
+          }
+        }
+      },
+      "at": "path"
+    },
+    {
+      "description": "消息须引用一个有 name 的 <message>（name 是 Coda 的事件名，如 session.facts）",
+      "schema": {
+        "properties": {
+          "messageNamed": {
+            "const": true
+          }
+        }
+      },
+      "when": {
+        "properties": {
+          "eventKind": {
+            "const": "Message"
+          }
+        }
+      },
+      "at": "path"
+    },
+    {
+      "description": "receiveTask 须引用一个有 name 的 <message>（name 是 Coda 的事件名，如 session.facts）",
+      "schema": {
+        "properties": {
+          "messageNamed": {
+            "const": true
+          }
+        }
+      },
+      "on": [
+        "bpmn:ReceiveTask"
+      ],
+      "at": "path"
+    },
+    {
+      "description": "信号须引用一个 <signal>，抛出与捕获按它配对",
+      "schema": {
+        "properties": {
+          "signalReferenced": {
+            "const": true
+          }
+        }
+      },
+      "when": {
+        "properties": {
+          "eventKind": {
+            "const": "Signal"
+          }
+        }
+      },
+      "at": "path"
+    },
+    {
+      "description": "抛出的升级须引用一个 <escalation>",
+      "schema": {
+        "properties": {
+          "escalationReferenced": {
+            "const": true
+          }
+        }
+      },
+      "on": [
+        "bpmn:IntermediateThrowEvent",
+        "bpmn:EndEvent"
+      ],
+      "when": {
+        "properties": {
+          "eventKind": {
+            "const": "Escalation"
+          }
+        }
+      },
+      "at": "path"
+    },
+    {
+      "description": "连接事件须写 name，抛出与捕获按它配对",
+      "schema": {
+        "properties": {
+          "linkNamed": {
+            "const": true
+          }
+        }
+      },
+      "when": {
+        "properties": {
+          "eventKind": {
+            "const": "Link"
+          }
+        }
+      },
+      "at": "path"
+    },
+    {
+      "description": "条件只支持 FEEL 表达式，不运行脚本",
+      "schema": {
+        "properties": {
+          "conditionLanguage": {
+            "enum": [
+              "",
+              "feel"
+            ]
+          }
+        }
+      },
+      "when": {
+        "required": [
+          "conditionLanguage"
+        ]
+      },
+      "at": "path"
+    },
+    {
+      "description": "条件事件的条件须为「=」开头的 FEEL 表达式，如 =checks.passed",
+      "schema": {
+        "required": [
+          "condition"
+        ],
+        "properties": {
+          "condition": {
+            "pattern": "^\\s*="
+          }
+        }
+      },
+      "when": {
+        "properties": {
+          "eventKind": {
+            "const": "Conditional"
+          }
+        }
+      },
+      "at": "path"
+    },
+    {
+      "description": "条件须为「=」开头的 FEEL 表达式，如 =check.go",
+      "schema": {
+        "required": [
+          "condition"
+        ],
+        "properties": {
+          "condition": {
+            "pattern": "^\\s*="
+          }
+        }
+      },
+      "on": [
+        "bpmn:SequenceFlow"
+      ],
+      "when": {
+        "properties": {
+          "hasCondition": {
+            "const": true
+          }
+        }
+      },
+      "at": "path"
+    },
+    {
+      "description": "取消结束事件只写在事务子流程（transaction）里",
+      "schema": {
+        "properties": {
+          "parentType": {
+            "const": "bpmn:Transaction"
+          }
+        }
+      },
+      "on": [
+        "bpmn:EndEvent"
+      ],
+      "when": {
+        "properties": {
+          "eventKind": {
+            "const": "Cancel"
+          }
+        }
+      }
+    },
+    {
+      "description": "取消边界事件只挂在事务子流程（transaction）上",
+      "schema": {
+        "properties": {
+          "attachedType": {
+            "const": "bpmn:Transaction"
+          }
+        }
+      },
+      "on": [
+        "bpmn:BoundaryEvent"
+      ],
+      "when": {
+        "properties": {
+          "eventKind": {
+            "const": "Cancel"
+          }
+        }
+      }
+    }
+  ],
+  "readable": [
+    {
+      "property": "condition",
+      "where": "path"
+    },
+    {
+      "property": "cardinality",
+      "where": "path 的 loopCardinality"
+    },
+    {
+      "property": "loopCompletion",
+      "where": "path 的 completionCondition"
+    },
+    {
+      "property": "completion",
+      "where": "id 的 completionCondition"
+    },
+    {
+      "property": "documentation",
+      "where": "id 的 documentation"
+    },
+    {
+      "property": "timeDuration",
+      "where": "path 的 timeDuration"
+    },
+    {
+      "property": "timeDate",
+      "where": "path 的 timeDate"
+    },
+    {
+      "property": "timeCycle",
+      "where": "path 的 timeCycle"
+    }
+  ],
+  "projection": {
+    "description": "rules.schema 和 rules.when 检查节点的无环投影；on 是精确 BPMN 类型列表；at 为 path 时使用 process/子流程/节点，其余用节点 id。未提供的属性为 undefined（Ajv 当作缺失）。原始标量属性按原名保留。",
+    "facts": {
+      "type": "BPMN 类型",
+      "top": "是否直属 process",
+      "parentType": "父元素类型",
+      "subprocess": "是否属于 SubProcess（含 transaction 与 adHoc）",
+      "position": "开始事件按 start / innerStart / eventStart 区分，其余为 BPMN 类型",
+      "eventKind": "第一个事件定义的种类；事件数量另按 events 表检查",
+      "messageNamed": "引用的 message 是否有 name",
+      "signalReferenced": "是否引用 signal",
+      "escalationReferenced": "是否引用 escalation",
+      "linkNamed": "link 是否有非空 name",
+      "attachedType": "边界事件挂靠节点的类型",
+      "condition": "条件正文",
+      "conditionLanguage": "条件声明的语言",
+      "hasCondition": "是否写了条件",
+      "timeDuration / timeDate / timeCycle": "第一个事件定义中对应时间的正文",
+      "loopType / collection / cardinality / loopCompletion": "多实例类型、集合、次数和完成条件",
+      "completion": "自由子流程的完成条件",
+      "hasStartOrEnd": "直接子节点是否有开始或结束事件",
+      "hasScriptExtension": "是否写 coda:script",
+      "hasOutputs / outputHasValue": "是否有 coda:output，以及是否有输出声明 value",
+      "documentation": "人工任务 documentation 合并后的文字",
+      "hasInputFields": "是否有 inputFields 中类型的字段或动态 coda:fields",
+      "hasTimeCycle": "是否声明 timeCycle 元素（包括空元素）"
+    }
+  }
+}

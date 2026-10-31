@@ -14,6 +14,7 @@
     "workflow.dispatch": "手动发起（workflow_run、客户端的按钮）：由事件启动的流程也订阅它，才能手动发起",
     "workflow.cancel": "要它停下：在等它的运行被告知，走到自己的结束，以取消结束"
   },
+  "eventRoles": {"lifecycleStart": "session.opened", "lifecycleFacts": "session.facts", "dispatch": "workflow.dispatch", "cancel": "workflow.cancel"},
   "userMessage": "^user\\.[a-z][a-z0-9-]{0,39}$",
   "stepFailed": "STEP_FAILED",
   "variables": ["inputs", "run", "github", "vars"],
