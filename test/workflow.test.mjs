@@ -48,6 +48,8 @@ test('what the dialect does not have is said: not BPMN, an attribute or element 
   let nested = '<serviceTask id="deep" coda:action="nope" />';
   for (let i = 5000; i > 0; i--) nested = `<subProcess id="s${i}">${nested}</subProcess>`;
   assert.match(await workflowProblem(workflow(nested), 'w'), /^deep：coda:action 只能是 /);
+  // And however many there are in one place.
+  assert.match(await workflowProblem(workflow(`${'<task/>'.repeat(140_000)}<serviceTask id="wide" coda:action="nope" />`), 'w'), /^wide：coda:action 只能是 /);
   assert.equal(await workflowProblem(workflow('<serviceTask id="go" coda:action="run-workflows"><extensionElements><coda:param name="branch" value="main" /></extensionElements></serviceTask>'), 'w'),
     'go：coda:action run-workflows 只接受参数 kind、commit、inputs');
 });

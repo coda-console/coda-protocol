@@ -26,11 +26,12 @@ export const RUN_VARIABLES = dialect.variables;
 
 const SIZE_LIMIT = 1_000_000;
 const children = element => Object.values(element).flatMap(v => (Array.isArray(v) ? v : [v])).filter(v => v?.$type && v.$parent === element);
-// Everything in the definition under `element`, depth first, by a stack of its own: a definition may nest deeper than the
-// call stack goes.
+// Everything in the definition under `element`, depth first, by a stack of its own, pushed one at a time: a definition may
+// nest deeper than the call stack goes, and hold more in one place than a call takes arguments.
 const all = element => {
-  const found = [], stack = children(element).reverse();
-  while (stack.length) { const next = stack.pop(); found.push(next); stack.push(...children(next).reverse()); }
+  const found = [], stack = [], push = kids => { for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i]); };
+  push(children(element));
+  while (stack.length) { const next = stack.pop(); found.push(next); push(children(next)); }
   return found;
 };
 
