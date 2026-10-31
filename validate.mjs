@@ -6,8 +6,9 @@
 // when it reads one, and coda-plugins' contract check does where a plugin is written.
 // What JSON Schema cannot say of one value alone it says with five keywords, each meaning one thing wherever it is written,
 // as Kubernetes extends its OpenAPI with `x-kubernetes-*`:
-// - `x-unique-by`: [name or { part }] — in an array, each named property of its objects is unique among the items having it,
-//   and so is `part`'s first group of each of its texts (a directory's last name);
+// - `x-unique-by`: [name, { part } or { key, nested }] — in an array, each named property of its objects is unique among the
+//   items having it, and so is `part`'s first group of each of its texts (a directory's last name), and `key` among the
+//   items and those in their `nested` arrays, at every depth (a task's answers and those offered on holding one);
 // - `x-max-contains`: { match, max } — of an object's values, at most `max` satisfy `match` (`maxContains` of an object);
 // - `x-ref`: { pointer, part?, match? } — the value (or `part`'s first group of it) names a key of the object, or an element
 //   of the array, at `pointer` in the manifest: absolute (`/contributes/configuration/properties`), or relative to the value
@@ -53,7 +54,8 @@ const SCHEMA_VALUE = { type: ['object', 'boolean'] };
 const META = {
   'x-max-contains': { type: 'object', properties: { match: SCHEMA_VALUE, max: { type: 'integer', minimum: 0 } }, required: ['match', 'max'], additionalProperties: false },
   'x-unique-by': { type: 'array', minItems: 1, items: { anyOf: [{ type: 'string' },
-    { type: 'object', properties: { part: { type: 'string' } }, required: ['part'], additionalProperties: false }] } },
+    { type: 'object', properties: { part: { type: 'string' } }, required: ['part'], additionalProperties: false },
+    { type: 'object', properties: { key: { type: 'string' }, nested: { type: 'string' } }, required: ['key', 'nested'], additionalProperties: false }] } },
   'x-ref': { type: 'object', properties: { pointer: { type: 'string', pattern: '^(?:\\d+(?:/.*)?|/.*)$' }, part: { type: 'string' }, match: SCHEMA_VALUE },
     required: ['pointer'], additionalProperties: false },
   'x-placeholders': { type: 'object', properties: { names: { type: 'array', items: { type: 'string' } }, config: SCHEMA_VALUE }, additionalProperties: false },
@@ -90,11 +92,23 @@ function keywords(ajv) {
   ajv.addKeyword({
     keyword: 'x-unique-by', type: 'array', schemaType: 'array', metaSchema: META['x-unique-by'], errors: true,
     compile(keys, parentSchema) {
-      const by = keys.map(key => typeof key === 'object' ? { part: new RegExp(key.part, 'u') } : { key });
+      const by = keys.map(key => typeof key !== 'object' ? { key } : key.part !== undefined ? { part: new RegExp(key.part, 'u') } : key);
+      // The items, and with `nested` those in each one's array of that name, at every depth: by a stack of its own.
+      const every = (items, nested) => {
+        if (!nested) return items;
+        const found = [], stack = [...items].reverse();
+        while (stack.length) {
+          const item = stack.pop();
+          found.push(item);
+          const inner = item && typeof item === 'object' ? item[nested] : undefined;
+          if (Array.isArray(inner)) for (let i = inner.length - 1; i >= 0; i--) stack.push(inner[i]);
+        }
+        return found;
+      };
       return function unique(items) {
-        for (const { key, part } of by) {
+        for (const { key, part, nested } of by) {
           const seen = new Set();
-          for (const item of items) {
+          for (const item of every(items, nested)) {
             const value = part ? (typeof item === 'string' ? part.exec(item)?.[1] : undefined)
               : item && typeof item === 'object' && Object.hasOwn(item, key) ? item[key] : undefined;
             if (value === undefined) continue;

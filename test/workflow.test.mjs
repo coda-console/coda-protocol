@@ -78,11 +78,18 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     [step('', '<coda:env name="A" value="${{ inputs.a }}" />'), /^say 的 coda:env A：value 不超过 20000 字；这里的表达式以「=」开头/],
     [step('', '<coda:output name="bad-name" />'), /^say 的 coda:output bad-name：名字不合法/],
     [workflow('<extensionElements><coda:input name="a" /><coda:input name="a" /></extensionElements>'), /^p：name 不能重复：a$/],
-    [workflow('<extensionElements><coda:input name="n" type="number" default="many" /></extensionElements>'), /^p 的 coda:input n：default 须为数字$/],
+    [workflow('<extensionElements><coda:input name="n" type="number" default="many" /></extensionElements>'), /^p 的 coda:input n：default 须为数字/],
+    // A number that reads as more than a number holds is none.
+    ...['1e999', '-1e999', '9'.repeat(400)].map(huge =>
+      [workflow(`<extensionElements><coda:input name="n" type="number" default="${huge}" /></extensionElements>`), /^p 的 coda:input n：default 须为数字/]),
     [workflow('<extensionElements><coda:input name="b" type="boolean" defaultFrom="session.branch" /></extensionElements>'), /^p 的 coda:input b：defaultFrom="session\.branch" 只用于 type 为 branch、string 的参数$/],
     [task('<coda:choice id="handback" name="交回" />'), /^ask 的 coda:choice handback：id 须为字母开头/],
-    [task('<coda:choice id="a" name="甲" primary="true" /><coda:choice id="b" name="乙" primary="true" />'), /^ask：最多 6 个 coda:choice，最多一个主按钮$/],
+    [task('<coda:choice id="a" name="甲" primary="true" /><coda:choice id="b" name="乙" primary="true" />'), /^ask：最多 6 个 coda:choice，最多一个主按钮；/],
     [task('<coda:choice id="a" name="甲"><coda:choice id="b" name="乙" primary="true" /></coda:choice>'), /^ask 的 coda:choice b：只有最外层的选项能是主按钮$/],
+    // Answers are told apart by id across the task: one inside another, or inside two others, is not to have one twice.
+    [task('<coda:choice id="yes" name="是"><coda:choice id="yes" name="也是" /></coda:choice>'), /^ask：id 不能重复：yes$/],
+    [task('<coda:choice id="a" name="甲"><coda:choice id="same" name="一" /></coda:choice><coda:choice id="b" name="乙"><coda:choice id="same" name="二" /></coda:choice>'),
+      /^ask：id 不能重复：same$/],
     [task('<coda:choice id="a" name="甲"><coda:option id="o" name="部署" shown="true" /></coda:choice>'), /^ask 的 coda:option o：coda:shown 须为表达式（以 = 开头）$/],
     [workflow('<userTask id="ask" coda:assignee="me" />'), /^ask：coda:assignee 只能是 agent/],
     [workflow('<startEvent id="due" coda:reportOn="always"><timerEventDefinition><timeCycle>R/PT6H</timeCycle></timerEventDefinition></startEvent>'),
@@ -93,6 +100,7 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     [workflow('<task id="each"><multiInstanceLoopCharacteristics coda:inputCollection="=inputs.items" /></task>'), /^each 需要 coda:inputElement：写 coda:inputElement/],
   ];
   for (const [source, said] of cases) assert.match(await workflowProblem(source, 'w'), said, source);
+  assert.equal(await workflowProblem(workflow('<extensionElements><coda:input name="n" type="number" default="-1.5e99" /></extensionElements>'), 'w'), null);
   // What it reads by name is the workflow's: a node's id with a dash reads as one name.
   assert.equal(await workflowProblem(step(' coda:status="还在：{{in-queue.count}}"').replace('<scriptTask id="say"', '<task id="in-queue" /><scriptTask id="say"'), 'w'), null);
 });
