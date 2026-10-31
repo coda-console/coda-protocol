@@ -33,16 +33,18 @@ export const SCHEMAS = Object.fromEntries(readdirSync(SCHEMA_DIR).filter(file =>
 // The types a plugin may contribute to Coda itself, as the manifest's schema names them.
 export const TYPES = Object.keys(SCHEMAS['plugin.json'].properties.contributes.properties);
 
-// What a pointer names, from where a keyword is: the manifest's root, or levels up from the value itself.
+// What a pointer names, from where a keyword is: the manifest's root, or levels up from the value itself; and where that is.
 function locate(pointer, { rootData, instancePath }) {
   const relative = /^(\d+)(.*)$/.exec(pointer);
   const up = relative ? Number(relative[1]) : 0, rest = relative ? relative[2] : pointer;
   const here = instancePath.split('/').slice(1).map(unescape);
-  if (up > here.length) return undefined;
+  if (up > here.length) return { at: undefined, path: '' };
   const steps = [...(relative ? here.slice(0, here.length - up) : []), ...rest.split('/').slice(1).map(unescape)];
-  return steps.reduce((at, step) => at !== null && typeof at === 'object' && Object.hasOwn(at, step) ? at[step] : undefined, rootData);
+  return { at: steps.reduce((at, step) => at !== null && typeof at === 'object' && Object.hasOwn(at, step) ? at[step] : undefined, rootData),
+    path: steps.map(step => `/${escape(step)}`).join('') };
 }
 const unescape = step => step.replace(/~1/g, '/').replace(/~0/g, '~');
+const escape = step => String(step).replace(/~/g, '~0').replace(/\//g, '~1');
 const fail = (validate, keyword, message, parentSchema) => { validate.errors = [{ keyword, message, params: {}, parentSchema }]; return false; };
 
 // What each keyword is written with, checked where a schema using it is compiled: one written wrong is refused there, as an
@@ -66,14 +68,23 @@ function now(validate) {
   return validate;
 }
 
-// The schemas a keyword is written with (`match`, `config`) are compiled on their own, as validators that answer now, and
-// are called with what the value is checked with (the plugin's directory, for `x-file`): `this`, Ajv's context.
+// A schema a keyword is written with (`match`, `config`), for a value elsewhere in what is checked: compiled on its own as a
+// validator that answers now, and run as one part of the whole — with what the whole is checked with (`self`, Ajv's context:
+// the plugin's directory), on the whole value, at the value's place in it — so that its pointers and files are as the
+// schema around it has them.
+function inner(ajv, schema) {
+  const validate = now(ajv.compile(schema));
+  return (self, value, path, { rootData }) => validate.call(self, value, { instancePath: path, rootData, dynamicAnchors: {} });
+}
+
 function keywords(ajv) {
   ajv.addKeyword({
     keyword: 'x-max-contains', type: 'object', schemaType: 'object', metaSchema: META['x-max-contains'],
     compile({ match, max }) {
-      const matcher = now(ajv.compile(match));
-      return function (value) { return Object.values(value).filter(each => matcher.call(this, each)).length <= max; };
+      const matches = inner(ajv, match);
+      return function (value, cxt) {
+        return Object.entries(value).filter(([key, each]) => matches(this, each, `${cxt.instancePath}/${escape(key)}`, cxt)).length <= max;
+      };
     },
   });
   ajv.addKeyword({
@@ -97,31 +108,30 @@ function keywords(ajv) {
     },
   });
   // A reference: whether `name` is a key (or element) of what `pointer` names, and that satisfies `match`.
-  function resolves(ref, matcher, name, cxt) {
-    const at = locate(ref.pointer, cxt);
-    if (Array.isArray(at)) return at.includes(name);
-    if (!at || typeof at !== 'object' || !Object.hasOwn(at, name)) return false;
-    return !matcher || matcher.call(this, at[name]);
+  function resolves(self, ref, matches, name, cxt) {
+    const { at, path } = locate(ref.pointer, cxt);
+    const key = Array.isArray(at) ? at.indexOf(name) : at !== null && typeof at === 'object' && Object.hasOwn(at, name) ? name : -1;
+    return key !== -1 && (!matches || matches(self, at[key], `${path}/${escape(key)}`, cxt));
   }
   ajv.addKeyword({
     keyword: 'x-ref', type: 'string', schemaType: 'object', metaSchema: META['x-ref'],
     compile(ref) {
-      const matcher = ref.match !== undefined ? now(ajv.compile(ref.match)) : null, part = ref.part !== undefined ? new RegExp(ref.part, 'u') : null;
+      const matches = ref.match !== undefined ? inner(ajv, ref.match) : null, part = ref.part !== undefined ? new RegExp(ref.part, 'u') : null;
       return function (value, cxt) {
         const name = part ? part.exec(value)?.[1] : value;
-        return name !== undefined && resolves.call(this, ref, matcher, name, cxt);
+        return name !== undefined && resolves(this, ref, matches, name, cxt);
       };
     },
   });
   ajv.addKeyword({
     keyword: 'x-placeholders', type: 'string', schemaType: 'object', metaSchema: META['x-placeholders'],
     compile(allowed) {
-      const config = allowed.config !== undefined ? { pointer: '/contributes/configuration/properties' } : null, matcher = config && now(ajv.compile(allowed.config));
+      const config = allowed.config !== undefined ? { pointer: '/contributes/configuration/properties' } : null, matches = config && inner(ajv, allowed.config);
       return function (value, cxt) {
         return [...value.matchAll(/\$\{([^}]*)\}/g)].every(([, place]) => {
           if ((allowed.names ?? []).includes(place)) return true;
           const setting = /^config:(.+)$/.exec(place)?.[1];
-          return !!(config && setting && resolves.call(this, config, matcher, setting, cxt));
+          return !!(config && setting && resolves(this, config, matches, setting, cxt));
         });
       };
     },
@@ -166,11 +176,12 @@ const validator = file => {
 // schema as compiled, for what it says of a failing value. One that answers later (`$async`) is refused.
 const points = new Map();
 function declared(schema) {
-  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('须为对象');
   const text = JSON.stringify(schema);
   if (!points.has(text)) {
-    const own = { ...schema, $id: `${BASE}point-${createHash('sha256').update(text).digest('hex').slice(0, 16)}.json` };
-    points.set(text, { validate: now(ajv.getSchema(own.$id) ?? ajv.compile(own)), schema: own });
+    // `true` and `false` say all they say as they are; what is no schema at all Ajv refuses.
+    const object = schema !== null && typeof schema === 'object' && !Array.isArray(schema);
+    const own = object ? { ...schema, $id: `${BASE}point-${createHash('sha256').update(text).digest('hex').slice(0, 16)}.json` } : schema;
+    points.set(text, { validate: now((object && ajv.getSchema(own.$id)) || ajv.compile(own)), schema: own });
   }
   return points.get(text);
 }
