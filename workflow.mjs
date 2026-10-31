@@ -26,8 +26,13 @@ export const RUN_VARIABLES = dialect.variables;
 
 const SIZE_LIMIT = 1_000_000;
 const children = element => Object.values(element).flatMap(v => (Array.isArray(v) ? v : [v])).filter(v => v?.$type && v.$parent === element);
-// Everything in the definition under `element`, depth first.
-const all = element => children(element).flatMap(child => [child, ...all(child)]);
+// Everything in the definition under `element`, depth first, by a stack of its own: a definition may nest deeper than the
+// call stack goes.
+const all = element => {
+  const found = [], stack = children(element).reverse();
+  while (stack.length) { const next = stack.pop(); found.push(next); stack.push(...children(next).reverse()); }
+  return found;
+};
 
 // A workflow's definition (`file`, its name without `.bpmn`, for what is said) read with Coda's dialect: `{ root }`, the
 // parsed definitions, or `{ problem }`, what of it the dialect does not have — not BPMN, a coda: attribute or element it
