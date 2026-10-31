@@ -187,8 +187,8 @@ function keywords(ajv) {
 
 // An Ajv as these schemas are checked with, the keywords above in it: also for the schemas of the protocol's other parts
 // (workflow.mjs), which add their own keywords to it.
-export function newAjv() {
-  const made = new Ajv2020({ allErrors: false, verbose: true, passContext: true, strict: true, strictTypes: false, strictRequired: false, allowUnionTypes: true });
+export function newAjv(options = {}) {
+  const made = new Ajv2020({ allErrors: false, verbose: true, passContext: true, strict: true, strictTypes: false, strictRequired: false, allowUnionTypes: true, ...options });
   keywords(made);
   return made;
 }
@@ -216,8 +216,8 @@ function declared(schema) {
 }
 
 // Where in the manifest a value is, as a person writes it: `contributes.composerModes[0].in`.
-const place = (path, base) => path.split('/').slice(1).map(unescape)
-  .reduce((at, step) => /^\d+$/.test(step) ? `${at}[${step}]` : !/^[A-Za-z_$][\w$]*$/.test(step) ? `${at}「${step}」` : at ? `${at}.${step}` : step, base);
+const place = (path, base, leadingDot = false) => path.split('/').slice(1).map(unescape)
+  .reduce((at, step) => /^\d+$/.test(step) ? `${at}[${step}]` : !/^[A-Za-z_$][\w$]*$/.test(step) ? `${at}「${step}」` : at || leadingDot ? `${at}.${step}` : step, base);
 const TYPE_NAMES = { array: '数组', object: '对象', string: '文本', number: '数字', integer: '整数', boolean: '开或关' };
 // What the schema says of a failing value: the description nearest above the keyword that failed (a branch's `then`, a
 // property's), found by where the error says it is, from the schema it failed in (the one a `$ref` names, any of these).
@@ -226,8 +226,49 @@ const nodes = function* (node) {
   yield node;
   for (const child of Object.values(node)) yield* nodes(child);
 };
-export function described(error, { roots = true, schemas = [] } = {}) {
+// A registered schema, optionally followed by a JSON Pointer: only own keys, never prototype properties.
+export function schemaAt(ref, schemas) {
+  if (typeof ref !== 'string') return undefined;
+  const [file, fragment = '', extra] = ref.split('#');
+  if (extra !== undefined || !Object.hasOwn(schemas, file)) return undefined;
+  let pointer;
+  try { pointer = decodeURIComponent(fragment); } catch { return undefined; }
+  if (pointer && !pointer.startsWith('/')) return undefined;
+  let node = schemas[file];
+  for (const token of pointer.split('/').slice(1)) {
+    if (/~(?:[^01]|$)/.test(token)) return undefined;
+    const key = unescape(token);
+    node = node && typeof node === 'object' && Object.hasOwn(node, key) ? node[key] : undefined;
+  }
+  return typeof node === 'boolean' || node && typeof node === 'object' && !Array.isArray(node) ? node : undefined;
+}
+// A missing property's description may live behind a reference or in its first described allOf branch.
+// Walk schemas, not input values, with a stack and a visited set so depth, width and reference cycles are bounded.
+function propertyDescription(schema, schemas, base) {
+  const registered = Object.fromEntries(schemas.filter(schema => schema.$id).map(schema => [schema.$id, schema]));
+  const stack = [{ schema, base }], seen = new Set();
+  while (stack.length) {
+    const { schema: node, base: from } = stack.pop();
+    if (!node || typeof node !== 'object' || seen.has(node)) continue;
+    seen.add(node);
+    const at = node.$id ? new URL(node.$id, from).href : from;
+    if (node.$ref) {
+      const ref = new URL(node.$ref, at).href;
+      stack.push({ schema: schemaAt(ref, registered), base: ref });
+      continue;
+    }
+    if (node.description) return node.description;
+    if (node.allOf) for (let i = node.allOf.length - 1; i >= 0; i--) stack.push({ schema: node.allOf[i], base: at });
+  }
+}
+export function described(error, { roots = true, schemas = [], required = 'object', schemaBase } = {}) {
   if (!error.parentSchema) return undefined;
+  if (required === 'property' && error.keyword === 'required') {
+    const key = error.params.missingProperty, properties = error.parentSchema.properties;
+    const own = properties && Object.hasOwn(properties, key)
+      ? propertyDescription(properties[key], [...schemas, ...Object.values(SCHEMAS)], schemaBase) : undefined;
+    if (own !== undefined) return own;
+  }
   if (error.parentSchema.description) return roots || !error.parentSchema.$id ? error.parentSchema.description : undefined;
   const steps = error.schemaPath.replace(/^#\//, '').split('/').map(unescape).slice(0, -1);
   for (const root of [...schemas, ...Object.values(SCHEMAS)]) for (const from of nodes(root)) {
@@ -242,16 +283,21 @@ export function described(error, { roots = true, schemas = [] } = {}) {
 // What is wrong, said once: the first error, by its place and what the schema says of the value there.
 // What a whole type says of itself is too much for a key it lacks or one written twice: those say only what is wrong.
 // `schemas`: those besides these the value was checked against (an extension point's).
-export function explain(errors, base = '', schemas = []) {
+// `style: 'description'` uses schema wording for every keyword. `required: 'property'` names and describes the
+// missing property; `schemaBase` resolves its references. `leadingDot` retains relative paths with an empty base.
+export function explain(errors, base = '', schemas = [], { style = 'keyword', required = 'object', schemaBase, leadingDot = false } = {}) {
   const [error] = errors;
-  const at = place(error.instancePath, base) || 'package.json', name = error.propertyName ? `「${error.propertyName}」` : '';
+  const path = error.instancePath + (required === 'property' && error.keyword === 'required' ? `/${escape(error.params.missingProperty)}` : '');
+  const at = place(path, base, leadingDot) || (style === 'description' ? '' : 'package.json'), name = error.propertyName ? `「${error.propertyName}」` : '';
+  const options = { schemas, required, schemaBase };
+  if (style === 'description') return `${at}：${described(error, options) ?? error.message}`;
   if (error.keyword === 'x-unique-by') return `${at}${name}：${error.message}`;
-  if (error.keyword === 'required') { const said = described(error, { roots: false, schemas }); return `${at} 缺 ${error.params.missingProperty}${said ? `：${said}` : ''}`; }
+  if (error.keyword === 'required') { const said = described(error, { ...options, roots: false }); return `${at} 缺 ${error.params.missingProperty}${said ? `：${said}` : ''}`; }
   if (error.keyword === 'additionalProperties' || error.keyword === 'unevaluatedProperties')
     return `${at} 里有不认识的键：${error.params.additionalProperty ?? error.params.unevaluatedProperty}`;
-  const said = described(error, { schemas });
+  const said = described(error, options);
   if (error.keyword === 'type') return `${at}${name} 须为${TYPE_NAMES[error.params.type] ?? error.params.type}${said ? `：${said}` : ''}`;
-  if (error.keyword === 'x-file') { const own = described(error, { roots: false, schemas }); return `${at}${name}：${error.message}${own ? `（${own}）` : ''}`; }
+  if (error.keyword === 'x-file') { const own = described(error, { ...options, roots: false }); return `${at}${name}：${error.message}${own ? `（${own}）` : ''}`; }
   return `${at}${name}：${said ?? error.message}`;
 }
 
