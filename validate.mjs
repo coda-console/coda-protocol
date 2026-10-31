@@ -60,12 +60,20 @@ const META = {
     required: ['type'], additionalProperties: false },
 };
 
+// A validator that answers now: one of a schema written `$async` answers later, with a promise that would pass for a yes.
+function now(validate) {
+  if (validate.$async) throw new Error('不能是异步的（$async）');
+  return validate;
+}
+
+// The schemas a keyword is written with (`match`, `config`) are compiled on their own, as validators that answer now, and
+// are called with what the value is checked with (the plugin's directory, for `x-file`): `this`, Ajv's context.
 function keywords(ajv) {
   ajv.addKeyword({
     keyword: 'x-max-contains', type: 'object', schemaType: 'object', metaSchema: META['x-max-contains'],
     compile({ match, max }) {
-      const matcher = ajv.compile(match);
-      return value => Object.values(value).filter(each => matcher(each)).length <= max;
+      const matcher = now(ajv.compile(match));
+      return function (value) { return Object.values(value).filter(each => matcher.call(this, each)).length <= max; };
     },
   });
   ajv.addKeyword({
@@ -89,31 +97,33 @@ function keywords(ajv) {
     },
   });
   // A reference: whether `name` is a key (or element) of what `pointer` names, and that satisfies `match`.
-  const resolves = (ref, matcher, name, cxt) => {
+  function resolves(ref, matcher, name, cxt) {
     const at = locate(ref.pointer, cxt);
     if (Array.isArray(at)) return at.includes(name);
     if (!at || typeof at !== 'object' || !Object.hasOwn(at, name)) return false;
-    return !matcher || matcher(at[name]);
-  };
+    return !matcher || matcher.call(this, at[name]);
+  }
   ajv.addKeyword({
     keyword: 'x-ref', type: 'string', schemaType: 'object', metaSchema: META['x-ref'],
     compile(ref) {
-      const matcher = ref.match ? ajv.compile(ref.match) : null, part = ref.part ? new RegExp(ref.part, 'u') : null;
-      return (value, cxt) => {
+      const matcher = ref.match !== undefined ? now(ajv.compile(ref.match)) : null, part = ref.part !== undefined ? new RegExp(ref.part, 'u') : null;
+      return function (value, cxt) {
         const name = part ? part.exec(value)?.[1] : value;
-        return name !== undefined && resolves(ref, matcher, name, cxt);
+        return name !== undefined && resolves.call(this, ref, matcher, name, cxt);
       };
     },
   });
   ajv.addKeyword({
     keyword: 'x-placeholders', type: 'string', schemaType: 'object', metaSchema: META['x-placeholders'],
     compile(allowed) {
-      const config = allowed.config ? { pointer: '/contributes/configuration/properties' } : null, matcher = allowed.config ? ajv.compile(allowed.config) : null;
-      return (value, cxt) => [...value.matchAll(/\$\{([^}]*)\}/g)].every(([, place]) => {
-        if ((allowed.names ?? []).includes(place)) return true;
-        const setting = /^config:(.+)$/.exec(place)?.[1];
-        return !!(config && setting && resolves(config, matcher, setting, cxt));
-      });
+      const config = allowed.config !== undefined ? { pointer: '/contributes/configuration/properties' } : null, matcher = config && now(ajv.compile(allowed.config));
+      return function (value, cxt) {
+        return [...value.matchAll(/\$\{([^}]*)\}/g)].every(([, place]) => {
+          if ((allowed.names ?? []).includes(place)) return true;
+          const setting = /^config:(.+)$/.exec(place)?.[1];
+          return !!(config && setting && resolves.call(this, config, matcher, setting, cxt));
+        });
+      };
     },
   });
   ajv.addKeyword({
@@ -153,16 +163,14 @@ const validator = file => {
 };
 // The schema an extension point declares, compiled once by what it says, under an ID of its own beside these (whatever `$id`
 // it wrote), so that it builds on them as they build on one another (`common.json#/$defs/line40`): its validator, and the
-// schema as compiled, for what it says of a failing value. One whose validator answers later (`$async`) says nothing now.
+// schema as compiled, for what it says of a failing value. One that answers later (`$async`) is refused.
 const points = new Map();
 function declared(schema) {
   if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('须为对象');
   const text = JSON.stringify(schema);
   if (!points.has(text)) {
     const own = { ...schema, $id: `${BASE}point-${createHash('sha256').update(text).digest('hex').slice(0, 16)}.json` };
-    const validate = ajv.getSchema(own.$id) ?? ajv.compile(own);
-    if (validate.$async) throw new Error('不能是异步的（$async）');
-    points.set(text, { validate, schema: own });
+    points.set(text, { validate: now(ajv.getSchema(own.$id) ?? ajv.compile(own)), schema: own });
   }
   return points.get(text);
 }

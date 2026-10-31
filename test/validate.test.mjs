@@ -113,7 +113,9 @@ test('an extension point\'s schema is a file of its plugin\'s that compiles besi
   const dir = directory({ 'panels.json': JSON.stringify(panels), 'broken.json': '{', 'loose.json': JSON.stringify({ type: 'array', colour: 'red' }),
     'old.json': JSON.stringify({ $schema: 'http://json-schema.org/draft-07/schema#', type: 'array' }), 'panels.txt': '',
     'later.json': JSON.stringify({ $async: true, type: 'array' }), 'unpointed.json': JSON.stringify({ type: 'string', 'x-ref': {} }),
-    'unparsed.json': JSON.stringify({ type: 'array', 'x-unique-by': [{ part: '[' }] }) });
+    'unparsed.json': JSON.stringify({ type: 'array', 'x-unique-by': [{ part: '[' }] }),
+    'inner.json': JSON.stringify({ type: 'string', 'x-ref': { pointer: '/target', match: { $async: true, type: 'string' } } }),
+    'innerConfig.json': JSON.stringify({ type: 'string', 'x-placeholders': { config: { $async: true } } }) });
   const point = schema => ({ name: 'kit', contributes: { extensionPoints: { panels: { description: '面板', contributes: 'panels', title: '面板', schema } } } });
   assert.equal(manifestProblem(point('panels.json'), dir), null);
   assert.match(manifestProblem(point('broken.json'), dir), /^contributes\.extensionPoints\.panels\.schema：broken\.json 不是可用的 JSON Schema：/);
@@ -124,6 +126,7 @@ test('an extension point\'s schema is a file of its plugin\'s that compiles besi
   assert.match(manifestProblem(point('later.json'), dir), /later\.json 不是可用的 JSON Schema：不能是异步的（\$async）/);
   assert.match(manifestProblem(point('unpointed.json'), dir), /unpointed\.json 不是可用的 JSON Schema：keyword "x-ref" value is invalid at path "#": data must have required property 'pointer'/);
   assert.match(manifestProblem(point('unparsed.json'), dir), /unparsed\.json 不是可用的 JSON Schema：Invalid regular expression/);
+  for (const file of ['inner.json', 'innerConfig.json']) assert.match(manifestProblem(point(file), dir), /不是可用的 JSON Schema：不能是异步的（\$async）/, file);
   assert.match(manifestProblem(point('panels.txt'), dir), /^contributes\.extensionPoints\.panels\.schema：别的插件在这个键下写的东西的 JSON Schema/);
   // Only a point taking what others write has one.
   assert.equal(manifestProblem({ contributes: { extensionPoints: { accounts: { description: '账号', schema: 'panels.json' } } } }, dir),
@@ -137,9 +140,17 @@ test('an extension point\'s schema is a file of its plugin\'s that compiles besi
   // The ID it gives itself is not where it is kept: one naming a schema of these takes nothing of it.
   assert.equal(pointProblem({ ...panels, $id: 'https://coda.pub/schemas/plugin/v1/common.json' }, [{ id: 'quota', title: '额度' }], 'contributes.panels'), null);
   assert.equal(valueProblem('common.json#/$defs/id', 'kit', 'x'), null);
-  // The files a value names are the writing plugin's.
+  // The files a value names are the writing plugin's, also where a keyword's own schema names them.
   const own = { type: 'string', 'x-file': { type: 'file' } };
   assert.equal(pointProblem(own, 'panels.json', 'contributes.icon', dir), null);
   assert.equal(pointProblem(own, 'gone.json', 'contributes.icon', dir), 'contributes.icon：插件目录里没有 gone.json');
+  const named = match => ({ type: 'object', properties: { files: { type: 'object' }, icon: { description: '图标是 files 里的一个', type: 'string', 'x-ref': { pointer: '/files', match } } } });
+  assert.equal(pointProblem(named(own), { files: { light: 'panels.json' }, icon: 'light' }, 'contributes.icon', dir), null);
+  assert.equal(pointProblem(named(own), { files: { light: 'gone.json' }, icon: 'light' }, 'contributes.icon', dir), 'contributes.icon.icon：图标是 files 里的一个');
+  const most = { type: 'object', 'x-max-contains': { match: { not: own }, max: 0 } };
+  assert.equal(pointProblem(most, { light: 'panels.json' }, 'contributes.icon', dir), null);
+  assert.match(pointProblem(most, { light: 'gone.json' }, 'contributes.icon', dir), /^contributes\.icon：/);
+  // A keyword's schema of false takes nothing.
+  assert.equal(pointProblem(named(false), { files: { light: 'panels.json' }, icon: 'light' }, 'contributes.icon'), 'contributes.icon.icon：图标是 files 里的一个');
 });
 
