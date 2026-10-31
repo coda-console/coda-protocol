@@ -1,11 +1,11 @@
 // The checker against manifests of every kind of mistake, one at a time: each is said where it is, in what the schema says
-// there; and its five keywords, each as it means the same thing wherever it is written.
+// there; its five keywords, each as it means the same thing wherever it is written; and an extension point's own schema.
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { manifestProblem, SCHEMAS, TYPES, valueProblem } from '../validate.mjs';
+import { manifestProblem, pointProblem, SCHEMAS, TYPES, valueProblem } from '../validate.mjs';
 
 const dirs = [];
 after(() => { for (const dir of dirs) rmSync(dir, { recursive: true, force: true }); });
@@ -101,3 +101,75 @@ test('a part of a type, as a plugin gives it while it runs, is checked against t
     '插件给出的参数.required[0]：required 是本模式的参数名，不重复');
   assert.throws(() => valueProblem('nothing.json', {}, 'x'), /没有这个 schema/);
 });
+
+test('a server for Agents of another kind than one they start is told what a server is', () => {
+  assert.equal(manifestProblem({ contributes: { mcpServers: { docs: { type: 'http', url: 'https://docs.example' } } } }),
+    'contributes.mcpServers.docs 缺 command：一个服务器：由 Agent 在本机启动、经标准输入输出说话的程序（stdio），写 command 与 args；远程的（http、sse）现在不支持');
+});
+
+test('an extension point\'s schema is a file of its plugin\'s that compiles beside these; what another plugin writes for it is of it', () => {
+  const panels = { description: '面板的数组', type: 'array', 'x-unique-by': ['id'],
+    items: { type: 'object', properties: { id: { $ref: 'common.json#/$defs/name' }, title: { $ref: 'common.json#/$defs/line40' } }, required: ['id', 'title'], additionalProperties: false } };
+  const dir = directory({ 'panels.json': JSON.stringify(panels), 'broken.json': '{', 'loose.json': JSON.stringify({ type: 'array', colour: 'red' }),
+    'old.json': JSON.stringify({ $schema: 'http://json-schema.org/draft-07/schema#', type: 'array' }), 'panels.txt': '',
+    'later.json': JSON.stringify({ $async: true, type: 'array' }), 'unpointed.json': JSON.stringify({ type: 'string', 'x-ref': {} }),
+    'unparsed.json': JSON.stringify({ type: 'array', 'x-unique-by': [{ part: '[' }] }),
+    'inner.json': JSON.stringify({ type: 'string', 'x-ref': { pointer: '/target', match: { $async: true, type: 'string' } } }),
+    'innerConfig.json': JSON.stringify({ type: 'string', 'x-placeholders': { config: { $async: true } } }),
+    'anything.json': 'true', 'nothing.json': 'false', 'list.json': '[]' });
+  const point = schema => ({ name: 'kit', contributes: { extensionPoints: { panels: { description: '面板', contributes: 'panels', title: '面板', schema } } } });
+  assert.equal(manifestProblem(point('panels.json'), dir), null);
+  assert.match(manifestProblem(point('broken.json'), dir), /^contributes\.extensionPoints\.panels\.schema：broken\.json 不是可用的 JSON Schema：/);
+  assert.match(manifestProblem(point('loose.json'), dir), /loose\.json 不是可用的 JSON Schema：strict mode: unknown keyword: "colour"/);
+  assert.match(manifestProblem(point('old.json'), dir), /old\.json 不是可用的 JSON Schema：no schema with key or ref "http:\/\/json-schema\.org\/draft-07\/schema#"/);
+  assert.match(manifestProblem(point('gone.json'), dir), /插件目录里没有 gone\.json/);
+  // One that would answer later, or whose keywords are written wrong, is refused here, not where a value is checked by it.
+  assert.match(manifestProblem(point('later.json'), dir), /later\.json 不是可用的 JSON Schema：不能是异步的（\$async）/);
+  assert.match(manifestProblem(point('unpointed.json'), dir), /unpointed\.json 不是可用的 JSON Schema：keyword "x-ref" value is invalid at path "#": data must have required property 'pointer'/);
+  assert.match(manifestProblem(point('unparsed.json'), dir), /unparsed\.json 不是可用的 JSON Schema：Invalid regular expression/);
+  for (const file of ['inner.json', 'innerConfig.json']) assert.match(manifestProblem(point(file), dir), /不是可用的 JSON Schema：不能是异步的（\$async）/, file);
+  // A schema of true or false is one; what is neither an object nor those is none.
+  for (const file of ['anything.json', 'nothing.json']) assert.equal(manifestProblem(point(file), dir), null, file);
+  assert.match(manifestProblem(point('list.json'), dir), /list\.json 不是可用的 JSON Schema：schema is invalid/);
+  assert.equal(pointProblem(true, [{ any: 1 }], 'contributes.panels'), null);
+  assert.equal(pointProblem(false, [], 'contributes.panels'), 'contributes.panels：boolean schema is false');
+  assert.match(manifestProblem(point('panels.txt'), dir), /^contributes\.extensionPoints\.panels\.schema：别的插件在这个键下写的东西的 JSON Schema/);
+  // Only a point taking what others write has one.
+  assert.equal(manifestProblem({ contributes: { extensionPoints: { accounts: { description: '账号', schema: 'panels.json' } } } }, dir),
+    'contributes.extensionPoints.accounts：只有写了 contributes 的扩展点才写 title、commands 与 schema');
+
+  assert.equal(pointProblem(panels, [{ id: 'quota', title: '额度' }], 'contributes.panels'), null);
+  assert.equal(pointProblem(panels, {}, 'contributes.panels'), 'contributes.panels 须为数组：面板的数组');
+  assert.equal(pointProblem(panels, [{ id: 'quota' }], 'contributes.panels'), 'contributes.panels[0] 缺 title');
+  assert.equal(pointProblem(panels, [{ id: 'quota', title: ' ' }], 'contributes.panels'), 'contributes.panels[0].title：不超过 40 字的一行');
+  assert.equal(pointProblem(panels, [{ id: 'quota', title: '额度' }, { id: 'quota', title: '又一个' }], 'contributes.panels'), 'contributes.panels：id 不能重复：quota');
+  // The ID it gives itself is not where it is kept: one naming a schema of these takes nothing of it.
+  assert.equal(pointProblem({ ...panels, $id: 'https://coda.pub/schemas/plugin/v1/common.json' }, [{ id: 'quota', title: '额度' }], 'contributes.panels'), null);
+  assert.equal(valueProblem('common.json#/$defs/id', 'kit', 'x'), null);
+  // The files a value names are the writing plugin's, also where a keyword's own schema names them.
+  const own = { type: 'string', 'x-file': { type: 'file' } };
+  assert.equal(pointProblem(own, 'panels.json', 'contributes.icon', dir), null);
+  assert.equal(pointProblem(own, 'gone.json', 'contributes.icon', dir), 'contributes.icon：插件目录里没有 gone.json');
+  const named = match => ({ type: 'object', properties: { icon: { description: '图标是 files 里的一个', type: 'string', 'x-ref': { pointer: '/files', match } } } });
+  assert.equal(pointProblem(named(own), { files: { light: 'panels.json' }, icon: 'light' }, 'contributes.icon', dir), null);
+  assert.equal(pointProblem(named(own), { files: { light: 'gone.json' }, icon: 'light' }, 'contributes.icon', dir), 'contributes.icon.icon：图标是 files 里的一个');
+  const most = { type: 'object', 'x-max-contains': { match: { not: own }, max: 0 } };
+  assert.equal(pointProblem(most, { light: 'panels.json' }, 'contributes.icon', dir), null);
+  assert.match(pointProblem(most, { light: 'gone.json' }, 'contributes.icon', dir), /^contributes\.icon：/);
+  // A keyword's schema of false takes nothing, of an object's keys or an array's elements.
+  assert.equal(pointProblem(named(false), { files: { light: 'panels.json' }, icon: 'light' }, 'contributes.icon'), 'contributes.icon.icon：图标是 files 里的一个');
+  assert.equal(pointProblem(named(false), { files: ['light'], icon: 'light' }, 'contributes.icon'), 'contributes.icon.icon：图标是 files 里的一个');
+  assert.equal(pointProblem(named({ const: 'light' }), { files: ['light'], icon: 'light' }, 'contributes.icon'), null);
+  // A keyword's schema checks the value where it is in the whole: its pointers go from there, to the whole's root.
+  const chosen = { type: 'object', properties: { icon: { description: '图标是 files 里的一个', type: 'string',
+    'x-ref': { pointer: '/files', match: { properties: { theme: { 'x-ref': { pointer: '/themes' } }, near: { 'x-ref': { pointer: '2/spare' } } } } } } } };
+  const themed = (file, more = {}) => ({ themes: { dark: 1 }, files: { light: file, spare: { b: 1 } }, icon: 'light', ...more });
+  assert.equal(pointProblem(chosen, themed({ theme: 'dark', near: 'b' }), 'contributes.icon'), null);
+  assert.equal(pointProblem(chosen, themed({ theme: 'bad', themes: { dark: 1 } }), 'contributes.icon'), 'contributes.icon.icon：图标是 files 里的一个');
+  assert.equal(pointProblem(chosen, themed({ theme: 'bad', themes: { bad: 1 } }), 'contributes.icon'), 'contributes.icon.icon：图标是 files 里的一个');
+  assert.equal(pointProblem(chosen, themed({ near: 'c' }), 'contributes.icon'), 'contributes.icon.icon：图标是 files 里的一个');
+  const counted = { type: 'object', properties: { uses: { type: 'object', 'x-max-contains': { match: { properties: { on: { 'x-ref': { pointer: '/enabled' } } }, required: ['on'] }, max: 1 } } } };
+  assert.equal(pointProblem(counted, { enabled: { x: 1 }, uses: { a: { on: 'x' }, b: { on: 'y' } } }, 'contributes.uses'), null);
+  assert.match(pointProblem(counted, { enabled: { x: 1 }, uses: { a: { on: 'x' }, b: { on: 'x' } } }, 'contributes.uses'), /^contributes\.uses\.uses：/);
+});
+
