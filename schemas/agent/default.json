@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/default.json",
+  "type": "object",
+  "description": "_meta.coda 须为对象",
+  "properties": {
+    "default": {
+      "type": "boolean",
+      "description": "default 须为 true 或 false；true 表示交给 Agent 自己的默认"
+    }
+  }
+}

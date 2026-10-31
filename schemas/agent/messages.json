@@ -1,0 +1,40 @@
+{
+  "description": "Coda 使用的扩展方法与参数、答复 schema 的索引；本文件是数据表，不是 JSON Schema。",
+  "methods": {
+    "_coda/wait": {
+      "kind": "notification",
+      "direction": "agent-to-client",
+      "params": "wait.json"
+    },
+    "_coda/wait/stop": {
+      "kind": "request",
+      "direction": "client-to-agent",
+      "params": "wait-stop.json#/$defs/params",
+      "result": "wait-stop.json#/$defs/result"
+    },
+    "_coda/session/compact": {
+      "kind": "request",
+      "direction": "client-to-agent",
+      "params": "compact.json#/$defs/params",
+      "result": "compact.json#/$defs/result"
+    },
+    "_coda/remote/code": {
+      "kind": "request",
+      "direction": "agent-to-client",
+      "params": "remote-code.json#/$defs/params",
+      "result": "remote-code.json#/$defs/result"
+    },
+    "_coda/remote": {
+      "kind": "request",
+      "direction": "client-to-agent",
+      "params": "remote.json#/$defs/params",
+      "result": "remote.json#/$defs/result"
+    },
+    "_session/steering": {
+      "kind": "request",
+      "direction": "client-to-agent",
+      "params": "steering.json#/$defs/params",
+      "result": "steering.json#/$defs/result"
+    }
+  }
+}

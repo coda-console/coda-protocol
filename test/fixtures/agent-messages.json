@@ -1,0 +1,308 @@
+{
+  "sources": {
+    "coda": "ce11c5486735d0ed7ef97940733ff459b41148f9",
+    "coda-plugins": "6028fae5788dbbdb5ec24d26d2b542c481e29a86"
+  },
+  "note": "从 origin/main 测试收集；动态根 sessionId 固定为 s1。首次终态、陌生会话与终态后的更新形状仍合法，丢弃由状态规则决定。",
+  "cases": [
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "fixture-child",
+        "waitId": "nested",
+        "state": "waiting",
+        "title": "子 Agent 起的命令"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "between",
+        "state": "waiting",
+        "title": "轮次之间起的命令"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "later",
+        "kind": "timer",
+        "state": "waiting",
+        "title": "稍后"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "sub",
+        "kind": "subagent",
+        "state": "handling",
+        "childSessionId": "fixture-child",
+        "title": "检查",
+        "stoppable": true
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "late",
+        "state": "done"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "late-timer",
+        "kind": "timer",
+        "state": "done"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "someone-else",
+        "waitId": "x",
+        "state": "waiting"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "y",
+        "state": "sleeping"
+      },
+      "problem": "值.state：state 只能是 waiting、handling、done、failed、cancelled"
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+        "state": "waiting"
+      },
+      "problem": "值.waitId：waitId 须为不超过 200 字的文本"
+    },
+    {
+      "source": "coda:backend/test/agent-waits.test.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "w",
+        "state": "waiting",
+        "at": "not a time",
+        "kind": "timer"
+      },
+      "problem": "值.at：at 读不出时间"
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "w",
+        "state": "running"
+      },
+      "problem": "值.state：state 只能是 waiting、handling、done、failed、cancelled"
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "w1",
+        "kind": "subagent",
+        "state": "waiting"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "t1",
+        "kind": "timer",
+        "state": "waiting"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "w",
+        "kind": "task",
+        "state": "waiting"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "w",
+        "state": "done"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "params",
+      "ref": "_coda/wait",
+      "value": {
+        "sessionId": "s1",
+        "waitId": "w",
+        "state": "handling"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "params",
+      "ref": "_coda/remote/code",
+      "value": {
+        "sessionId": "someone-else"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/fixture-peer.mjs",
+      "part": "result",
+      "ref": "_coda/wait/stop",
+      "value": {},
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/fixture-peer.mjs",
+      "part": "result",
+      "ref": "_coda/session/compact",
+      "value": {
+        "compacted": true,
+        "before": 120000,
+        "after": 9000,
+        "extra": "left out"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/fixture-peer.mjs",
+      "part": "result",
+      "ref": "_session/steering",
+      "value": {
+        "outcome": "promptRequired",
+        "reason": "noRunningTurn"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/fixture-peer.mjs",
+      "part": "result",
+      "ref": "_session/steering",
+      "value": {
+        "outcome": "injected"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda:backend/test/fixture-peer.mjs",
+      "part": "result",
+      "ref": "_coda/remote",
+      "value": {
+        "released": true
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/plugins/claude/entry.test.mjs",
+      "part": "result",
+      "ref": "_coda/session/compact",
+      "value": {
+        "compacted": true,
+        "before": 180000,
+        "after": 9000
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/plugins/claude/entry.test.mjs",
+      "part": "result",
+      "ref": "_coda/session/compact",
+      "value": {
+        "compacted": false,
+        "reason": "压缩被停止"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/plugins/claude/entry.test.mjs",
+      "part": "result",
+      "ref": "_coda/session/compact",
+      "value": {
+        "compacted": false,
+        "reason": "压缩被取消"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "value",
+      "ref": "failure.json",
+      "value": {
+        "kind": "service_unavailable",
+        "input": "accepted",
+        "retryAfterMs": 300
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-plugins:test/fixtures/liar.mjs",
+      "part": "value",
+      "ref": "failure.json",
+      "value": {
+        "kind": "service_unavailable",
+        "input": "accepted",
+        "retryAfterMs": 60001
+      },
+      "problem": null
+    }
+  ]
+}

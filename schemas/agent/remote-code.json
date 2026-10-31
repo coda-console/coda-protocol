@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/remote-code.json",
+  "description": "Agent 请求本会话的绑定码；归属、有效期和一次性使用由 Coda 检查。",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "description": "params 须为对象",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "description": "缺 sessionId",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "sessionId"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "description": "绑定码答复须为对象",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "一次性的绑定码",
+          "minLength": 1
+        },
+        "expiresAt": {
+          "type": "string",
+          "description": "expiresAt 读不出时间",
+          "format": "date-parse"
+        },
+        "addresses": {
+          "type": "array",
+          "description": "addresses 须为入口地址的数组；不在 tailnet 时为空",
+          "items": {
+            "type": "string",
+            "description": "入口地址须为文本"
+          }
+        }
+      },
+      "required": [
+        "code",
+        "expiresAt",
+        "addresses"
+      ]
+    }
+  }
+}

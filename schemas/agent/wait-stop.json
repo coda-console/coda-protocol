@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/wait-stop.json",
+  "description": "停止一项活动；答复只表示收到，是否已停止由之后的活动报告确认。",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "description": "params 须为对象",
+      "properties": {
+        "sessionId": {
+          "$ref": "wait.json#/properties/sessionId"
+        },
+        "waitId": {
+          "$ref": "wait.json#/properties/waitId"
+        }
+      },
+      "required": [
+        "sessionId",
+        "waitId"
+      ]
+    },
+    "result": {
+      "type": "object",
+      "description": "Agent 回 {}；回复只表示收到",
+      "properties": {}
+    }
+  }
+}

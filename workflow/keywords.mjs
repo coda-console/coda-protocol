@@ -5,7 +5,7 @@ import { isAbsolute } from 'node:path';
 
 // The byte length of a JSON value, without recursion or serializing the whole object. Stop as soon as the budget is
 // exceeded. Only JSON values count: cycles, non-finite numbers and non-JSON objects cannot turn into a different value.
-function jsonFits(value, max) {
+export function jsonFits(value, max) {
   let bytes = 0;
   const active = new Set(), stack = [{ value }];
   while (stack.length && bytes <= max) {

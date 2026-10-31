@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/remote.json",
+  "description": "转交远端请求，method、params 与答复的业务含义由 Agent 定义；HTTP 入口的 256 KiB 限制不施加到 ACP 答复。",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "description": "请求须为 {method, params}",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "description": "缺 sessionId",
+          "minLength": 1
+        },
+        "method": {
+          "type": "string",
+          "description": "请求须为 {method, params}",
+          "minLength": 1,
+          "x-length": 200
+        },
+        "params": {
+          "type": "object",
+          "description": "请求须为 {method, params}",
+          "properties": {}
+        }
+      },
+      "required": [
+        "sessionId",
+        "method",
+        "params"
+      ]
+    },
+    "result": {
+      "description": "Agent 的回答原样作为 { result } 回给 Bot；可以是任意 JSON 值"
+    }
+  }
+}
