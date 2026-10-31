@@ -78,6 +78,9 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     [step('', '<coda:env name="A" value="${{ inputs.a }}" />'), /^say 的 coda:env A：value 不超过 20000 字；这里的表达式以「=」开头/],
     [step('', '<coda:output name="bad-name" />'), /^say 的 coda:output bad-name：名字不合法/],
     [workflow('<extensionElements><coda:input name="a" /><coda:input name="a" /></extensionElements>'), /^p：name 不能重复：a$/],
+    // A run keeps its inputs by name: a name an object has of itself is none it can keep.
+    ...['__proto__', 'constructor', 'toString'].map(name =>
+      [workflow(`<extensionElements><coda:input name="${name}" /></extensionElements>`), new RegExp(`^p 的 coda:input ${name}：name 不合法：.*不是 JavaScript 对象自带的名字`)]),
     [workflow('<extensionElements><coda:input name="n" type="number" default="many" /></extensionElements>'), /^p 的 coda:input n：default 须为数字/],
     // A number that reads as more than a number holds is none.
     ...['1e999', '-1e999', '9'.repeat(400)].map(huge =>
@@ -120,6 +123,7 @@ test('FEEL and durations are read as Coda reads them, and the schemas say the na
   assert.deepEqual(defs.Input.properties.type.enum, INPUT_TYPES);
   assert.deepEqual(defs.Input.properties.defaultFrom.enum, Object.keys(INPUT_SOURCES));
   assert.deepEqual(defs.Input.allOf[0].then.properties.type.enum, INPUT_SOURCES['session.branch'].types);
+  assert.deepEqual(defs.Input.properties.name.not.enum, Object.getOwnPropertyNames(Object.prototype).filter(name => /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)).sort());
   for (const name of Object.keys(defs).filter(name => !name.endsWith('.children') && name !== 'NestedChoice'))
     assert.ok(CODA_MODDLE.types.some(type => type.name === name), `values.json 的 ${name} 是 moddle.json 的一个类型`);
 });
