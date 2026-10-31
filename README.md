@@ -37,6 +37,12 @@ const { root } = await readWorkflow(source, 'deploy');
 
 `TYPES` 是 Coda 自己的类型（`contributes` 的键），`SCHEMAS` 是全部 schema（按文件名）。
 
+## 插件的后端通道
+
+插件清单可以声明 `"coda": { "channels": ["preview"] }`，限定只在预览版后端安装和更新。允许的通道是 `stable`（正式版）和 `preview`（预览版）；数组非空、不重复。不写 `channels` 的插件不限制通道。
+
+宿主按每台目标后端自己的安装记录判断，不按 Mac / iPhone 客户端版本判断；没有通道记录的后端不满足显式限制。商店和直接从 npm、Git 安装执行同一限制。这是 Coda 的安装约束，不改变 npm 包的公开性，也不能约束不认识该字段的旧宿主。
+
 ## 项目中的多选选项
 
 设置的 `items.anyOf` 选项可附带 `workflowKind`（`check`、`premerge`、`deploy`、`preview`、`release`）。全局设置显示全部选项；项目设置只显示该项目有的流程类别，未写此字段的选项始终显示。宿主负责按项目提供可选项，流程执行时仍需按运行的提交判断可用操作。
