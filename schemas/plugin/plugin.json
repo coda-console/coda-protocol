@@ -8,6 +8,14 @@
     "id": {"$ref": "common.json#/$defs/id", "description": "插件 ID：小写字母、数字和「-」，以字母开头，至多 40 个字符；不写就用 name"},
     "name": {"type": "string"},
     "categories": {"description": "分类：文本的数组，第一个是插件页里归的类", "type": "array", "items": {"type": "string"}},
+    "coda": {
+      "description": "Coda 宿主的安装要求；不写 channels 就不限制后端通道",
+      "type": "object",
+      "properties": {
+        "channels": {"description": "允许安装和更新的后端通道：stable（正式版）、preview（预览版）；以目标后端的安装记录为准，没有通道记录不满足限制", "type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["stable", "preview"]}}
+      },
+      "additionalProperties": false
+    },
     "main": {"description": "插件宿主运行的模块：插件目录里的 .js 或 .mjs 文件", "type": "string", "pattern": "\\.m?js$", "x-file": {"type": "file"}},
     "activationEvents": {"description": "宿主什么时候加载 main：onStartupFinished（后端一启动），不重复", "type": "array", "items": {"enum": ["onStartupFinished"]}, "uniqueItems": true},
     "extensionDependencies": {"description": "需要先装的插件的 ID，不重复", "type": "array", "items": {"$ref": "common.json#/$defs/id"}, "uniqueItems": true},

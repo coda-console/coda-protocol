@@ -8,6 +8,13 @@ import { after, test } from 'node:test';
 import { manifestProblem, pointProblem, SCHEMAS, TYPES, valueProblem } from '../validate.mjs';
 
 const dirs = [];
+test('plugin channel requirements are optional, nonempty and name distinct backend channels', () => {
+  for (const coda of [undefined, {}, { channels: ['preview'] }, { channels: ['stable'] }, { channels: ['stable', 'preview'] }])
+    assert.equal(manifestProblem({ name: 'kit', ...(coda === undefined ? {} : { coda }) }), null);
+  for (const coda of [null, [], 'preview', { channels: [] }, { channels: 'preview' }, { channels: ['beta'] }, { channels: ['preview', 'preview'] }, { channel: 'preview' }])
+    assert.match(manifestProblem({ name: 'kit', coda }), /coda/);
+});
+
 after(() => { for (const dir of dirs) rmSync(dir, { recursive: true, force: true }); });
 // A plugin's directory holding `files`.
 function directory(files = {}) {
