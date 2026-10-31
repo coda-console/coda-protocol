@@ -6,7 +6,7 @@ import { CODA_FIELDS, CODA_MODDLE, fieldProblem, fieldsProblem, readWorkflow, wo
 const esc = value => String(value).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('\r', '&#13;').replaceAll('\n', '&#10;');
 const fieldXML = field => `<coda:field ${Object.entries(field).map(([key, value]) => `${key}="${esc(typeof value === 'object' ? JSON.stringify(value) : value)}"`).join(' ')}/>`;
 const workflow = body => `<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:coda="${CODA_MODDLE.uri}" targetNamespace="test">
-<process id="p"><task id="in-queue"/><userTask id="ask"><extensionElements>${body}</extensionElements></userTask></process></definitions>`;
+<process id="p" isExecutable="true"><startEvent id="start"/><sequenceFlow id="start-ask" sourceRef="start" targetRef="ask"/><task id="in-queue"/><userTask id="ask" coda:assignee="user"><extensionElements>${body}</extensionElements></userTask></process></definitions>`;
 const text = { type: 'text', id: 'a', label: '名称' }, secret = { type: 'secret', id: 'a', label: '密码' };
 const view = { type: 'view', label: '查看', plugin: 'remote', view: 'desktop' };
 const missing = (raw, key) => Object.fromEntries(Object.entries(raw).filter(([name]) => name !== key));

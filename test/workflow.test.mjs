@@ -13,7 +13,7 @@ const workflow = (body, process = '') => `<?xml version="1.0" encoding="UTF-8"?>
 
 test('a workflow written in the dialect is read: Coda\'s attributes and elements, an action with the parameters it takes', async () => {
   const source = workflow(`
-    <startEvent id="start" />
+    <startEvent id="start" /><sequenceFlow id="a" sourceRef="start" targetRef="build"/><sequenceFlow id="b" sourceRef="build" targetRef="deploy"/><sequenceFlow id="c" sourceRef="deploy" targetRef="approve"/>
     <scriptTask id="build" coda:timeout="10" coda:checkout="false" coda:status="构建中" scriptFormat="bash">
       <extensionElements><coda:env name="HEAD" value="=inputs.head" /><coda:output name="version" /></extensionElements>
       <script>echo "version=1" >> "$GITHUB_OUTPUT"</script>
@@ -105,9 +105,9 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
   for (const [source, said] of cases) assert.match(await workflowProblem(source, 'w'), said, source);
   // Any number that is one: however large, small or precise.
   for (const number of ['-1.5e99', '1e100', '1e-100', `0.${'3'.repeat(40)}`, '1e308'])
-    assert.equal(await workflowProblem(workflow(`<extensionElements><coda:input name="n" type="number" default="${number}" /></extensionElements>`), 'w'), null, number);
+    assert.equal(await workflowProblem(workflow(`<extensionElements><coda:input name="n" type="number" default="${number}" /></extensionElements><startEvent id="start"/><userTask id="ask"/><sequenceFlow id="f" sourceRef="start" targetRef="ask"/>`), 'w'), null, number);
   // What it reads by name is the workflow's: a node's id with a dash reads as one name.
-  assert.equal(await workflowProblem(step(' coda:status="还在：{{in-queue.count}}"').replace('<scriptTask id="say"', '<task id="in-queue" /><scriptTask id="say"'), 'w'), null);
+  assert.equal(await workflowProblem(step(' coda:status="还在：{{in-queue.count}}"').replace('<scriptTask id="say"', '<startEvent id="start"/><sequenceFlow id="f" sourceRef="start" targetRef="say"/><task id="in-queue" /><scriptTask id="say"'), 'w'), null);
 });
 
 test('FEEL and durations are read as Coda reads them, and the schemas say the names the dialect has', () => {

@@ -1,0 +1,903 @@
+{
+  "revision": "af0edbdd0be22baf598713e17834eef09bcbf753",
+  "description": "从 Coda main 的解析测试收集的 assert.rejects(parseBpmn(...)) 输入；采集只运行测试的定义生成部分，跳过后端执行。pattern 是 Coda 原测试断言。",
+  "cases": [
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"one\"></sequenceFlow><scriptTask id=\"one\" name=\"one\" coda:runsOn=\"Linux\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"one\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/one：coda:runsOn/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"one\"></sequenceFlow><scriptTask id=\"one\" name=\"one\" coda:runsOn=\"\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"one\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/one：coda:runsOn/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"one\"></sequenceFlow><scriptTask id=\"one\" name=\"one\" coda:runsOn=\"linux,,x64\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"one\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/one：coda:runsOn/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"one\"></sequenceFlow><scriptTask id=\"one\" name=\"one\" coda:runsOn=\"a b\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"one\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/one：coda:runsOn/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "keyed",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" coda:key=\"\">\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "[object Object]"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "keyed",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" coda:key=\" \">\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "[object Object]"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "keyed",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" coda:key=\"=inputs.\">\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "[object Object]"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "keyed",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" coda:key=\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\">\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "[object Object]"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "names",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"__proto__\" type=\"branch\" defaultFrom=\"session.branch\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:input __proto__：name 不合法：.*不是 JavaScript 对象自带的名字/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "names",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"constructor\" type=\"branch\" defaultFrom=\"session.branch\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:input constructor：name 不合法：.*不是 JavaScript 对象自带的名字/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "names",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"toString\" type=\"branch\" defaultFrom=\"session.branch\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:input toString：name 不合法：.*不是 JavaScript 对象自带的名字/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "mixed",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"m\" name=\"pull_request.synchronize\" /><process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><startEvent id=\"pushed\"><messageEventDefinition messageRef=\"m\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"say\"></sequenceFlow><sequenceFlow id=\"f2\" sourceRef=\"pushed\" targetRef=\"say\"></sequenceFlow><scriptTask id=\"say\" name=\"say\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f3\" sourceRef=\"say\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/开始事件都要带消息/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "twice",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"m0\" name=\"workflow.dispatch\" /><message id=\"m1\" name=\"workflow.dispatch\" /><process id=\"flow\" name=\"事件\" isExecutable=\"true\">\n<startEvent id=\"s0\"><messageEventDefinition messageRef=\"m0\" /></startEvent><sequenceFlow id=\"f0\" sourceRef=\"s0\" targetRef=\"say\"></sequenceFlow><startEvent id=\"s1\"><messageEventDefinition messageRef=\"m1\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"s1\" targetRef=\"say\"></sequenceFlow>\n<scriptTask id=\"say\" name=\"say\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>echo started</script></scriptTask><sequenceFlow id=\"done\" sourceRef=\"say\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/<message name=\"workflow\\.dispatch\"> 写了不止一个/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"up\"></sequenceFlow><scriptTask id=\"up\" name=\"up\" coda:retry=\"0\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"up\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/up：coda:retry/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"up\"></sequenceFlow><scriptTask id=\"up\" name=\"up\" coda:retry=\"6\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"up\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/up：coda:retry/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"up\"></sequenceFlow><scriptTask id=\"up\" name=\"up\" coda:retry=\"two\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"up\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/up：coda:retry/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"up\"></sequenceFlow><scriptTask id=\"up\" name=\"up\" coda:retry=\"1.5\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"up\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/up：coda:retry/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"up\"></sequenceFlow><scriptTask id=\"up\" name=\"up\" coda:retry=\"\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"up\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/up：coda:retry/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"act\"></sequenceFlow><serviceTask id=\"act\" coda:action=\"workflow-kinds\" coda:retry=\"1\" /><sequenceFlow id=\"f2\" sourceRef=\"act\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:retry/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" coda:assignee=\"robot\" /><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:assignee/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"v\" type=\"list\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/type 只能是 string、boolean、number、branch/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"v\" defaultFrom=\"session.cwd\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/defaultFrom 只能是 session\\.branch/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"v\" type=\"boolean\" defaultFrom=\"session.branch\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/只用于 type 为 branch、string 的参数/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"v\" type=\"number\" default=\"many\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/default 须为数字/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"v\" label=\"长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长长\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/label 须为 1–40 个字/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><businessRuleTask id=\"ask\" /><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/BusinessRuleTask.*决策表/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><serviceTask id=\"step\" /><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/须写 coda:action/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"run\"></sequenceFlow><scriptTask id=\"run\" name=\"run\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"run\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/id 不能是 inputs、run、github、vars/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n<coda:env name=\"V\" value=\"${environment.variables.inputs.v}\"/>\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/表达式改用 FEEL/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n<coda:env name=\"V\" value=\"=inputs.v &gt;\"/>\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/不是有效的 FEEL 表达式/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"gate\"></sequenceFlow><exclusiveGateway id=\"gate\" default=\"f3\" /><sequenceFlow id=\"f2\" sourceRef=\"gate\" targetRef=\"end\"><conditionExpression xsi:type=\"tFormalExpression\">inputs.go</conditionExpression></sequenceFlow><sequenceFlow id=\"f3\" sourceRef=\"gate\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/条件须为「=」开头的 FEEL 表达式/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\" coda:checkout=\"no\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:checkout/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><serviceTask id=\"step\" coda:action=\"cold-store\" coda:checkout=\"false\" /><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:checkout/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"x\"></sequenceFlow><scriptTask id=\"x\"><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"x\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/scriptFormat=\"bash\"/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"x\"></sequenceFlow><scriptTask id=\"x\" scriptFormat=\"bash\" /><sequenceFlow id=\"f2\" sourceRef=\"x\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/需要 <script>/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"x\"></sequenceFlow><serviceTask id=\"x\"><extensionElements><coda:script>true</coda:script></extensionElements></serviceTask><sequenceFlow id=\"f2\" sourceRef=\"x\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/脚本步骤写成 <scriptTask scriptFormat=\"bash\">/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"g\"></sequenceFlow><exclusiveGateway id=\"g\" /><sequenceFlow id=\"f2\" sourceRef=\"g\" targetRef=\"a\"><conditionExpression xsi:type=\"tFormalExpression\">next(null, true)</conditionExpression></sequenceFlow><scriptTask id=\"a\" name=\"a\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f3\" sourceRef=\"a\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/表达式/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<definitions/>",
+      "pattern": "/BPMN|process/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/isExecutable/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"box\"></sequenceFlow><subProcess id=\"box\" ><standardLoopCharacteristics /><startEvent id=\"s\" /><sequenceFlow id=\"i1\" sourceRef=\"s\" targetRef=\"in\"></sequenceFlow><scriptTask id=\"in\" name=\"in\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"i2\" sourceRef=\"in\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess><sequenceFlow id=\"f2\" sourceRef=\"box\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/不支持标准循环/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"box\"></sequenceFlow><subProcess id=\"box\" ><multiInstanceLoopCharacteristics ></multiInstanceLoopCharacteristics><startEvent id=\"s\" /><sequenceFlow id=\"i1\" sourceRef=\"s\" targetRef=\"in\"></sequenceFlow><scriptTask id=\"in\" name=\"in\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"i2\" sourceRef=\"in\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess><sequenceFlow id=\"f2\" sourceRef=\"box\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/要写做几份/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"box\"></sequenceFlow><subProcess id=\"box\" ><multiInstanceLoopCharacteristics coda:inputCollection=\"=inputs.items\"></multiInstanceLoopCharacteristics><startEvent id=\"s\" /><sequenceFlow id=\"i1\" sourceRef=\"s\" targetRef=\"in\"></sequenceFlow><scriptTask id=\"in\" name=\"in\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"i2\" sourceRef=\"in\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess><sequenceFlow id=\"f2\" sourceRef=\"box\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/写 coda:inputElement/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"box\"></sequenceFlow><subProcess id=\"box\" ><multiInstanceLoopCharacteristics coda:inputCollection=\"inputs.items\" coda:inputElement=\"item\"></multiInstanceLoopCharacteristics><startEvent id=\"s\" /><sequenceFlow id=\"i1\" sourceRef=\"s\" targetRef=\"in\"></sequenceFlow><scriptTask id=\"in\" name=\"in\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"i2\" sourceRef=\"in\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess><sequenceFlow id=\"f2\" sourceRef=\"box\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:inputCollection 须为「=」开头/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"box\"></sequenceFlow><subProcess id=\"box\" ><multiInstanceLoopCharacteristics coda:inputCollection=\"=inputs.items\" coda:inputElement=\"in\"></multiInstanceLoopCharacteristics><startEvent id=\"s\" /><sequenceFlow id=\"i1\" sourceRef=\"s\" targetRef=\"in\"></sequenceFlow><scriptTask id=\"in\" name=\"in\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"i2\" sourceRef=\"in\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess><sequenceFlow id=\"f2\" sourceRef=\"box\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/coda:inputElement 不能是节点、消息的 id/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"box\"></sequenceFlow><subProcess id=\"box\" ><multiInstanceLoopCharacteristics ><loopCardinality>two</loopCardinality></multiInstanceLoopCharacteristics><startEvent id=\"s\" /><sequenceFlow id=\"i1\" sourceRef=\"s\" targetRef=\"in\"></sequenceFlow><scriptTask id=\"in\" name=\"in\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"i2\" sourceRef=\"in\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess><sequenceFlow id=\"f2\" sourceRef=\"box\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/loopCardinality 写非负整数/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"box\"></sequenceFlow><subProcess id=\"box\" ><multiInstanceLoopCharacteristics ><loopCardinality>2</loopCardinality><completionCondition>in.ok</completionCondition></multiInstanceLoopCharacteristics><startEvent id=\"s\" /><sequenceFlow id=\"i1\" sourceRef=\"s\" targetRef=\"in\"></sequenceFlow><scriptTask id=\"in\" name=\"in\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"i2\" sourceRef=\"in\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess><sequenceFlow id=\"f2\" sourceRef=\"box\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>",
+      "pattern": "/completionCondition 须为「=」开头/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><sendTask id=\"tell\" />\n</process>\n</definitions>",
+      "pattern": "/SendTask.*只收不发/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"m\" name=\"user.go\" /><process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><intermediateThrowEvent id=\"tell\"><messageEventDefinition messageRef=\"m\" /></intermediateThrowEvent>\n</process>\n</definitions>",
+      "pattern": "/只收不发/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><complexGateway id=\"g\" />\n</process>\n</definitions>",
+      "pattern": "/复杂网关/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<signal id=\"s\" name=\"go\" /><process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\"><signalEventDefinition signalRef=\"s\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask>\n</process>\n</definitions>",
+      "pattern": "/流程的开始事件只能是消息、计时器事件；运行里发生的信号/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><intermediateCatchEvent id=\"wait\"><signalEventDefinition /></intermediateCatchEvent>\n</process>\n</definitions>",
+      "pattern": "/信号须引用一个 <signal>/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"m\" name=\"user.go\" /><process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><boundaryEvent id=\"b\" attachedToRef=\"step\"><timerEventDefinition><timeDuration>PT1M</timeDuration></timerEventDefinition><messageEventDefinition messageRef=\"m\" /></boundaryEvent>\n</process>\n</definitions>",
+      "pattern": "/一个事件只带一个事件定义/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><intermediateCatchEvent id=\"wait\"><conditionalEventDefinition><condition xsi:type=\"tFormalExpression\">step.done</condition></conditionalEventDefinition></intermediateCatchEvent>\n</process>\n</definitions>",
+      "pattern": "/条件事件的条件须为「=」开头/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><intermediateThrowEvent id=\"jump\"><linkEventDefinition name=\"on\" /></intermediateThrowEvent>\n</process>\n</definitions>",
+      "pattern": "/没有名为「on」的连接捕获事件/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"m\" name=\"user.go\" /><process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><subProcess id=\"esp\" triggeredByEvent=\"true\"><startEvent id=\"es\"><messageEventDefinition messageRef=\"m\" /></startEvent></subProcess><sequenceFlow id=\"f3\" sourceRef=\"esp\" targetRef=\"end\"></sequenceFlow>\n</process>\n</definitions>",
+      "pattern": "/事件子流程不连顺序流/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><subProcess id=\"esp\" triggeredByEvent=\"true\"><startEvent id=\"es\"><timerEventDefinition><timeCycle>R/PT1M</timeCycle></timerEventDefinition></startEvent></subProcess>\n</process>\n</definitions>",
+      "pattern": "/timeDuration 或 timeDate/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><subProcess id=\"esp\" triggeredByEvent=\"true\"><startEvent id=\"es\" /></subProcess>\n</process>\n</definitions>",
+      "pattern": "/事件子流程的开始事件要带一个事件定义/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><subProcess id=\"esp\" triggeredByEvent=\"true\"><startEvent id=\"es\" isInterrupting=\"false\"><errorEventDefinition /></startEvent></subProcess>\n</process>\n</definitions>",
+      "pattern": "/总是打断/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"m\" name=\"user.go\" /><process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><subProcess id=\"box\"><startEvent id=\"bs\"><messageEventDefinition messageRef=\"m\" /></startEvent></subProcess>\n</process>\n</definitions>",
+      "pattern": "/子流程的开始事件不带事件定义/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"which\"></sequenceFlow><eventBasedGateway id=\"which\" /><sequenceFlow id=\"f2\" sourceRef=\"which\" targetRef=\"ask\"></sequenceFlow><sequenceFlow id=\"f3\" sourceRef=\"which\" targetRef=\"wait\"></sequenceFlow><userTask id=\"ask\" name=\"问\" ><documentation>问</documentation></userTask>\n    <intermediateCatchEvent id=\"wait\"><timerEventDefinition><timeDuration>PT1M</timeDuration></timerEventDefinition></intermediateCatchEvent>\n</process>\n</definitions>",
+      "pattern": "/事件网关的出口只接/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><subProcess id=\"box\"><startEvent id=\"bs\" /><sequenceFlow id=\"b1\" sourceRef=\"bs\" targetRef=\"be\"></sequenceFlow><endEvent id=\"be\"><cancelEventDefinition /></endEvent></subProcess>\n</process>\n</definitions>",
+      "pattern": "/取消结束事件只写在事务子流程/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><boundaryEvent id=\"undo\" attachedToRef=\"step\"><compensateEventDefinition /></boundaryEvent><sequenceFlow id=\"f3\" sourceRef=\"undo\" targetRef=\"end\"></sequenceFlow>\n</process>\n</definitions>",
+      "pattern": "/补偿边界事件不连顺序流/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><boundaryEvent id=\"undo\" attachedToRef=\"step\"><compensateEventDefinition /></boundaryEvent><scriptTask id=\"fix\" name=\"fix\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><association id=\"a\" sourceRef=\"undo\" targetRef=\"fix\" />\n</process>\n</definitions>",
+      "pattern": "/isForCompensation=\"true\"/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><scriptTask id=\"fix\" name=\"fix\" isForCompensation=\"true\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask>\n</process>\n</definitions>",
+      "pattern": "/没有补偿边界事件用关联引到/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><adHocSubProcess id=\"any\"><startEvent id=\"as\" /><scriptTask id=\"a1\" name=\"a1\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask></adHocSubProcess>\n</process>\n</definitions>",
+      "pattern": "/自由子流程里不写开始、结束事件/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /><adHocSubProcess id=\"any\"><completionCondition>a1.ok</completionCondition><scriptTask id=\"a1\" name=\"a1\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask></adHocSubProcess>\n</process>\n</definitions>",
+      "pattern": "/completionCondition 须为「=」开头/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"in\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow>\n    <userTask id=\"ask\" coda:assignee=\"user\"><extensionElements><coda:choice id=\"merge\" name=\"合并\">\n      <coda:option id=\"notify\" name=\"通知\" default=\"yes\" />\n      <coda:option id=\"deleteBranch\" name=\"删除分支\" default=\"true\" />\n      <coda:option id=\"release\" name=\"正式发布\" default=\"true\" coda:shown=\"=false\" />\n    </coda:choice></extensionElements></userTask><sequenceFlow id=\"out\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow>\n    <endEvent id=\"end\"><extensionElements><coda:output name=\"options\" value=\"=ask.options\" /></extensionElements></endEvent>\n</process>\n</definitions>",
+      "pattern": "/default 须为/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"target\" default=\"预览\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"in\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow>\n    <userTask id=\"ask\" ><extensionElements>\n      <coda:choice id=\"merge\" name=\"合并\" primary=\"true\"><coda:option id=\"deploy\" name=\"部署\" detail=\"目标 {{inputs.target}}\" /><coda:option id=\"notify\" name=\"通知 Agent\" /><coda:option id=\"deploy\" name=\"重复\" /></coda:choice><coda:choice id=\"close\" name=\"关闭\" />\n    </extensionElements></userTask><sequenceFlow id=\"out\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow>\n    <endEvent id=\"end\"><extensionElements><coda:output name=\"options\" value=\"=ask.options\" /></extensionElements></endEvent>\n</process>\n</definitions>",
+      "pattern": "/id 不能重复：deploy/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"target\" default=\"预览\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"in\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow>\n    <userTask id=\"ask\" ><extensionElements>\n      <coda:choice id=\"merge\" name=\"合并\" primary=\"true\"><coda:option id=\"deploy\" name=\"部署\" detail=\"目标 {{inputs.target}}\" /><coda:option id=\"notify\" name=\"通知 Agent\" /><coda:choice id=\"extra\" name=\"嵌套\" /></coda:choice><coda:choice id=\"close\" name=\"关闭\" />\n    </extensionElements></userTask><sequenceFlow id=\"out\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow>\n    <endEvent id=\"end\"><extensionElements><coda:output name=\"options\" value=\"=ask.options\" /></extensionElements></endEvent>\n</process>\n</definitions>",
+      "pattern": "/只能属于/"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "bad",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"kinds\"></sequenceFlow><serviceTask id=\"kinds\" coda:action=\"workflow-kinds\" /><sequenceFlow id=\"f2\" sourceRef=\"kinds\" targetRef=\"ask\"></sequenceFlow>\n    <userTask id=\"ask\" coda:assignee=\"user\"><extensionElements><coda:choice id=\"merge\" name=\"合并\" primary=\"true\"><coda:option id=\"deploy\" name=\"部署\" coda:shown=\"kinds.deploy\" /></coda:choice></extensionElements></userTask>\n    <sequenceFlow id=\"f3\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\"><extensionElements><coda:output name=\"options\" value=\"=ask.options\" />\n      <coda:output name=\"quiet\" value=\"=not(ask.options.release)\" /></extensionElements></endEvent>\n</process>\n</definitions>",
+      "pattern": "/coda:shown 须为表达式/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeDuration xsi:type=\"tFormalExpression\">PT6H</timeDuration></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/timeCycle/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R5/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/不限次数/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H/2027-01-01T00:00Z</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/不限次数、不写结束时间/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT1M</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/至少 5 分钟/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">every six hours</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/不是 ISO 8601 重复间隔/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">=inputs.every</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/只能读插件的设置/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><startEvent id=\"again\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT12H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"again-step\" sourceRef=\"again\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/只能有一个/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><startEvent id=\"plain\" /><sequenceFlow id=\"plain-step\" sourceRef=\"plain\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/都要带消息或计时器/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:scope=\"everywhere\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/coda:scope 只能是 project、machine/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"=inputs.who\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/只读插件设置的表达式/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"维护者\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/coda:reportTo 写会话引用（coda:\\/\\/threads\\/<会话 UUID>）/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportOn=\"always\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/就要写 coda:reportTo/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"=vars.probe.reportTo\" coda:reportOn=\"success\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/只能是 failure、always/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"asked\" coda:reportTo=\"=vars.probe.reportTo\"><messageEventDefinition messageRef=\"dispatch\" /></startEvent><sequenceFlow id=\"asked-step\" sourceRef=\"asked\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/只写在定时开始事件上/"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"asked\"><messageEventDefinition messageRef=\"dispatch\" /></startEvent><sequenceFlow id=\"asked-step\" sourceRef=\"asked\" targetRef=\"inner\" /><subProcess id=\"inner\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask></subProcess><sequenceFlow id=\"inner-end\" sourceRef=\"inner\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "pattern": "/只有最外层的开始事件能带计时器/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"opened\" name=\"session.opened\" /><message id=\"facts\" name=\"session.facts\" /><message id=\"go\" name=\"user.go\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"opened\" /></startEvent>\n    <sequenceFlow id=\"f0\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask>\n    <sequenceFlow id=\"f1\" sourceRef=\"a\" targetRef=\"w\" /><intermediateCatchEvent id=\"w\"><timerEventDefinition><timeDuration xsi:type=\"tFormalExpression\">PT1H</timeDuration></timerEventDefinition></intermediateCatchEvent><sequenceFlow id=\"f2\" sourceRef=\"w\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/聋状态：流程在 w 等待时收不到 session\\.facts/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"opened\" name=\"session.opened\" /><message id=\"facts\" name=\"session.facts\" /><message id=\"go\" name=\"user.go\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"opened\" /></startEvent>\n    <sequenceFlow id=\"f0\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask>\n    <sequenceFlow id=\"f1\" sourceRef=\"a\" targetRef=\"w\" /><receiveTask id=\"w\" messageRef=\"go\" /><sequenceFlow id=\"f2\" sourceRef=\"w\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/聋状态/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"opened\" name=\"session.opened\" /><message id=\"facts\" name=\"session.facts\" /><message id=\"go\" name=\"user.go\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"opened\" /></startEvent>\n    <sequenceFlow id=\"f0\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask>\n    <sequenceFlow id=\"f1\" sourceRef=\"a\" targetRef=\"w\" /><userTask id=\"w\" coda:assignee=\"user\" /><boundaryEvent id=\"b\" attachedToRef=\"w\"><messageEventDefinition messageRef=\"facts\" /></boundaryEvent>\n    <sequenceFlow id=\"f2\" sourceRef=\"w\" targetRef=\"e\" /><sequenceFlow id=\"f3\" sourceRef=\"b\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/跟随会话的流程（订阅 session\\.opened）不能有人工任务：w/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent>\n    <sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"reboot\"><extensionElements></extensionElements></serviceTask><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/coda:action 只能是/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent>\n    <sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"reclaim-worktree\"><extensionElements></extensionElements></serviceTask><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/coda:action 只能是/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent>\n    <sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"color\" value=\"red\" /></extensionElements></serviceTask><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/只接受参数/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent>\n    <sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:script>true</coda:script></extensionElements></serviceTask><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/不写脚本/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\" coda:agents=\"Claude\">\n  <startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" />\n  <serviceTask id=\"a\" coda:action=\"compact-session\" /><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/p：coda:agents 写 Agent 的 ID，用逗号或空格分隔/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\" coda:agents=\" , \">\n  <startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" />\n  <serviceTask id=\"a\" coda:action=\"compact-session\" /><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/coda:agents 写 Agent 的 ID.*不能为空/"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"pull_request.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\" coda:agents=\"kimi\">\n  <startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" />\n  <serviceTask id=\"a\" coda:action=\"compact-session\" /><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/coda:agents 只写在生命周期流程上/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"video\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/type 只能是 markdown、code、image、text、secret、link、view/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"text\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/须写 label/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"text\" label=\"A\" required=\"no\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/required 须为 true 或 false/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"text\" label=\"A\" maxLength=\"1.5\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/maxLength 须为 1–4000 的整数/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"text\" label=\"{{inputs.}}\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/FEEL/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"secret\" label=\"A\" default=\"x\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/secret 字段没有 default，可写 type、id、label、required、maxLength、multiline、masked、autofill、keep、host、dir/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"link\" label=\"L\" href=\"http://example.com\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/href 须为 https 网址/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"image\" src=\"shot.png\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/src 须为本机文件的绝对路径/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" view=\"desktop\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/须写 plugin/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"desktop\" presentation=\"unknown\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/presentation/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"Bad\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/视图 ID/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"Remote\" view=\"desktop\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/插件 ID/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"desktop\" args=\"[]\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/JSON 对象/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"desktop\" args=\"null\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/JSON 对象/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"desktop\" args=\"broken\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/JSON 对象/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"desktop\" args=\"{&quot;x&quot;:&quot;界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界&quot;}\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/4096 字节/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"secret\" label=\"A\" keep=\"use\" dir=\"d\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/dir 只用于 keep=\"session\" 或 keep=\"memory\" 的密文/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"secret\" label=\"A\" keep=\"file\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/keep 只能是 session/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"text\" label=\"A\" /><coda:field id=\"a\" type=\"secret\" label=\"B\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/字段 id 重复：a/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"a\" type=\"text\" label=\"A\" /><coda:choice id=\"go\" name=\"好\" fields=\"b\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/fields 里的 b 不是这个任务的输入字段/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"markdown\" text=\"0\" /><coda:field type=\"markdown\" text=\"1\" /><coda:field type=\"markdown\" text=\"2\" /><coda:field type=\"markdown\" text=\"3\" /><coda:field type=\"markdown\" text=\"4\" /><coda:field type=\"markdown\" text=\"5\" /><coda:field type=\"markdown\" text=\"6\" /><coda:field type=\"markdown\" text=\"7\" /><coda:field type=\"markdown\" text=\"8\" /><coda:field type=\"markdown\" text=\"9\" /><coda:field type=\"markdown\" text=\"10\" /><coda:field type=\"markdown\" text=\"11\" /><coda:field type=\"markdown\" text=\"12\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/最多 12 个字段/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:fields value=\"[]\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/coda:fields 须用 value 写一个/"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" ><extensionElements><coda:field id=\"a\" type=\"text\" label=\"A\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
+      "pattern": "/有输入字段（text、secret 或 coda:fields）的任务只交给用户/"
+    },
+    {
+      "source": "backend/test/workflows/workflows.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"s\" /><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"sub\" />\n<subProcess id=\"sub\" coda:expect=\"一小时\"><startEvent id=\"ss\" /><sequenceFlow id=\"f2\" sourceRef=\"ss\" targetRef=\"t\" />\n<scriptTask id=\"t\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f3\" sourceRef=\"t\" targetRef=\"se\" /><endEvent id=\"se\" /></subProcess>\n<sequenceFlow id=\"f4\" sourceRef=\"sub\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/coda:expect 须为 ISO 8601 时长/"
+    },
+    {
+      "source": "backend/test/workflows/workflows.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"s\" /><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"sub\" />\n<subProcess id=\"sub\"><startEvent id=\"ss\" /><sequenceFlow id=\"f2\" sourceRef=\"ss\" targetRef=\"t\" />\n<scriptTask id=\"t\" coda:expect=\"PT1H\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f3\" sourceRef=\"t\" targetRef=\"se\" /><endEvent id=\"se\" /></subProcess>\n<sequenceFlow id=\"f4\" sourceRef=\"sub\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>",
+      "pattern": "/coda:expect 只写在子流程上/"
+    }
+  ],
+  "accepted": [
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "placed",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"mac\"></sequenceFlow><scriptTask id=\"mac\" name=\"mac\" coda:runsOn=\"x64, linux,linux\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"mac\" targetRef=\"part\"></sequenceFlow>\n<subProcess id=\"part\" coda:runsOn=\"linux,x64\"><startEvent id=\"s\" /><sequenceFlow id=\"g1\" sourceRef=\"s\" targetRef=\"inner\"></sequenceFlow><scriptTask id=\"inner\" name=\"inner\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"g2\" sourceRef=\"inner\" targetRef=\"own\"></sequenceFlow><scriptTask id=\"own\" name=\"own\" coda:runsOn=\"darwin\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"g3\" sourceRef=\"own\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess>\n<sequenceFlow id=\"f3\" sourceRef=\"part\" targetRef=\"free\"></sequenceFlow><scriptTask id=\"free\" name=\"free\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f4\" sourceRef=\"free\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "keyed",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" coda:key=\"=inputs.id\">\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "names",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><extensionElements><coda:input name=\"base\" type=\"branch\" /></extensionElements>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "on-pr",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"m0\" name=\"pull_request.synchronize\" /><process id=\"flow\" name=\"事件\" isExecutable=\"true\">\n<startEvent id=\"s0\"><messageEventDefinition messageRef=\"m0\" /></startEvent><sequenceFlow id=\"f0\" sourceRef=\"s0\" targetRef=\"say\"></sequenceFlow>\n<scriptTask id=\"say\" name=\"say\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>echo started</script></scriptTask><sequenceFlow id=\"done\" sourceRef=\"say\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "both",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"m0\" name=\"workflow.dispatch\" /><message id=\"m1\" name=\"pull_request.opened\" /><process id=\"flow\" name=\"事件\" isExecutable=\"true\">\n<startEvent id=\"s0\"><messageEventDefinition messageRef=\"m0\" /></startEvent><sequenceFlow id=\"f0\" sourceRef=\"s0\" targetRef=\"say\"></sequenceFlow><startEvent id=\"s1\"><messageEventDefinition messageRef=\"m1\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"s1\" targetRef=\"say\"></sequenceFlow>\n<scriptTask id=\"say\" name=\"say\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>echo started</script></scriptTask><sequenceFlow id=\"done\" sourceRef=\"say\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "ok",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"up\"></sequenceFlow><scriptTask id=\"up\" name=\"up\" coda:retry=\"2\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"up\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "ok",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"up\"></sequenceFlow><scriptTask id=\"up\" name=\"up\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"up\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" >\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"box\"></sequenceFlow><subProcess id=\"box\" ><multiInstanceLoopCharacteristics isSequential=\"false\"><loopCardinality xsi:type=\"tFormalExpression\">2</loopCardinality></multiInstanceLoopCharacteristics><startEvent id=\"s\" /><sequenceFlow id=\"i1\" sourceRef=\"s\" targetRef=\"in\"></sequenceFlow><scriptTask id=\"in\" name=\"in\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"i2\" sourceRef=\"in\" targetRef=\"e\"></sequenceFlow><endEvent id=\"e\" /></subProcess><sequenceFlow id=\"f2\" sourceRef=\"box\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" ><laneSet id=\"ls\"><lane id=\"ops\" name=\"运维\"><flowNodeRef>step</flowNodeRef></lane><lane id=\"dev\"><flowNodeRef>start</flowNodeRef></lane></laneSet>\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\"  scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/bpmn-workflows.test.mjs",
+      "file": "x",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"BPMN 流程\" isExecutable=\"true\" coda:deploy=\"true\">\n<startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"step\"></sequenceFlow><scriptTask id=\"step\" name=\"step\" coda:group=\"host\" coda:timeout=\"30\" scriptFormat=\"bash\"><extensionElements>\n\n</extensionElements><script>true</script></scriptTask><sequenceFlow id=\"f2\" sourceRef=\"step\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" />\n</process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/2026-01-01T03:00:00+08:00/P1D</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><startEvent id=\"asked\"><messageEventDefinition messageRef=\"dispatch\" /></startEvent><sequenceFlow id=\"asked-step\" sourceRef=\"asked\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">=vars.probe.every</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"=vars.probe.reportTo\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"coda://threads/f63f8870-3592-4252-a5ac-c1b101995ab6\" coda:reportOn=\"always\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:scope=\"machine\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflow-schedules.test.mjs",
+      "file": "nightly",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:scope=\"project\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"opened\" name=\"session.opened\" /><message id=\"facts\" name=\"session.facts\" /><message id=\"go\" name=\"user.go\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"opened\" /></startEvent>\n    <sequenceFlow id=\"f0\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask>\n    <sequenceFlow id=\"f1\" sourceRef=\"a\" targetRef=\"w\" /><receiveTask id=\"w\" messageRef=\"facts\" /><boundaryEvent id=\"b\" attachedToRef=\"w\"><timerEventDefinition><timeDuration xsi:type=\"tFormalExpression\">PT1H</timeDuration></timerEventDefinition></boundaryEvent>\n    <sequenceFlow id=\"f2\" sourceRef=\"w\" targetRef=\"e\" /><sequenceFlow id=\"f3\" sourceRef=\"b\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"opened\" name=\"session.opened\" /><message id=\"facts\" name=\"session.facts\" /><message id=\"go\" name=\"user.go\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"opened\" /></startEvent>\n    <sequenceFlow id=\"f0\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask>\n    <sequenceFlow id=\"f1\" sourceRef=\"a\" targetRef=\"w\" /><subProcess id=\"w\"><startEvent id=\"ws\" /><sequenceFlow id=\"w1\" sourceRef=\"ws\" targetRef=\"wait\" />\n    <intermediateCatchEvent id=\"wait\"><timerEventDefinition><timeDuration xsi:type=\"tFormalExpression\">PT1H</timeDuration></timerEventDefinition></intermediateCatchEvent><sequenceFlow id=\"w2\" sourceRef=\"wait\" targetRef=\"we\" /><endEvent id=\"we\" /></subProcess>\n    <boundaryEvent id=\"b\" attachedToRef=\"w\"><messageEventDefinition messageRef=\"facts\" /></boundaryEvent>\n    <sequenceFlow id=\"f2\" sourceRef=\"w\" targetRef=\"e\" /><sequenceFlow id=\"f3\" sourceRef=\"b\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"opened\" name=\"session.opened\" /><message id=\"facts\" name=\"session.facts\" /><message id=\"go\" name=\"user.go\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"opened\" /></startEvent>\n    <sequenceFlow id=\"f0\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask>\n    <sequenceFlow id=\"f1\" sourceRef=\"a\" targetRef=\"w\" /><intermediateCatchEvent id=\"w\"><timerEventDefinition><timeDuration xsi:type=\"tFormalExpression\">PT1H</timeDuration></timerEventDefinition></intermediateCatchEvent><sequenceFlow id=\"f2\" sourceRef=\"w\" targetRef=\"e\" />\n    <subProcess id=\"heard\" triggeredByEvent=\"true\"><startEvent id=\"hs\" isInterrupting=\"false\"><messageEventDefinition messageRef=\"facts\" /></startEvent>\n    <sequenceFlow id=\"h1\" sourceRef=\"hs\" targetRef=\"he\" /><endEvent id=\"he\" /></subProcess><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"opened\" name=\"session.opened\" /><message id=\"facts\" name=\"session.facts\" /><message id=\"go\" name=\"workflow.dispatch\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"go\" /></startEvent>\n    <sequenceFlow id=\"f0\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask>\n    <sequenceFlow id=\"f1\" sourceRef=\"a\" targetRef=\"w\" /><intermediateCatchEvent id=\"w\"><timerEventDefinition><timeDuration xsi:type=\"tFormalExpression\">PT1H</timeDuration></timerEventDefinition></intermediateCatchEvent><sequenceFlow id=\"f2\" sourceRef=\"w\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\"><startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent>\n    <sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" ><startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent>\n    <sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" /><serviceTask id=\"a\" coda:action=\"publish-stage\"><extensionElements><coda:param name=\"stage\" value=\"idle\" /></extensionElements></serviceTask><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\" coda:agents=\"claude-sdk, kimi codex,kimi\">\n  <startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" />\n  <serviceTask id=\"a\" coda:action=\"compact-session\" /><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/lifecycle.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"t\">\n  <message id=\"m\" name=\"session.opened\" /><process id=\"p\" isExecutable=\"true\" coda:dispatch=\"false\" >\n  <startEvent id=\"s\"><messageEventDefinition messageRef=\"m\" /></startEvent><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"a\" />\n  <serviceTask id=\"a\" coda:action=\"compact-session\" /><sequenceFlow id=\"f2\" sourceRef=\"a\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field id=\"pin\" type=\"secret\" label=\"PIN\" autofill=\"otp\" /><coda:field type=\"image\" src=\"=x.y\" /><coda:field type=\"view\" label=\"远程桌面\" plugin=\"coda-remote\" view=\"desktop\" args=\"{&quot;mode&quot;:&quot;control&quot;}\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"desktop\" presentation=\"side\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"desktop\" presentation=\"inline\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" coda:assignee=\"user\"><extensionElements><coda:field type=\"view\" label=\"桌面\" plugin=\"remote\" view=\"desktop\" presentation=\"window\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/task-fields.test.mjs",
+      "file": "t",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"看\" ><extensionElements><coda:field type=\"markdown\" text=\"看一眼\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflows.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"s\" /><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"sub\" />\n<subProcess id=\"sub\" coda:expect=\"PT1H\"><startEvent id=\"ss\" /><sequenceFlow id=\"f2\" sourceRef=\"ss\" targetRef=\"t\" />\n<scriptTask id=\"t\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f3\" sourceRef=\"t\" targetRef=\"se\" /><endEvent id=\"se\" /></subProcess>\n<sequenceFlow id=\"f4\" sourceRef=\"sub\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflows.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"s\" /><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"sub\" />\n<subProcess id=\"sub\" coda:expect=\"=vars.review.reviewWithin\"><startEvent id=\"ss\" /><sequenceFlow id=\"f2\" sourceRef=\"ss\" targetRef=\"t\" />\n<scriptTask id=\"t\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f3\" sourceRef=\"t\" targetRef=\"se\" /><endEvent id=\"se\" /></subProcess>\n<sequenceFlow id=\"f4\" sourceRef=\"sub\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflows.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"s\" /><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"sub\" />\n<subProcess id=\"sub\"><startEvent id=\"ss\" /><sequenceFlow id=\"f2\" sourceRef=\"ss\" targetRef=\"t\" />\n<scriptTask id=\"t\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f3\" sourceRef=\"t\" targetRef=\"se\" /><endEvent id=\"se\" /></subProcess>\n<sequenceFlow id=\"f4\" sourceRef=\"sub\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflows.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"s\" /><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"sub\" />\n<subProcess id=\"sub\" coda:expect=\"PT15M\"><startEvent id=\"ss\" /><sequenceFlow id=\"f2\" sourceRef=\"ss\" targetRef=\"t\" />\n<scriptTask id=\"t\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f3\" sourceRef=\"t\" targetRef=\"se\" /><endEvent id=\"se\" /></subProcess>\n<sequenceFlow id=\"f4\" sourceRef=\"sub\" targetRef=\"look\" />\n\n<scriptTask id=\"look\" scriptFormat=\"bash\"><extensionElements><coda:output name=\"again\" /></extensionElements><script>true</script></scriptTask>\n<sequenceFlow id=\"f5\" sourceRef=\"look\" targetRef=\"again\" /><exclusiveGateway id=\"again\" default=\"f7\" />\n<sequenceFlow id=\"f6\" sourceRef=\"again\" targetRef=\"sub\"><conditionExpression xsi:type=\"tFormalExpression\">=look.again</conditionExpression></sequenceFlow>\n<sequenceFlow id=\"f7\" sourceRef=\"again\" targetRef=\"next\" />\n<scriptTask id=\"next\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f8\" sourceRef=\"next\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    },
+    {
+      "source": "backend/test/workflows/workflows.test.mjs",
+      "file": "p",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"s\" /><sequenceFlow id=\"f1\" sourceRef=\"s\" targetRef=\"sub\" />\n<subProcess id=\"sub\" coda:expect=\"PT15M\"><startEvent id=\"ss\" /><sequenceFlow id=\"f2\" sourceRef=\"ss\" targetRef=\"t\" />\n<scriptTask id=\"t\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f3\" sourceRef=\"t\" targetRef=\"se\" /><endEvent id=\"se\" /></subProcess>\n<sequenceFlow id=\"f4\" sourceRef=\"sub\" targetRef=\"pause\" />\n<intermediateCatchEvent id=\"pause\"><timerEventDefinition><timeDuration xsi:type=\"tFormalExpression\">PT3M</timeDuration></timerEventDefinition></intermediateCatchEvent><sequenceFlow id=\"f4b\" sourceRef=\"pause\" targetRef=\"look\" />\n<scriptTask id=\"look\" scriptFormat=\"bash\"><extensionElements><coda:output name=\"again\" /></extensionElements><script>true</script></scriptTask>\n<sequenceFlow id=\"f5\" sourceRef=\"look\" targetRef=\"again\" /><exclusiveGateway id=\"again\" default=\"f7\" />\n<sequenceFlow id=\"f6\" sourceRef=\"again\" targetRef=\"sub\"><conditionExpression xsi:type=\"tFormalExpression\">=look.again</conditionExpression></sequenceFlow>\n<sequenceFlow id=\"f7\" sourceRef=\"again\" targetRef=\"next\" />\n<scriptTask id=\"next\" scriptFormat=\"bash\"><script>true</script></scriptTask>\n<sequenceFlow id=\"f8\" sourceRef=\"next\" targetRef=\"e\" /><endEvent id=\"e\" /></process></definitions>"
+    }
+  ]
+}

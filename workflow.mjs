@@ -3,8 +3,8 @@
 // ask of Coda itself, each with the parameters it takes (actions.json); and the names workflows share (dialect.json):
 // their kinds, the events Coda sends, the error code of a failed step, the run's variables an expression reads by name,
 // the types a run's inputs take. Coda reads a workflow with them, and coda-plugins' contract check does where a plugin is
-// written. readWorkflow refuses what the dialect does not have and a value of it its schema does not take; how the
-// process itself is put together is still Coda's to check as it reads the workflow.
+// written. readWorkflow checks values and structure: structure.json describes local constraints and structure.mjs
+// checks BPMN topology, leaving only compilation to Coda.
 // What JSON Schema cannot say of a value it says with these keywords, besides the manifests' (validate.mjs):
 // - `x-feel`: true, or { names } — the value is FEEL: an expression when it starts with `=`, else text whose every
 //   `{{ … }}` holds one, each reading by name what the workflow has (its nodes and messages, the run's variables, a loop's
@@ -23,6 +23,8 @@ import actions from './workflow/actions.json' with { type: 'json' };
 import dialect from './workflow/dialect.json' with { type: 'json' };
 import fields from './workflow/fields.json' with { type: 'json' };
 import { valueKeywords } from './workflow/keywords.mjs';
+import { structureChecker } from './workflow/structure.mjs';
+export { CODA_STRUCTURE } from './workflow/structure.mjs';
 
 export const CODA_MODDLE = moddle;
 export const CODA_NAMESPACE = moddle.uri;
@@ -35,7 +37,7 @@ export const WORKFLOW_KINDS = Object.keys(dialect.kinds);
 export const DEPLOYING_KINDS = dialect.deploying;
 // The events Coda sends (dialect.json says what each is).
 export const CODA_EVENTS = Object.keys(dialect.events);
-export const SESSION_OPENED = 'session.opened', SESSION_FACTS = 'session.facts', DISPATCH_EVENT = 'workflow.dispatch', CANCEL_EVENT = 'workflow.cancel';
+export const { lifecycleStart: SESSION_OPENED, lifecycleFacts: SESSION_FACTS, dispatch: DISPATCH_EVENT, cancel: CANCEL_EVENT } = dialect.eventRoles;
 // A message the user sends from a run's page (`user.<what>`), while the run waits on it.
 export const USER_MESSAGE = new RegExp(dialect.userMessage);
 export const STEP_FAILED = dialect.stepFailed;
@@ -94,6 +96,7 @@ ajv.addKeyword({ keyword: 'x-duration', type: 'string', schemaType: 'boolean', c
 ajv.addKeyword({ keyword: 'x-number', type: 'string', schemaType: 'boolean', compile: spec => value => !spec || Number.isFinite(Number(value)) });
 ajv.addSchema(fields);
 ajv.addSchema(values);
+const structureProblem = structureChecker(ajv, { feelProblem, isExpression });
 const checks = new Map();
 // The validator of a definition of values.json, by its name; none for a type it says nothing of.
 const check = name => {
@@ -225,9 +228,11 @@ function valuesProblem(root) {
 // A workflow's definition (`file`, its name without `.bpmn`, for what is said) read with Coda's dialect: `{ root }`, the
 // parsed definitions, or `{ problem }`, what of it the dialect does not have — not BPMN, a coda: attribute or element it
 // does not know, an action it does not have or a parameter that action does not take — or a value of it its schema does
-// not take.
+// not take, or a structure the workflow cannot run with.
 export async function readWorkflow(source, file = 'workflow') {
   if (typeof source !== 'string' || source.length > SIZE_LIMIT) return { problem: `${file}.bpmn 过大` };
+  const old = OLD.exec(source);
+  if (old) return { problem: `${file}.bpmn 第 ${source.slice(0, old.index).split('\n').length} 行：${feelProblem(old[0])}` };
   let parsed;
   try { parsed = await new BpmnModdle({ coda: structuredClone(PARSER_DESCRIPTOR) }).fromXML(source); }
   catch (e) { return { problem: `${file}.bpmn 不是有效的 BPMN 2.0：${e.message}` }; }
@@ -244,7 +249,7 @@ export async function readWorkflow(source, file = 'workflow') {
     const given = (task.extensionElements?.values ?? []).filter(v => v.$type === 'coda:Param');
     if (given.some(p => !params.includes(p.name))) return { problem: `${task.id}：coda:action ${task.action} 只接受参数 ${params.join('、')}` };
   }
-  const problem = valuesProblem(root);
+  const problem = valuesProblem(root) ?? structureProblem(root, file);
   return problem ? { problem } : { root };
 }
 // What of a workflow's definition the dialect does not have, or null.
