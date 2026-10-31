@@ -1,0 +1,236 @@
+{
+  "name": "Coda",
+  "prefix": "coda",
+  "uri": "https://coda.pub/schema/bpmn/1.0",
+  "description": "Coda 的 BPMN 方言：挂在 BPMN 元素上的 coda: 属性，与写在 extensionElements 里的 coda: 元素（bpmn-moddle 的描述格式）。认不出的 coda: 内容一律不算数",
+  "xml": {"tagAlias": "lowerCase"},
+  "associations": [],
+  "types": [
+    {
+      "name": "ProcessProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:Process"],
+      "description": "流程本身：concurrency 并发、key 未结束运行的业务键、deploy 只跑默认分支的提交、title 运行在卡片上的名字（同 GitHub 的 run-name）、kind 种类（见 dialect.json 的 kinds）、dispatch 能否手动发起、inline Agent 用 workflow_run 发起时等它结束再回答、subagents 为 false 时会话 Agent 的原生子 Agent 不能发起、agents 生命周期流程跟随哪些 Agent 的会话（ID，逗号或空格分隔，不写是全部）",
+      "properties": [
+        {"name": "concurrency", "isAttr": true, "type": "String"},
+        {"name": "key", "isAttr": true, "type": "String"},
+        {"name": "deploy", "isAttr": true, "type": "Boolean"},
+        {"name": "title", "isAttr": true, "type": "String"},
+        {"name": "kind", "isAttr": true, "type": "String"},
+        {"name": "dispatch", "isAttr": true, "type": "Boolean"},
+        {"name": "inline", "isAttr": true, "type": "Boolean"},
+        {"name": "subagents", "isAttr": true, "type": "Boolean"},
+        {"name": "agents", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "ScriptTaskProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:ScriptTask", "bpmn:ServiceTask"],
+      "description": "脚本步骤（scriptTask）的：audience、group 运行时占的并发组、timeout 与 cancelTimeout（分钟）、workingDirectory、checkout、retry 网络失败时再跑几次（1 到 5）。写在 serviceTask 上只为提示脚本步骤要写成 scriptTask",
+      "properties": [
+        {"name": "audience", "isAttr": true, "type": "String"},
+        {"name": "group", "isAttr": true, "type": "String"},
+        {"name": "timeout", "isAttr": true, "type": "Real"},
+        {"name": "cancelTimeout", "isAttr": true, "type": "Real"},
+        {"name": "workingDirectory", "isAttr": true, "type": "String"},
+        {"name": "checkout", "isAttr": true, "type": "String"},
+        {"name": "retry", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "ServiceTaskProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:ServiceTask"],
+      "description": "Coda 自己做的一步：action 是 actions.json 里的一个动作，参数写成 coda:param",
+      "properties": [
+        {"name": "action", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "RunsOnProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:ScriptTask", "bpmn:SubProcess"],
+      "description": "脚本步骤要在哪里跑（同 GitHub 的 runs-on）：标签如 linux,x64，由这台机器上的项目绑到执行环境；写在子流程上对其中每个脚本步骤生效",
+      "properties": [
+        {"name": "runsOn", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "LoopProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:MultiInstanceLoopCharacteristics"],
+      "description": "多实例（同 Camunda 8）：inputCollection 是进入时读的集合表达式，每个元素一份，元素在每份里叫 inputElement",
+      "properties": [
+        {"name": "inputCollection", "isAttr": true, "type": "String"},
+        {"name": "inputElement", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "FlowNodeProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:FlowNode"],
+      "description": "status：走到这个节点时运行卡片上的一行；optional：阶段（最外层的子流程）进入了才显示；expect：子流程进入后预计多久（ISO 8601 时长或表达式），过了它，运行所在会话等的东西就到期",
+      "properties": [
+        {"name": "status", "isAttr": true, "type": "String"},
+        {"name": "optional", "isAttr": true, "type": "Boolean"},
+        {"name": "expect", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "StartEventProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:StartEvent"],
+      "description": "计时器开始事件的：reportTo 运行向哪个会话汇报（会话引用，或读本插件设置的 =vars.…），reportOn 是 failure（默认）或 always，scope 是 project（默认，每个有它的项目各跑）或 machine（整台机器一次）",
+      "properties": [
+        {"name": "reportTo", "isAttr": true, "type": "String"},
+        {"name": "reportOn", "isAttr": true, "type": "String"},
+        {"name": "scope", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "EndEventProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:EndEvent"],
+      "description": "notify：这一轮要结果回传（true、false 或表达式），只写在最外层的结束事件上，送达仍等整个运行结束",
+      "properties": [
+        {"name": "notify", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "UserTaskProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:UserTask"],
+      "description": "人工任务的：assignee 交给谁，handback 为 false 时卡片不给「交回 Agent」，三个按钮的名字",
+      "properties": [
+        {"name": "assignee", "isAttr": true, "type": "String"},
+        {"name": "handback", "isAttr": true, "type": "Boolean"},
+        {"name": "completeLabel", "isAttr": true, "type": "String"},
+        {"name": "rejectLabel", "isAttr": true, "type": "String"},
+        {"name": "noteLabel", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Input",
+      "superClass": ["Element"],
+      "description": "运行的一个输入：label 是表单上的名字，defaultFrom 是从会话发起、没给值时从哪里取（在 default 之前）",
+      "properties": [
+        {"name": "name", "isAttr": true, "type": "String"},
+        {"name": "type", "isAttr": true, "type": "String"},
+        {"name": "default", "isAttr": true, "type": "String"},
+        {"name": "required", "isAttr": true, "type": "Boolean"},
+        {"name": "description", "isAttr": true, "type": "String"},
+        {"name": "label", "isAttr": true, "type": "String"},
+        {"name": "defaultFrom", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Script",
+      "superClass": ["Element"],
+      "description": "脚本步骤的脚本正文",
+      "properties": [
+        {"name": "body", "isBody": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Inspect",
+      "superClass": ["Element"],
+      "description": "进节点执行记录的一个业务值：只记明确点名的，从不记整个环境",
+      "properties": [
+        {"name": "label", "isAttr": true, "type": "String"},
+        {"name": "type", "isAttr": true, "type": "String"},
+        {"name": "value", "isAttr": true, "type": "String"},
+        {"name": "phase", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Env",
+      "superClass": ["Element"],
+      "description": "步骤的一个环境变量：value 可以是表达式",
+      "properties": [
+        {"name": "name", "isAttr": true, "type": "String"},
+        {"name": "value", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Output",
+      "superClass": ["Element"],
+      "description": "步骤的一个输出（脚本写进 $GITHUB_OUTPUT，只写 name）；写在结束事件上是运行交给调用方的值（value，结束时读）",
+      "properties": [
+        {"name": "name", "isAttr": true, "type": "String"},
+        {"name": "value", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Choice",
+      "superClass": ["Element"],
+      "description": "人工任务给的一个答复：id 是任务输出里的 choice；可以套着更多答复，按住时给出；fields 是它检查并发送的输入（不写是全部，空串是没有）",
+      "properties": [
+        {"name": "id", "isAttr": true, "type": "String"},
+        {"name": "name", "isAttr": true, "type": "String"},
+        {"name": "detail", "isAttr": true, "type": "String"},
+        {"name": "primary", "isAttr": true, "type": "Boolean"},
+        {"name": "fields", "isAttr": true, "type": "String"},
+        {"name": "choices", "type": "Choice", "isMany": true},
+        {"name": "options", "type": "Option", "isMany": true}
+      ]
+    },
+    {
+      "name": "Option",
+      "superClass": ["Element"],
+      "description": "一个答复上可以独立勾选的附加项：default（是否默认勾上）与 shown（是否给出）都在任务打开时读；没给出的总是 false",
+      "properties": [
+        {"name": "id", "isAttr": true, "type": "String"},
+        {"name": "name", "isAttr": true, "type": "String"},
+        {"name": "detail", "isAttr": true, "type": "String"},
+        {"name": "shown", "isAttr": true, "type": "String"},
+        {"name": "default", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Field",
+      "superClass": ["Element"],
+      "description": "人工任务卡片上显示和询问的一个字段",
+      "properties": [
+        {"name": "type", "isAttr": true, "type": "String"},
+        {"name": "id", "isAttr": true, "type": "String"},
+        {"name": "label", "isAttr": true, "type": "String"},
+        {"name": "text", "isAttr": true, "type": "String"},
+        {"name": "src", "isAttr": true, "type": "String"},
+        {"name": "href", "isAttr": true, "type": "String"},
+        {"name": "plugin", "isAttr": true, "type": "String"},
+        {"name": "view", "isAttr": true, "type": "String"},
+        {"name": "args", "isAttr": true, "type": "String"},
+        {"name": "presentation", "isAttr": true, "type": "String"},
+        {"name": "default", "isAttr": true, "type": "String"},
+        {"name": "autofill", "isAttr": true, "type": "String"},
+        {"name": "keep", "isAttr": true, "type": "String"},
+        {"name": "host", "isAttr": true, "type": "String"},
+        {"name": "dir", "isAttr": true, "type": "String"},
+        {"name": "required", "isAttr": true, "type": "Boolean"},
+        {"name": "multiline", "isAttr": true, "type": "Boolean"},
+        {"name": "masked", "isAttr": true, "type": "Boolean"},
+        {"name": "maxLength", "isAttr": true, "type": "Integer"}
+      ]
+    },
+    {
+      "name": "Fields",
+      "superClass": ["Element"],
+      "description": "卡片上的一组字段：value 是装着它们的 JSON",
+      "properties": [
+        {"name": "value", "isAttr": true, "type": "String"},
+        {"name": "host", "isAttr": true, "type": "String"},
+        {"name": "dir", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Param",
+      "superClass": ["Element"],
+      "description": "coda:action 或 callActivity 的一个参数：value 可以是表达式",
+      "properties": [
+        {"name": "name", "isAttr": true, "type": "String"},
+        {"name": "value", "isAttr": true, "type": "String"}
+      ]
+    }
+  ]
+}

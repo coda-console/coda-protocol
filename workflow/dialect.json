@@ -1,0 +1,20 @@
+{
+  "description": "Coda 的 BPMN 方言里共用的名字：流程种类、Coda 自己发的事件、步骤失败时抛出的错误码、表达式按名字读的运行变量",
+  "kinds": {
+    "deploy": "部署后端与服务；只跑合并进默认分支的提交",
+    "preview": "发布预览版客户端；只跑合并进默认分支的提交",
+    "release": "发布正式版客户端；只跑合并进默认分支的提交",
+    "check": "检查一个提交，PR 的流程在评审前调用；任何提交都能跑",
+    "premerge": "合并前检查：批准合并后，在要合并的提交上只跑一次；任何提交都能跑"
+  },
+  "deploying": ["deploy", "preview", "release"],
+  "events": {
+    "session.opened": "会话开了：新建，或带着它的 Agent 从归档里拿回来。开始事件订阅它的流程跟随这个会话（生命周期流程）",
+    "session.facts": "只有 Coda 看得到的会话事实变了：轮次、等用户的请求、后台工作、它在等什么、定时唤醒、进程、归档。生命周期流程在哪里等都收得到",
+    "workflow.dispatch": "手动发起（workflow_run、客户端的按钮）：由事件启动的流程也订阅它，才能手动发起",
+    "workflow.cancel": "要它停下：在等它的运行被告知，走到自己的结束，以取消结束"
+  },
+  "userMessage": "^user\\.[a-z][a-z0-9-]{0,39}$",
+  "stepFailed": "STEP_FAILED",
+  "variables": ["inputs", "run", "github", "vars"]
+}
