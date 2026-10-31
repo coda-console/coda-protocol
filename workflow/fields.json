@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schema/bpmn/1.0/fields.json",
+  "title": "人工任务卡片的字段",
+  "description": "字段须为对象",
+  "type": "object",
+  "allOf": [
+    {"required": ["type"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view"},
+    {"properties": {"type": {"enum": ["markdown", "code", "image", "text", "secret", "link", "view"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view"}}},
+    {"if": {"properties": {"type": {"const": "markdown"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/markdown"}},
+    {"if": {"properties": {"type": {"const": "code"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/code"}},
+    {"if": {"properties": {"type": {"const": "image"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/image"}},
+    {"if": {"properties": {"type": {"const": "text"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/text"}},
+    {"if": {"properties": {"type": {"const": "secret"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/secret"}},
+    {"if": {"properties": {"type": {"const": "link"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/link"}},
+    {"if": {"properties": {"type": {"const": "view"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/view"}}
+  ],
+  "$defs": {
+    "markdown": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "markdown"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "text": {"x-deferred": {"type": "string", "pattern": "\\S", "x-length": 4000, "description": "text 须为1–4000 个字"}}
+          },
+          "additionalProperties": false
+        },
+        {"required": ["text"], "description": "须写 text"}
+      ]
+    },
+    "code": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "code"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "text": {"x-deferred": {"type": "string", "pattern": "\\S", "x-length": 16384, "description": "text 须为1–16384 个字"}}
+          },
+          "additionalProperties": false
+        },
+        {"required": ["text"], "description": "须写 text"}
+      ]
+    },
+    "image": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "image"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "src": {
+              "x-deferred": {
+                "allOf": [
+                  {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 4096, "description": "src 须为一行、1–4096 个字"},
+                  {"format": "absolute-path", "description": "src 须为本机文件的绝对路径"}
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {"required": ["src"], "description": "须写 src"}
+      ]
+    },
+    "text": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "text"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "required": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/required"},
+            "default": {},
+            "maxLength": {"type": "integer", "minimum": 1, "maximum": 4000, "description": "maxLength 须为 1–4000 的整数"},
+            "multiline": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/multiline"},
+            "autofill": {"enum": ["username", "otp"], "description": "autofill 只能是 username、otp"}
+          },
+          "additionalProperties": false
+        },
+        {"required": ["id"], "description": "须有 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）"},
+        {"required": ["label"], "description": "须写 label"},
+        {
+          "if": {"properties": {"multiline": {"const": true}}, "required": ["multiline"]},
+          "then": {
+            "if": {"required": ["maxLength"]},
+            "then": {"properties": {"default": {"x-deferred": {"type": "string", "pattern": "\\S", "x-length": {"property": "maxLength"}, "description": "default 须为1–{maxLength} 个字"}}}},
+            "else": {"properties": {"default": {"x-deferred": {"type": "string", "pattern": "\\S", "x-length": 4000, "description": "default 须为1–4000 个字"}}}}
+          },
+          "else": {
+            "if": {"required": ["maxLength"]},
+            "then": {
+              "properties": {
+                "default": {"x-deferred": {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": {"property": "maxLength"}, "description": "default 须为一行、1–{maxLength} 个字"}}
+              }
+            },
+            "else": {"properties": {"default": {"x-deferred": {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 200, "description": "default 须为一行、1–200 个字"}}}}
+          }
+        },
+        {
+          "if": {"required": ["multiline"], "properties": {"multiline": {"const": true}}},
+          "then": {"properties": {"maxLength": {"default": 4000}}},
+          "else": {"properties": {"maxLength": {"default": 200}}}
+        }
+      ]
+    },
+    "secret": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "secret"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "required": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/required"},
+            "maxLength": {"type": "integer", "minimum": 1, "maximum": 65536, "description": "maxLength 须为 1–65536 的整数", "default": 65536},
+            "multiline": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/multiline"},
+            "masked": {"type": "boolean", "description": "masked 须为 true 或 false"},
+            "autofill": {"enum": ["username", "password", "otp"], "description": "autofill 只能是 username、password、otp"},
+            "keep": {
+              "enum": ["session", "memory", "use"],
+              "description": "keep 只能是 session（写进会话的密钥目录，流程拿到路径）、memory（只在后端内存里，本会话的桌面动作可反复用，流程拿到句柄）或 use（只在后端内存里，流程拿到句柄，用一次）",
+              "default": "session"
+            },
+            "host": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/host"},
+            "dir": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/dir"}
+          },
+          "additionalProperties": false
+        },
+        {"required": ["id"], "description": "须有 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）"},
+        {"required": ["label"], "description": "须写 label"},
+        {
+          "if": {"required": ["keep"], "properties": {"keep": {"const": "use"}}},
+          "then": {"not": {"required": ["dir"]}, "description": "dir 只用于 keep=\"session\" 或 keep=\"memory\" 的密文"}
+        },
+        {
+          "if": {"required": ["autofill"], "properties": {"autofill": {"enum": ["username", "otp"]}}},
+          "then": {"properties": {"masked": {"default": false}}},
+          "else": {"properties": {"masked": {"default": true}}}
+        }
+      ]
+    },
+    "link": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "link"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "href": {
+              "x-deferred": {
+                "allOf": [
+                  {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 2000, "description": "href 须为一行、1–2000 个字"},
+                  {"format": "https-url", "description": "href 须为 https 网址"}
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {"required": ["label"], "description": "须写 label"},
+        {"required": ["href"], "description": "须写 href"}
+      ]
+    },
+    "view": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "view"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "plugin": {
+              "x-deferred": {
+                "allOf": [
+                  {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 64, "description": "plugin 须为一行、1–64 个字"},
+                  {"pattern": "^\\s*[a-z0-9][a-z0-9-]{0,63}\\s*$", "description": "plugin 须为插件 ID（小写字母、数字和「-」）"}
+                ]
+              }
+            },
+            "view": {
+              "x-deferred": {
+                "allOf": [
+                  {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 40, "description": "view 须为一行、1–40 个字"},
+                  {"pattern": "^\\s*[a-z][a-z0-9-]{0,39}\\s*$", "description": "view 须为插件声明的视图 ID（小写字母开头的小写字母、数字和「-」）"}
+                ]
+              }
+            },
+            "args": {"x-deferred": {"x-json": {"schema": {"type": "object", "description": "args 须为不超过 4096 字节的 JSON 对象"}, "maxBytes": 4096}, "description": "args 须为 JSON 对象"}},
+            "presentation": {"enum": ["window", "inline", "side"], "description": "presentation 只能是 window、inline 或 side"}
+          },
+          "additionalProperties": false
+        },
+        {"required": ["label"], "description": "须写 label"},
+        {"required": ["plugin"], "description": "须写 plugin"},
+        {"required": ["view"], "description": "须写 view"}
+      ]
+    },
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$", "description": "须有 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）"},
+    "label": {"x-deferred": {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 40, "description": "label 须为一行、1–40 个字"}},
+    "required": {"type": "boolean", "description": "required 须为 true 或 false", "default": true},
+    "multiline": {"type": "boolean", "description": "multiline 须为 true 或 false"},
+    "host": {
+      "x-deferred": {
+        "allOf": [
+          {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 253, "description": "host 须为一行、1–253 个字"},
+          {
+            "pattern": "^\\s*(?=[a-zA-Z0-9.-]{4,253}\\s*$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\s*$",
+            "description": "host 须为网站域名，如 signin.aws.amazon.com"
+          }
+        ]
+      }
+    },
+    "dir": {
+      "x-deferred": {
+        "allOf": [
+          {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 80, "description": "dir 须为一行、1–80 个字"},
+          {"pattern": "^\\s*[A-Za-z0-9][A-Za-z0-9._-]{0,79}\\s*$", "description": "dir 只能是字母、数字、点、下划线和连字符，以字母或数字开头，最长 80 个字符"}
+        ]
+      }
+    }
+  }
+}

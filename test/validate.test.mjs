@@ -196,3 +196,14 @@ test('multi-select options may require a declared workflow kind', () => {
   for (const kind of ['check', 'premerge', 'deploy', 'preview', 'release']) assert.equal(manifestProblem(spec(kind)), null);
   for (const kind of ['', 'unknown', true, ['deploy']]) assert.match(manifestProblem(spec(kind)), /workflowKind/);
 });
+
+test('x-ref can name an array item by its own property, with each separated name satisfying match', () => {
+  const schema = { type: 'object', properties: { uses: { type: 'string', description: '引用一个可用项',
+    'x-ref': { pointer: '/items', key: 'id', split: '[\\s,]+', match: { properties: { enabled: { const: true } }, required: ['enabled'] } } } } };
+  const items = [{ id: 'constructor', enabled: true }, { id: '__proto__', enabled: true }, { id: 'off', enabled: false }];
+  for (const uses of ['', ', ', 'constructor, __proto__', '__proto__ constructor constructor'])
+    assert.equal(pointProblem(schema, { items, uses }, '引用'), null);
+  for (const uses of ['missing', 'off', 'constructor, off', 'toString'])
+    assert.equal(pointProblem(schema, { items, uses }, '引用'), '引用.uses：引用一个可用项');
+  assert.equal(pointProblem(schema, { items: [Object.create({ id: 'inherited', enabled: true })], uses: 'inherited' }, '引用'), '引用.uses：引用一个可用项');
+});

@@ -7,6 +7,12 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 - **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是流程种类、Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。流程的结构对不对（元素与事件、连接、补偿、走不到的步骤、事件启动），现在仍由 Coda 读流程时检查。
 - **Agent 接入协议**（`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
 
+流程方言的 **卡片字段**由 `workflow/fields.json` 定义：七种字段各能写哪些属性、必填项、文字长度与单行限制、路径与网址、视图参数、输入框与密钥选项；`values.json` 的 `Field` 引用它，`Fields` 声明读出 JSON 字段列表的表达式，`UserTask.children` 限定最多 12 个静态字段、id 不重复，以及全部字段已知时答复的 `fields` 只能引用输入字段（含按住出现的答复）。
+
+定义和运行时共用这一份 schema。`x-deferred` 包住一个 schema：读定义时，文字先检查 FEEL，表达式或含 `{{ … }}` 的模板留到打开任务后查；运行时只按包住的 schema 严格检查，不再把结果当表达式。只有内容属性使用它，`type`、`id`、布尔值、枚举和 `maxLength` 不放宽。另有 `x-length`（沿用 Coda 的 UTF-16 长度，可用 `{ "property": "maxLength" }` 读取同一对象的上限）、`x-json`（解析 JSON 文字或检查 JSON 值，按序列化后的 UTF-8 字节数限制大小）；`absolute-path`、`https-url` 两个 format 按本机路径与 URL 解析器检查。已有的 `x-ref` 增加 `key`（按数组元素的属性引用）和 `split`（逐个检查分隔后的名字）。这些操作都不改写输入。
+
+`fieldProblem(field, where)` 检查一个已求值的字段；`fieldsProblem(fields, where)` 检查展开并应用 `host`/`dir` 后的数组，复用同一份字段 schema、数量和唯一性规则。两者合法时返回 `null`，否则返回「位置：说明」；`where` 是调用方给出的完整位置。schema 的 `default` 仅作标注：默认值填充、去空白、域名转小写、`args` 解析后的保留、表达式求值、动态字段展开和用户答复的处理仍由 Coda 完成。`coda:fields` 的 `host`/`dir` 是可能被覆盖或忽略的备用值，定义时只检查 FEEL，合并后才检查实际字段。动态字段展开后，答复的输入引用仍须由 Coda 检查。
+
 ## 用法
 
 ```sh
@@ -25,12 +31,16 @@ pointProblem(panelsSchema, manifest.contributes.panels, 'contributes.panels', 'p
 ```
 
 ```js
-import { workflowProblem, readWorkflow, CODA_MODDLE, CODA_ACTIONS } from '@coda-console/protocol/workflow';
+import { workflowProblem, readWorkflow, fieldProblem, fieldsProblem, CODA_FIELDS } from '@coda-console/protocol/workflow';
 
 // 一份流程（名字不带 .bpmn，用在说明里）：方言里都有就返回 null，否则是一句说明。
 const problem = await workflowProblem(readFileSync('.coda/workflows/deploy.bpmn', 'utf8'), 'deploy');
 // 要接着读它的：{ root } 是解析好的 definitions，或 { problem }。
 const { root } = await readWorkflow(source, 'deploy');
+// 任务打开、接受答复时检查已求值的字段，不填默认值，不执行表达式。
+fieldProblem({ type: 'text', id: 'name', label: '名称' }, 'ask 的字段 name');
+fieldsProblem(JSON.parse(fieldsJSON), 'ask');
+// CODA_FIELDS 是同一份 fields.json，也可从 @coda-console/protocol/workflow/fields.json 导入。
 ```
 
 扩展点的 schema 和这里的并列：可以 `$ref` 协议的 schema（`common.json#/$defs/line40`），可以用五个关键字；它自己写的 `$id` 不算数，指针只指它校验的那份值里的位置。
