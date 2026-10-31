@@ -45,29 +45,47 @@ function locate(pointer, { rootData, instancePath }) {
 const unescape = step => step.replace(/~1/g, '/').replace(/~0/g, '~');
 const fail = (validate, keyword, message, parentSchema) => { validate.errors = [{ keyword, message, params: {}, parentSchema }]; return false; };
 
+// What each keyword is written with, checked where a schema using it is compiled: one written wrong is refused there, as an
+// extension point's schema is (x-file `schema`), not where a value is checked against it.
+const SCHEMA_VALUE = { type: ['object', 'boolean'] };
+const META = {
+  'x-max-contains': { type: 'object', properties: { match: SCHEMA_VALUE, max: { type: 'integer', minimum: 0 } }, required: ['match', 'max'], additionalProperties: false },
+  'x-unique-by': { type: 'array', minItems: 1, items: { anyOf: [{ type: 'string' },
+    { type: 'object', properties: { part: { type: 'string' } }, required: ['part'], additionalProperties: false }] } },
+  'x-ref': { type: 'object', properties: { pointer: { type: 'string', pattern: '^(?:\\d+(?:/.*)?|/.*)$' }, part: { type: 'string' }, match: SCHEMA_VALUE },
+    required: ['pointer'], additionalProperties: false },
+  'x-placeholders': { type: 'object', properties: { names: { type: 'array', items: { type: 'string' } }, config: SCHEMA_VALUE }, additionalProperties: false },
+  'x-file': { type: 'object', properties: { type: { enum: ['file', 'directory'] }, under: { type: 'string' }, suffix: { type: 'string' }, contains: { type: 'string' },
+    maxBytes: { type: 'integer', minimum: 0 }, magic: { type: 'string' }, schema: { type: 'boolean' }, absent: { type: 'boolean' } },
+    required: ['type'], additionalProperties: false },
+};
+
 function keywords(ajv) {
   ajv.addKeyword({
-    keyword: 'x-max-contains', type: 'object', schemaType: 'object',
+    keyword: 'x-max-contains', type: 'object', schemaType: 'object', metaSchema: META['x-max-contains'],
     compile({ match, max }) {
       const matcher = ajv.compile(match);
       return value => Object.values(value).filter(each => matcher(each)).length <= max;
     },
   });
   ajv.addKeyword({
-    keyword: 'x-unique-by', type: 'array', schemaType: 'array', errors: true,
-    validate: function unique(keys, items, parentSchema) {
-      for (const key of keys) {
-        const part = typeof key === 'object' ? new RegExp(key.part, 'u') : null, seen = new Set();
-        for (const item of items) {
-          const value = part ? (typeof item === 'string' ? part.exec(item)?.[1] : undefined)
-            : item && typeof item === 'object' && Object.hasOwn(item, key) ? item[key] : undefined;
-          if (value === undefined) continue;
-          const said = JSON.stringify(value);
-          if (seen.has(said)) return fail(unique, 'x-unique-by', part ? `不能重复：${value}` : `${key} 不能重复：${value}`, parentSchema);
-          seen.add(said);
+    keyword: 'x-unique-by', type: 'array', schemaType: 'array', metaSchema: META['x-unique-by'], errors: true,
+    compile(keys, parentSchema) {
+      const by = keys.map(key => typeof key === 'object' ? { part: new RegExp(key.part, 'u') } : { key });
+      return function unique(items) {
+        for (const { key, part } of by) {
+          const seen = new Set();
+          for (const item of items) {
+            const value = part ? (typeof item === 'string' ? part.exec(item)?.[1] : undefined)
+              : item && typeof item === 'object' && Object.hasOwn(item, key) ? item[key] : undefined;
+            if (value === undefined) continue;
+            const said = JSON.stringify(value);
+            if (seen.has(said)) return fail(unique, 'x-unique-by', part ? `不能重复：${value}` : `${key} 不能重复：${value}`, parentSchema);
+            seen.add(said);
+          }
         }
-      }
-      return true;
+        return true;
+      };
     },
   });
   // A reference: whether `name` is a key (or element) of what `pointer` names, and that satisfies `match`.
@@ -78,7 +96,7 @@ function keywords(ajv) {
     return !matcher || matcher(at[name]);
   };
   ajv.addKeyword({
-    keyword: 'x-ref', type: 'string', schemaType: 'object',
+    keyword: 'x-ref', type: 'string', schemaType: 'object', metaSchema: META['x-ref'],
     compile(ref) {
       const matcher = ref.match ? ajv.compile(ref.match) : null, part = ref.part ? new RegExp(ref.part, 'u') : null;
       return (value, cxt) => {
@@ -88,7 +106,7 @@ function keywords(ajv) {
     },
   });
   ajv.addKeyword({
-    keyword: 'x-placeholders', type: 'string', schemaType: 'object',
+    keyword: 'x-placeholders', type: 'string', schemaType: 'object', metaSchema: META['x-placeholders'],
     compile(allowed) {
       const config = allowed.config ? { pointer: '/contributes/configuration/properties' } : null, matcher = allowed.config ? ajv.compile(allowed.config) : null;
       return (value, cxt) => [...value.matchAll(/\$\{([^}]*)\}/g)].every(([, place]) => {
@@ -99,7 +117,7 @@ function keywords(ajv) {
     },
   });
   ajv.addKeyword({
-    keyword: 'x-file', type: 'string', schemaType: 'object', errors: true,
+    keyword: 'x-file', type: 'string', schemaType: 'object', metaSchema: META['x-file'], errors: true,
     validate: function file(spec, value, parentSchema) {
       const dir = this?.dir;
       const path = normalize(spec.under ? join(spec.under, `${value}${spec.suffix ?? ''}`) : `${value}${spec.suffix ?? ''}`);
@@ -135,14 +153,16 @@ const validator = file => {
 };
 // The schema an extension point declares, compiled once by what it says, under an ID of its own beside these (whatever `$id`
 // it wrote), so that it builds on them as they build on one another (`common.json#/$defs/line40`): its validator, and the
-// schema as compiled, for what it says of a failing value.
+// schema as compiled, for what it says of a failing value. One whose validator answers later (`$async`) says nothing now.
 const points = new Map();
 function declared(schema) {
   if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('须为对象');
   const text = JSON.stringify(schema);
   if (!points.has(text)) {
     const own = { ...schema, $id: `${BASE}point-${createHash('sha256').update(text).digest('hex').slice(0, 16)}.json` };
-    points.set(text, { validate: ajv.getSchema(own.$id) ?? ajv.compile(own), schema: own });
+    const validate = ajv.getSchema(own.$id) ?? ajv.compile(own);
+    if (validate.$async) throw new Error('不能是异步的（$async）');
+    points.set(text, { validate, schema: own });
   }
   return points.get(text);
 }

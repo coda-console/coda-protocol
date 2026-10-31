@@ -111,13 +111,19 @@ test('an extension point\'s schema is a file of its plugin\'s that compiles besi
   const panels = { description: '面板的数组', type: 'array', 'x-unique-by': ['id'],
     items: { type: 'object', properties: { id: { $ref: 'common.json#/$defs/name' }, title: { $ref: 'common.json#/$defs/line40' } }, required: ['id', 'title'], additionalProperties: false } };
   const dir = directory({ 'panels.json': JSON.stringify(panels), 'broken.json': '{', 'loose.json': JSON.stringify({ type: 'array', colour: 'red' }),
-    'old.json': JSON.stringify({ $schema: 'http://json-schema.org/draft-07/schema#', type: 'array' }), 'panels.txt': '' });
+    'old.json': JSON.stringify({ $schema: 'http://json-schema.org/draft-07/schema#', type: 'array' }), 'panels.txt': '',
+    'later.json': JSON.stringify({ $async: true, type: 'array' }), 'unpointed.json': JSON.stringify({ type: 'string', 'x-ref': {} }),
+    'unparsed.json': JSON.stringify({ type: 'array', 'x-unique-by': [{ part: '[' }] }) });
   const point = schema => ({ name: 'kit', contributes: { extensionPoints: { panels: { description: '面板', contributes: 'panels', title: '面板', schema } } } });
   assert.equal(manifestProblem(point('panels.json'), dir), null);
   assert.match(manifestProblem(point('broken.json'), dir), /^contributes\.extensionPoints\.panels\.schema：broken\.json 不是可用的 JSON Schema：/);
   assert.match(manifestProblem(point('loose.json'), dir), /loose\.json 不是可用的 JSON Schema：strict mode: unknown keyword: "colour"/);
   assert.match(manifestProblem(point('old.json'), dir), /old\.json 不是可用的 JSON Schema：no schema with key or ref "http:\/\/json-schema\.org\/draft-07\/schema#"/);
   assert.match(manifestProblem(point('gone.json'), dir), /插件目录里没有 gone\.json/);
+  // One that would answer later, or whose keywords are written wrong, is refused here, not where a value is checked by it.
+  assert.match(manifestProblem(point('later.json'), dir), /later\.json 不是可用的 JSON Schema：不能是异步的（\$async）/);
+  assert.match(manifestProblem(point('unpointed.json'), dir), /unpointed\.json 不是可用的 JSON Schema：keyword "x-ref" value is invalid at path "#": data must have required property 'pointer'/);
+  assert.match(manifestProblem(point('unparsed.json'), dir), /unparsed\.json 不是可用的 JSON Schema：Invalid regular expression/);
   assert.match(manifestProblem(point('panels.txt'), dir), /^contributes\.extensionPoints\.panels\.schema：别的插件在这个键下写的东西的 JSON Schema/);
   // Only a point taking what others write has one.
   assert.equal(manifestProblem({ contributes: { extensionPoints: { accounts: { description: '账号', schema: 'panels.json' } } } }, dir),
