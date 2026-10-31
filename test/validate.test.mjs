@@ -173,3 +173,12 @@ test('an extension point\'s schema is a file of its plugin\'s that compiles besi
   assert.match(pointProblem(counted, { enabled: { x: 1 }, uses: { a: { on: 'x' }, b: { on: 'x' } } }, 'contributes.uses'), /^contributes\.uses\.uses：/);
 });
 
+
+// Project-scoped choices use workflow kinds, while personal choices need no condition.
+test('multi-select options may require a declared workflow kind', () => {
+  const spec = workflowKind => ({ contributes: { configuration: { properties: { 'kit.defaults': {
+    type: 'array', items: { anyOf: [{ const: 'notify' }, { const: 'deploy', workflowKind }] }, default: []
+  } } } } });
+  for (const kind of ['check', 'premerge', 'deploy', 'preview', 'release']) assert.equal(manifestProblem(spec(kind)), null);
+  for (const kind of ['', 'unknown', true, ['deploy']]) assert.match(manifestProblem(spec(kind)), /workflowKind/);
+});

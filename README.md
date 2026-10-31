@@ -27,6 +27,10 @@ pointProblem(panelsSchema, manifest.contributes.panels, 'contributes.panels', 'p
 
 `TYPES` 是 Coda 自己的类型（`contributes` 的键），`SCHEMAS` 是全部 schema（按文件名）。
 
+## 项目中的多选选项
+
+设置的 `items.anyOf` 选项可附带 `workflowKind`（`check`、`premerge`、`deploy`、`preview`、`release`）。全局设置显示全部选项；项目设置只显示该项目有的流程类别，未写此字段的选项始终显示。宿主负责按项目提供可选项，流程执行时仍需按运行的提交判断可用操作。
+
 ## 谁在用
 
 - **Coda**：读插件时用它校验清单，再整理成自己的结构；只另看插件身份（ID、设置名在 ID 之下），以及装到一台机器上才知道的（来源、已装插件的冲突）。
