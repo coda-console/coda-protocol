@@ -40,8 +40,8 @@ export async function readWorkflow(source, file = 'workflow') {
   const { rootElement: root, warnings } = parsed;
   if (warnings.length) return { problem: `${file}.bpmn 有无法识别的内容：${warnings.slice(0, 3).map(w => w.message).join('；')}` };
   for (const task of all(root).filter(e => e.$type === 'bpmn:ServiceTask' && e.action !== undefined)) {
+    if (!Object.hasOwn(CODA_ACTIONS, task.action)) return { problem: `${task.id}：coda:action 只能是 ${Object.keys(CODA_ACTIONS).join('、')}` };
     const params = CODA_ACTIONS[task.action];
-    if (!params) return { problem: `${task.id}：coda:action 只能是 ${Object.keys(CODA_ACTIONS).join('、')}` };
     const given = (task.extensionElements?.values ?? []).filter(v => v.$type === 'coda:Param');
     if (given.some(p => !params.includes(p.name))) return { problem: `${task.id}：coda:action ${task.action} 只接受参数 ${params.join('、')}` };
   }
