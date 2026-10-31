@@ -1,6 +1,6 @@
 {
   "name": "@coda-console/protocol",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Coda 的协议：插件清单的类型（JSON Schema）、通用校验器、流程方言与 Agent 接入协议",
   "type": "module",
   "license": "MIT",

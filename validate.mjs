@@ -10,7 +10,8 @@
 //   items having it, and so is `part`'s first group of each of its texts (a directory's last name), and `key` among the
 //   items and those in their `nested` arrays, at every depth (a task's answers and those offered on holding one);
 // - `x-max-contains`: { match, max } — of an object's values, at most `max` satisfy `match` (`maxContains` of an object);
-// - `x-ref`: { pointer, part?, match? } — the value (or `part`'s first group of it) names a key of the object, or an element
+// - `x-ref`: { pointer, part?, key?, split?, match? } — the value (or `part`'s first group of it), or each nonempty token
+//   separated by `split`, names a key of the object, or an element (with `key`, that property of an element)
 //   of the array, at `pointer` in the manifest: absolute (`/contributes/configuration/properties`), or relative to the value
 //   (`2/properties`: two levels up, then down); what it names satisfies `match` when that is given;
 // - `x-placeholders`: { names?, config? } — every `${…}` in the text is one of `names`, or `config:<setting>` naming one of
@@ -56,7 +57,7 @@ const META = {
   'x-unique-by': { type: 'array', minItems: 1, items: { anyOf: [{ type: 'string' },
     { type: 'object', properties: { part: { type: 'string' } }, required: ['part'], additionalProperties: false },
     { type: 'object', properties: { key: { type: 'string' }, nested: { type: 'string' } }, required: ['key', 'nested'], additionalProperties: false }] } },
-  'x-ref': { type: 'object', properties: { pointer: { type: 'string', pattern: '^(?:\\d+(?:/.*)?|/.*)$' }, part: { type: 'string' }, match: SCHEMA_VALUE },
+  'x-ref': { type: 'object', properties: { pointer: { type: 'string', pattern: '^(?:\\d+(?:/.*)?|/.*)$' }, part: { type: 'string' }, key: { type: 'string' }, split: { type: 'string' }, match: SCHEMA_VALUE },
     required: ['pointer'], additionalProperties: false },
   'x-placeholders': { type: 'object', properties: { names: { type: 'array', items: { type: 'string' } }, config: SCHEMA_VALUE }, additionalProperties: false },
   'x-file': { type: 'object', properties: { type: { enum: ['file', 'directory'] }, under: { type: 'string' }, suffix: { type: 'string' }, contains: { type: 'string' },
@@ -124,16 +125,24 @@ function keywords(ajv) {
   // A reference: whether `name` is a key (or element) of what `pointer` names, and that satisfies `match`.
   function resolves(self, ref, matches, name, cxt) {
     const { at, path } = locate(ref.pointer, cxt);
-    const key = Array.isArray(at) ? at.indexOf(name) : at !== null && typeof at === 'object' && Object.hasOwn(at, name) ? name : -1;
+    const key = Array.isArray(at) ? ref.key === undefined ? at.indexOf(name)
+      : at.findIndex(item => item !== null && typeof item === 'object' && Object.hasOwn(item, ref.key) && item[ref.key] === name)
+      : at !== null && typeof at === 'object' && Object.hasOwn(at, name) ? name : -1;
     return key !== -1 && (!matches || matches(self, at[key], `${path}/${escape(key)}`, cxt));
   }
   ajv.addKeyword({
-    keyword: 'x-ref', type: 'string', schemaType: 'object', metaSchema: META['x-ref'],
-    compile(ref) {
+    keyword: 'x-ref', type: 'string', schemaType: 'object', metaSchema: META['x-ref'], errors: true,
+    compile(ref, parentSchema) {
       const matches = ref.match !== undefined ? inner(ajv, ref.match) : null, part = ref.part !== undefined ? new RegExp(ref.part, 'u') : null;
-      return function (value, cxt) {
-        const name = part ? part.exec(value)?.[1] : value;
-        return name !== undefined && resolves(this, ref, matches, name, cxt);
+      const split = ref.split === undefined ? null : new RegExp(ref.split, 'u');
+      return function reference(value, cxt) {
+        for (const token of split ? value.split(split).filter(Boolean) : [value]) {
+          const name = part ? part.exec(token)?.[1] : token;
+          if (name !== undefined && resolves(this, ref, matches, name, cxt)) continue;
+          reference.errors = [{ keyword: 'x-ref', params: { value: token }, parentSchema, message: '引用不存在或类型不符' }];
+          return false;
+        }
+        return true;
       };
     },
   });

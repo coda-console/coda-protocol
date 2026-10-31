@@ -171,10 +171,77 @@
     "UserTask.children": {
       "type": "object",
       "properties": {
-        "choice": {"type": "array", "maxItems": 6, "x-unique-by": [{"key": "id", "nested": "choices"}],
-          "contains": {"type": "object", "properties": {"primary": {"const": true}}, "required": ["primary"]}, "minContains": 0, "maxContains": 1,
-          "description": "最多 6 个 coda:choice，最多一个主按钮；所有答复的 id（包括按住出现的）不重复"}
-      }
+        "choice": {
+          "type": "array",
+          "maxItems": 6,
+          "x-unique-by": [{"key": "id", "nested": "choices"}],
+          "contains": {"type": "object", "properties": {"primary": {"const": true}}, "required": ["primary"]},
+          "minContains": 0,
+          "maxContains": 1,
+          "description": "最多 6 个 coda:choice，最多一个主按钮；所有答复的 id（包括按住出现的）不重复"
+        },
+        "field": {"type": "array", "x-unique-by": ["id"], "description": "coda:fields 须为字段的 JSON 数组", "allOf": [{"maxItems": 12, "description": "最多 12 个字段"}]}
+      },
+      "allOf": [
+        {
+          "if": {"not": {"properties": {"fields": {"minItems": 1}}, "required": ["fields"]}},
+          "then": {
+            "properties": {
+              "choice": {
+                "items": {
+                  "allOf": [
+                    {
+                      "properties": {
+                        "fields": {
+                          "type": "string",
+                          "x-ref": {
+                            "pointer": "/field",
+                            "key": "id",
+                            "split": "[\\s,]+",
+                            "match": {"type": "object", "required": ["type"], "properties": {"type": {"enum": ["text", "secret"]}}}
+                          },
+                          "description": "fields 里的 {value} 不是这个任务的输入字段"
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "choices": {
+                          "items": {
+                            "properties": {
+                              "fields": {
+                                "type": "string",
+                                "x-ref": {
+                                  "pointer": "/field",
+                                  "key": "id",
+                                  "split": "[\\s,]+",
+                                  "match": {"type": "object", "required": ["type"], "properties": {"type": {"enum": ["text", "secret"]}}}
+                                },
+                                "description": "fields 里的 {value} 不是这个任务的输入字段"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Field": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json"},
+    "Fields": {
+      "type": "object",
+      "properties": {
+        "value": {"type": "string", "pattern": "^\\s*=", "x-feel": true, "description": "coda:fields 须用 value 写一个「=」开头的表达式（字段的列表）"},
+        "host": {"type": "string", "x-feel": true, "description": "host 是展开后 secret 字段未另写 host 时的备用值"},
+        "dir": {"type": "string", "x-feel": true, "description": "dir 是展开后非 keep=\"use\" 的 secret 字段未另写 dir 时的备用值"}
+      },
+      "required": ["value"],
+      "description": "coda:fields 须用 value 写一个「=」开头的表达式（字段的列表）"
     }
   }
 }
