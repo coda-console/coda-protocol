@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schema/bpmn/1.0/values.json",
   "title": "流程里每个 coda: 值能写什么",
-  "description": "$defs 按 moddle.json 的类型名，各是那个类型的属性（和它套着的 coda: 元素）组成的对象的 schema；「<BPMN 类型>.children」是一个元素的 extensionElements 里各种 coda: 元素按名字成组的 schema。x-feel：值是 FEEL（「=」开头是一个表达式，否则文字里每个 {{ … }} 是一个），按这份流程里的名字读得通；x-duration：ISO 8601 时长，不为负",
+  "description": "$defs 按 moddle.json 的类型名，各是那个类型的属性（和它套着的 coda: 元素）组成的对象的 schema；「<BPMN 类型>.children」是一个元素的 extensionElements 里各种 coda: 元素按名字成组的 schema。x-feel：值是 FEEL（「=」开头是一个表达式，否则文字里每个 {{ … }} 是一个），按这份流程里的名字读得通；x-duration：ISO 8601 时长，不为负；x-number：文字换算成数字是个有限的数",
   "$defs": {
     "ProcessProperties": {
       "type": "object",
@@ -90,7 +90,7 @@
       "allOf": [
         {"if": {"required": ["defaultFrom"]}, "then": {"properties": {"type": {"enum": ["branch", "string"], "description": "defaultFrom=\"session.branch\" 只用于 type 为 branch、string 的参数"}}}},
         {"if": {"required": ["type"], "properties": {"type": {"const": "number"}}},
-          "then": {"properties": {"default": {"pattern": "^\\s*[-+]?(?:\\d{1,30}(?:\\.\\d{0,30})?|\\.\\d{1,30})(?:[eE][-+]?\\d{1,2})?\\s*$", "description": "default 须为数字（至多 30 位，指数至多两位：换算出来是个有限的数）"}}}}
+          "then": {"properties": {"default": {"pattern": "^\\s*[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$", "x-number": true, "description": "default 须为数字"}}}}
       ]
     },
     "Env": {

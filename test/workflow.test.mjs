@@ -100,7 +100,9 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     [workflow('<task id="each"><multiInstanceLoopCharacteristics coda:inputCollection="=inputs.items" /></task>'), /^each 需要 coda:inputElement：写 coda:inputElement/],
   ];
   for (const [source, said] of cases) assert.match(await workflowProblem(source, 'w'), said, source);
-  assert.equal(await workflowProblem(workflow('<extensionElements><coda:input name="n" type="number" default="-1.5e99" /></extensionElements>'), 'w'), null);
+  // Any number that is one: however large, small or precise.
+  for (const number of ['-1.5e99', '1e100', '1e-100', `0.${'3'.repeat(40)}`, '1e308'])
+    assert.equal(await workflowProblem(workflow(`<extensionElements><coda:input name="n" type="number" default="${number}" /></extensionElements>`), 'w'), null, number);
   // What it reads by name is the workflow's: a node's id with a dash reads as one name.
   assert.equal(await workflowProblem(step(' coda:status="还在：{{in-queue.count}}"').replace('<scriptTask id="say"', '<task id="in-queue" /><scriptTask id="say"'), 'w'), null);
 });

@@ -5,11 +5,12 @@
 // the types a run's inputs take. Coda reads a workflow with them, and coda-plugins' contract check does where a plugin is
 // written. readWorkflow refuses what the dialect does not have and a value of it its schema does not take; how the
 // process itself is put together is still Coda's to check as it reads the workflow.
-// What JSON Schema cannot say of a value it says with two keywords of its own, besides the manifests' (validate.mjs):
+// What JSON Schema cannot say of a value it says with three keywords of its own, besides the manifests' (validate.mjs):
 // - `x-feel`: true, or { names } — the value is FEEL: an expression when it starts with `=`, else text whose every
 //   `{{ … }}` holds one, each reading by name what the workflow has (its nodes and messages, the run's variables, a loop's
 //   element), or only `names`;
-// - `x-duration`: true — the value is an ISO 8601 duration, not negative.
+// - `x-duration`: true — the value is an ISO 8601 duration, not negative;
+// - `x-number`: true — the text, read as a number, is a finite one (`1e999` reads as none).
 import { parseDuration } from '@0dep/piso';
 import { BpmnModdle } from 'bpmn-moddle';
 import { parseExpression } from 'feelin';
@@ -84,6 +85,7 @@ ajv.addKeyword({
   },
 });
 ajv.addKeyword({ keyword: 'x-duration', type: 'string', schemaType: 'boolean', compile: spec => value => !spec || isDuration(value) });
+ajv.addKeyword({ keyword: 'x-number', type: 'string', schemaType: 'boolean', compile: spec => value => !spec || Number.isFinite(Number(value)) });
 ajv.addSchema(values);
 const checks = new Map();
 // The validator of a definition of values.json, by its name; none for a type it says nothing of.
