@@ -7,6 +7,24 @@ Coda 就知道这个 Agent 在一轮之外还在做什么，如实显示、不�
 
 **改协议**：本文在 `coda-console/coda-protocol`，与插件清单的类型（`schemas/`）同一个仓库、同一个版本（npm 包 `@coda-console/protocol`）。Coda 与公开仓库 `coda-console/coda-plugins` 的契约检查包都依赖这个包：改协议就在这里开 PR，发布新版本后两边各自升依赖。检查要换判定方式时（新的请求怎么发、怎样算合格），另给 coda-plugins 开 PR 改检查本身。文中提到的 Coda 文档与源码在 Coda 的仓库里。
 
+## 生命周期归属
+
+插件在 `contributes.agents[]` 声明 `lifecycle`，默认 `managed`；外部自主运行的 Bot 声明 `external`。
+这是生命周期的归属，不是任务时长。普通 Agent 的长期委派仍按原有调用关系汇报。
+
+- `managed`：Coda 按轮次建立回复关系，属于调用的后台活动继续补交结果。
+- `external`：Coda 连接适配器，观测原生对话与活动；连接或本地轮次结束不代表外部 Bot 或其调度停止。
+  发给它的会话消息是一次委派，附原请求编号和回传地址；没有自动回复或后续跟随，不根据原生发言的时间猜测回复对象。
+  需要交回结果时调用 Coda `send`，`childId` 为回传地址，`replyTo` 为原请求编号，`prompt` 为结果，`final` 默认 `true`。
+  完成后该委派不再接收新回传；约定的进展或需要发起方处理的问题用 `final: false`。回传唤醒发起会话，不创建反向调用。
+  原委派授权覆盖指定接收方到发起方的回传，Coda 校验这两方与原请求；另发新请求仍走通常授权。
+  外部 Agent 使用独立会话，不能被 `spawn` 接管为受管子会话，也不接受 `takeOver` 抢占回复轮次。
+
+常驻观测连接及外部运行记录使用 `_coda/wait` 的 `kind: "observation"`，保持适配器在线，但不作为等待结果的后台任务。
+`waiting` 表示正在观测，界面用呼吸状态；有新原生活动要交互时仍以 `handling` 开始、回到 `waiting` 结束自主轮次。
+外部生命周期的原生活动起因记作 `external`，不归到碰巧进行中的 Coda 调用，也不向以前的调用方自动回传。
+`session/cancel` 只表达适配器明确支持的局部停止；插件必须说明它实际停止的对象。
+
 ## ACP 部分
 
 Coda 是 ACP 的客户端。每个会话的 Agent 进程由一个会话托管进程（Coda 的 docs/session-host.md）持有，经标准输入输出说 JSON-RPC；
