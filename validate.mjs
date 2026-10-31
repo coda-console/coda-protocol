@@ -1,6 +1,7 @@
 // A plugin is right when what it writes is of the types it names: each key of a manifest's `contributes` is a type with a
 // JSON Schema of its own (schemas/plugin/, `https://coda.pub/schemas/plugin/v1/…`), and a key that is no type of Coda's is
-// one a plugin's extension point declares, for that plugin to read. Checking one is checking it against those schemas,
+// one a plugin's extension point declares, for that plugin to read: of the schema that point names, a file of the declaring
+// plugin's (`extensionPoints.<point>.schema`), when it names one. Checking one is checking it against those schemas,
 // nothing else: a field joins a type by joining its schema, never by a rule here. Coda checks a plugin with this module
 // when it reads one, and coda-plugins' contract check does where a plugin is written.
 // What JSON Schema cannot say of one value alone it says with five keywords, each meaning one thing wherever it is written,
@@ -13,10 +14,12 @@
 //   (`2/properties`: two levels up, then down); what it names satisfies `match` when that is given;
 // - `x-placeholders`: { names?, config? } — every `${…}` in the text is one of `names`, or `config:<setting>` naming one of
 //   the plugin's settings that satisfies `config`;
-// - `x-file`: { type, under?, suffix?, contains?, maxBytes?, magic?, absent? } — the value is a path in the plugin's directory
-//   (with `under` before it and `suffix` after it) that never leaves it, of that type, holding `contains`, at most
-//   `maxBytes` long, starting with `magic`; with `absent`, a path there is none at. Checked when the directory is known.
+// - `x-file`: { type, under?, suffix?, contains?, maxBytes?, magic?, schema?, absent? } — the value is a path in the plugin's
+//   directory (with `under` before it and `suffix` after it) that never leaves it, of that type, holding `contains`, at most
+//   `maxBytes` long, starting with `magic`, with `schema` a JSON Schema these keywords compile; with `absent`, a path there
+//   is none at. Checked when the directory is known.
 // It imports nothing but Node and Ajv.
+import { createHash } from 'node:crypto';
 import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } from 'node:fs';
 import { isAbsolute, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -114,6 +117,8 @@ function keywords(ajv) {
         try { readSync(fd, head, 0, head.length, 0); } finally { closeSync(fd); }
         if (head.toString('latin1') !== spec.magic) return fail(file, 'x-file', `${path} 不是 ${spec.magic.replace(/\W/g, '')}`, parentSchema);
       }
+      if (spec.schema) try { declared(JSON.parse(readFileSync(join(dir, path), 'utf8'))); }
+      catch (e) { return fail(file, 'x-file', `${path} 不是可用的 JSON Schema：${e.message}`, parentSchema); }
       return true;
     },
   });
@@ -128,6 +133,19 @@ const validator = file => {
   if (!compiled.has(file)) compiled.set(file, ajv.getSchema(`${BASE}${file}`));
   return compiled.get(file);
 };
+// The schema an extension point declares, compiled once by what it says, under an ID of its own beside these (whatever `$id`
+// it wrote), so that it builds on them as they build on one another (`common.json#/$defs/line40`): its validator, and the
+// schema as compiled, for what it says of a failing value.
+const points = new Map();
+function declared(schema) {
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) throw new Error('须为对象');
+  const text = JSON.stringify(schema);
+  if (!points.has(text)) {
+    const own = { ...schema, $id: `${BASE}point-${createHash('sha256').update(text).digest('hex').slice(0, 16)}.json` };
+    points.set(text, { validate: ajv.getSchema(own.$id) ?? ajv.compile(own), schema: own });
+  }
+  return points.get(text);
+}
 
 // Where in the manifest a value is, as a person writes it: `contributes.composerModes[0].in`.
 const place = (path, base) => path.split('/').slice(1).map(unescape)
@@ -140,11 +158,11 @@ const nodes = function* (node) {
   yield node;
   for (const child of Object.values(node)) yield* nodes(child);
 };
-function described(error, { roots = true } = {}) {
+function described(error, { roots = true, schemas = [] } = {}) {
   if (!error.parentSchema) return undefined;
   if (error.parentSchema.description) return roots || !error.parentSchema.$id ? error.parentSchema.description : undefined;
   const steps = error.schemaPath.replace(/^#\//, '').split('/').map(unescape).slice(0, -1);
-  for (const root of Object.values(SCHEMAS)) for (const from of nodes(root)) {
+  for (const root of [...schemas, ...Object.values(SCHEMAS)]) for (const from of nodes(root)) {
     const path = [from];
     for (const step of steps) path.push(path.at(-1)?.[step]);
     if (path.at(-1) !== error.parentSchema) continue;
@@ -155,16 +173,17 @@ function described(error, { roots = true } = {}) {
 }
 // What is wrong, said once: the first error, by its place and what the schema says of the value there.
 // What a whole type says of itself is too much for a key it lacks or one written twice: those say only what is wrong.
-export function explain(errors, base = '') {
+// `schemas`: those besides these the value was checked against (an extension point's).
+export function explain(errors, base = '', schemas = []) {
   const [error] = errors;
   const at = place(error.instancePath, base) || 'package.json', name = error.propertyName ? `「${error.propertyName}」` : '';
   if (error.keyword === 'x-unique-by') return `${at}${name}：${error.message}`;
-  if (error.keyword === 'required') { const said = described(error, { roots: false }); return `${at} 缺 ${error.params.missingProperty}${said ? `：${said}` : ''}`; }
+  if (error.keyword === 'required') { const said = described(error, { roots: false, schemas }); return `${at} 缺 ${error.params.missingProperty}${said ? `：${said}` : ''}`; }
   if (error.keyword === 'additionalProperties' || error.keyword === 'unevaluatedProperties')
     return `${at} 里有不认识的键：${error.params.additionalProperty ?? error.params.unevaluatedProperty}`;
-  const said = described(error);
+  const said = described(error, { schemas });
   if (error.keyword === 'type') return `${at}${name} 须为${TYPE_NAMES[error.params.type] ?? error.params.type}${said ? `：${said}` : ''}`;
-  if (error.keyword === 'x-file') { const own = described(error, { roots: false }); return `${at}${name}：${error.message}${own ? `（${own}）` : ''}`; }
+  if (error.keyword === 'x-file') { const own = described(error, { roots: false, schemas }); return `${at}${name}：${error.message}${own ? `（${own}）` : ''}`; }
   return `${at}${name}：${said ?? error.message}`;
 }
 
@@ -179,4 +198,11 @@ export function valueProblem(ref, value, where) {
   const validate = ajv.getSchema(`${BASE}${ref}`) ?? null;
   if (!validate) throw new Error(`没有这个 schema：${ref}`);
   return validate.call({ dir: null }, value) ? null : explain(validate.errors, where);
+}
+// What a plugin writes for another's extension point (`value`, under `where`, as `contributes.panels`), checked against the
+// schema that point declares (the declaring plugin's file, read): null, or what is wrong. `dir`: the writing plugin's
+// directory, for the files it names. The schema sees the value alone: its pointers name places in it.
+export function pointProblem(schema, value, where, dir = null) {
+  const point = declared(schema);
+  return point.validate.call({ dir }, value) ? null : explain(point.validate.errors, where, [point.schema]);
 }

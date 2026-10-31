@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/plugin/v1/extension-points.json",
   "title": "contributes.extensionPoints：插件声明的扩展点",
-  "description": "扩展点名 → 声明。只写 description 的，别的插件用 contributes.extensions 接一条命令；写了 contributes 的，任何插件在它的 contributes 里用这个键写的东西归它，原样交给声明它的插件读。",
+  "description": "扩展点名 → 声明。只写 description 的，别的插件用 contributes.extensions 接一条命令；写了 contributes 的，任何插件在它的 contributes 里用这个键写的东西归它，原样交给声明它的插件读，合乎它的 schema 才装得上。",
   "type": "object",
   "propertyNames": {"$ref": "common.json#/$defs/id"},
   "additionalProperties": {
@@ -46,12 +46,18 @@
         "type": "object",
         "propertyNames": {"pattern": "^(\\*|[A-Za-z][A-Za-z0-9]{0,39})(\\.(\\*|[A-Za-z][A-Za-z0-9]{0,39})){0,7}$"},
         "additionalProperties": {"$ref": "common.json#/$defs/line40"}
+      },
+      "schema": {
+        "description": "别的插件在这个键下写的东西的 JSON Schema（draft 2020-12）：本插件目录里的 .json 文件，至多 256 KiB。它和协议的类型并列，可以引用它们（common.json#/$defs/line40）、用协议的五个关键字；指针只指它自己校验的那份值里的位置",
+        "type": "string",
+        "pattern": "\\.json$",
+        "x-file": {"type": "file", "maxBytes": 262144, "schema": true}
       }
     },
     "required": ["description"],
     "additionalProperties": false,
     "if": {"required": ["contributes"]},
     "then": {"description": "写了 contributes 的扩展点也写 title", "required": ["title"]},
-    "else": {"description": "只有写了 contributes 的扩展点才写 title 与 commands", "not": {"anyOf": [{"required": ["title"]}, {"required": ["commands"]}]}}
+    "else": {"description": "只有写了 contributes 的扩展点才写 title、commands 与 schema", "not": {"anyOf": [{"required": ["title"]}, {"required": ["commands"]}, {"required": ["schema"]}]}}
   }
 }

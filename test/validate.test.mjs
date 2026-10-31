@@ -1,11 +1,11 @@
 // The checker against manifests of every kind of mistake, one at a time: each is said where it is, in what the schema says
-// there; and its five keywords, each as it means the same thing wherever it is written.
+// there; its five keywords, each as it means the same thing wherever it is written; and an extension point's own schema.
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { manifestProblem, SCHEMAS, TYPES, valueProblem } from '../validate.mjs';
+import { manifestProblem, pointProblem, SCHEMAS, TYPES, valueProblem } from '../validate.mjs';
 
 const dirs = [];
 after(() => { for (const dir of dirs) rmSync(dir, { recursive: true, force: true }); });
@@ -101,3 +101,39 @@ test('a part of a type, as a plugin gives it while it runs, is checked against t
     '插件给出的参数.required[0]：required 是本模式的参数名，不重复');
   assert.throws(() => valueProblem('nothing.json', {}, 'x'), /没有这个 schema/);
 });
+
+test('a server for Agents of another kind than one they start is told what a server is', () => {
+  assert.equal(manifestProblem({ contributes: { mcpServers: { docs: { type: 'http', url: 'https://docs.example' } } } }),
+    'contributes.mcpServers.docs 缺 command：一个服务器：由 Agent 在本机启动、经标准输入输出说话的程序（stdio），写 command 与 args；远程的（http、sse）现在不支持');
+});
+
+test('an extension point\'s schema is a file of its plugin\'s that compiles beside these; what another plugin writes for it is of it', () => {
+  const panels = { description: '面板的数组', type: 'array', 'x-unique-by': ['id'],
+    items: { type: 'object', properties: { id: { $ref: 'common.json#/$defs/name' }, title: { $ref: 'common.json#/$defs/line40' } }, required: ['id', 'title'], additionalProperties: false } };
+  const dir = directory({ 'panels.json': JSON.stringify(panels), 'broken.json': '{', 'loose.json': JSON.stringify({ type: 'array', colour: 'red' }),
+    'old.json': JSON.stringify({ $schema: 'http://json-schema.org/draft-07/schema#', type: 'array' }), 'panels.txt': '' });
+  const point = schema => ({ name: 'kit', contributes: { extensionPoints: { panels: { description: '面板', contributes: 'panels', title: '面板', schema } } } });
+  assert.equal(manifestProblem(point('panels.json'), dir), null);
+  assert.match(manifestProblem(point('broken.json'), dir), /^contributes\.extensionPoints\.panels\.schema：broken\.json 不是可用的 JSON Schema：/);
+  assert.match(manifestProblem(point('loose.json'), dir), /loose\.json 不是可用的 JSON Schema：strict mode: unknown keyword: "colour"/);
+  assert.match(manifestProblem(point('old.json'), dir), /old\.json 不是可用的 JSON Schema：no schema with key or ref "http:\/\/json-schema\.org\/draft-07\/schema#"/);
+  assert.match(manifestProblem(point('gone.json'), dir), /插件目录里没有 gone\.json/);
+  assert.match(manifestProblem(point('panels.txt'), dir), /^contributes\.extensionPoints\.panels\.schema：别的插件在这个键下写的东西的 JSON Schema/);
+  // Only a point taking what others write has one.
+  assert.equal(manifestProblem({ contributes: { extensionPoints: { accounts: { description: '账号', schema: 'panels.json' } } } }, dir),
+    'contributes.extensionPoints.accounts：只有写了 contributes 的扩展点才写 title、commands 与 schema');
+
+  assert.equal(pointProblem(panels, [{ id: 'quota', title: '额度' }], 'contributes.panels'), null);
+  assert.equal(pointProblem(panels, {}, 'contributes.panels'), 'contributes.panels 须为数组：面板的数组');
+  assert.equal(pointProblem(panels, [{ id: 'quota' }], 'contributes.panels'), 'contributes.panels[0] 缺 title');
+  assert.equal(pointProblem(panels, [{ id: 'quota', title: ' ' }], 'contributes.panels'), 'contributes.panels[0].title：不超过 40 字的一行');
+  assert.equal(pointProblem(panels, [{ id: 'quota', title: '额度' }, { id: 'quota', title: '又一个' }], 'contributes.panels'), 'contributes.panels：id 不能重复：quota');
+  // The ID it gives itself is not where it is kept: one naming a schema of these takes nothing of it.
+  assert.equal(pointProblem({ ...panels, $id: 'https://coda.pub/schemas/plugin/v1/common.json' }, [{ id: 'quota', title: '额度' }], 'contributes.panels'), null);
+  assert.equal(valueProblem('common.json#/$defs/id', 'kit', 'x'), null);
+  // The files a value names are the writing plugin's.
+  const own = { type: 'string', 'x-file': { type: 'file' } };
+  assert.equal(pointProblem(own, 'panels.json', 'contributes.icon', dir), null);
+  assert.equal(pointProblem(own, 'gone.json', 'contributes.icon', dir), 'contributes.icon：插件目录里没有 gone.json');
+});
+

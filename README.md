@@ -2,7 +2,7 @@
 
 Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
-- **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v1/<文件>`）。`plugin.json` 是整份清单，`setting.json` 是一项设置的声明。插件写的合乎它用到的类型就对；写给别的插件扩展点的键由那个插件声明。
+- **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v1/<文件>`）。`plugin.json` 是整份清单，`setting.json` 是一项设置的声明。插件写的合乎它用到的类型就对；写给别的插件扩展点的键由那个插件声明，扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
 - **Agent 接入协议**（`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
 
@@ -13,13 +13,17 @@ npm install @coda-console/protocol
 ```
 
 ```js
-import { manifestProblem, valueProblem, TYPES, SCHEMAS } from '@coda-console/protocol/validate';
+import { manifestProblem, pointProblem, valueProblem, TYPES, SCHEMAS } from '@coda-console/protocol/validate';
 
 // 整份清单；给出插件目录时，连同它点名的文件一起查（x-file）。合乎类型返回 null，否则是一句说明：哪里、schema 怎么说。
 const problem = manifestProblem(JSON.parse(readFileSync('plugin/package.json', 'utf8')), 'plugin');
 // 某个类型里的一部分，如输入框模式的参数（插件运行时给出的）。
 valueProblem('composer-modes.json#/$defs/parameters', parameters, '插件给出的参数');
+// 写给别的插件扩展点的东西，按那个扩展点的 schema（已读出的对象）；给出写它的插件目录时连同它点名的文件一起查。
+pointProblem(panelsSchema, manifest.contributes.panels, 'contributes.panels', 'plugin');
 ```
+
+扩展点的 schema 和这里的并列：可以 `$ref` 协议的 schema（`common.json#/$defs/line40`），可以用五个关键字；它自己写的 `$id` 不算数，指针只指它校验的那份值里的位置。
 
 `TYPES` 是 Coda 自己的类型（`contributes` 的键），`SCHEMAS` 是全部 schema（按文件名）。
 
