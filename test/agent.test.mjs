@@ -117,6 +117,14 @@ test('capabilities are optional, extensible declarations; each known declaration
   assert.equal(valueProblem('default.json', []), '值：_meta.coda 须为对象');
 });
 
+test('compact display names are optional metadata beside defaults and never change option identity', () => {
+  for (const value of [{}, { shortName: '审批' }, { shortName: 'Opus 4.6 [1m]', default: true, future: 1 }]) {
+    assert.equal(valueProblem('display.json', value), null);
+  }
+  for (const shortName of ['', '   ', null, 1, [], {}]) assert.notEqual(valueProblem('display.json', { shortName }), null);
+  for (const value of [null, [], 1]) assert.notEqual(valueProblem('display.json', value), null);
+});
+
 test('failure categories match agentFailure, including quota fields that are deliberately ignored', () => {
   const check = value => valueProblem('failure.json', value);
   for (const value of [null, [], 'x', 2]) assert.equal(check(value), '值：执行失败须为对象');

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/display.json",
+  "type": "object",
+  "description": "_meta.coda 须为对象",
+  "properties": {
+    "shortName": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "shortName 须为非空白文本，用于紧凑位置的显示，不改变选项 ID"
+    }
+  }
+}

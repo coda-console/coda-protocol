@@ -27,6 +27,7 @@ ACP 的消息、内容块、会话指令和能力由 ACP SDK 校验，这里只�
 | 工具更新的 `_meta.coda.review` | [review.json](../schemas/agent/review.json)；已知风险值见 `$defs/risk` |
 | 用量更新的 `_meta.coda` | [usage.json](../schemas/agent/usage.json) |
 | 配置选项的 `_meta.coda.default` | [default.json](../schemas/agent/default.json)（传入 `_meta.coda` 对象） |
+| 模型、模式、配置项及其选项的 `_meta.coda.shortName` | [display.json](../schemas/agent/display.json)（传入 `_meta.coda` 对象） |
 
 `@coda-console/protocol/agent` 导出 `agentMessageProblem(method, params)`、`agentResultProblem(method, result)`、
 `agentCapabilitiesProblem(meta, party = 'agent')` 和 `agentValueProblem(ref, value, where)`，合法返回 `null`，
@@ -105,6 +106,11 @@ ACP 只允许在一轮（`session/prompt`）进行时交互。Agent 在两轮之
   `clientCapabilities.session.configOptions.boolean` 里声明接受开关型。会话设置里按配置项 ID 给的值，每轮开始前设给 Agent；当前模型没有这一项就不设。
   Coda 设过、会话设置里又去掉的（用户选回「Agent 默认」），切回 Agent 标了 `_meta.coda.default` 的那一项，没标就切回 Coda 第一次设它之前、
   同一模型下 Agent 报的值，两样都不知道就不改。Agent 自己改的 Coda 不去改回；用户在会话里用命令改的（如 Codex 的 `/fast`）记进会话设置。名字与说明照 Agent 给的显示。
+  模型、模式、配置项及其选项可在 `_meta.coda.shortName` 声明紧凑显示名（[display.json](../schemas/agent/display.json)），
+  适用于 `configOptions` 的项与叶子选项，以及 `availableModels`、`availableModes` 的项。例如
+  `{ "value": "read-only", "name": "Ask for approval", "_meta": { "coda": { "shortName": "审批" } } }`。
+  工具栏优先短名，再取完整 `name`，最后取 ID；选择面板和辅助功能保留完整名称。短名由插件声明，客户端不猜测或改写模型 ID，
+  不影响设置、分组与执行；插件应保留版本、上下文变体等辨认所需的信息。没声明时保持原有显示。
 - **未登录**：Agent 在 `initialize`、`session/new` 或 `session/load` 回错误 -32000（ACP 的 `auth_required`）时，Coda 告诉用户这个 Agent 未登录，
   到「资源」里添加（面板的登录（Coda 的 docs/plugins.md「面板的登录」））；Coda 不调用 `authenticate`，也不按错误文字猜。
 - **Agent 版本**：`initialize` 结果的 `agentInfo`（ACP 的 `name`、`version`）填**实际运行的那个 Agent**：包装了别家 CLI 或 SDK 的插件，
