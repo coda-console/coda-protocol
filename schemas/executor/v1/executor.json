@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://coda.pub/schemas/executor/v1/executor.json",
+  "title": "executor：运行器配置意图与持有端事实",
+  "type": "object",
+  "properties": {
+    "spec": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {"const": 1},
+        "enabled": {"type": "boolean"},
+        "capacity": {"$ref": "common.json#/definitions/resourceAmounts"},
+        "labels": {"$ref": "common.json#/definitions/userLabels"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200}
+      },
+      "required": ["protocolVersion", "enabled", "capacity", "labels"],
+      "additionalProperties": false,
+      "description": "运行器配置意图；无 target，由持有端维护"
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "detectedLabels": {"$ref": "common.json#/definitions/labels"},
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "os": {"type": "string", "minLength": 1, "maxLength": 40},
+            "arch": {"type": "string", "minLength": 1, "maxLength": 40},
+            "nodeVersion": {"type": "string", "minLength": 1, "maxLength": 128},
+            "xcode": {
+              "type": "object",
+              "properties": {
+                "version": {"type": "string", "minLength": 1, "maxLength": 128},
+                "build": {"type": "string", "minLength": 1, "maxLength": 128}
+              },
+              "required": ["version", "build"],
+              "additionalProperties": false
+            },
+            "simulatorRuntimes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {"type": "string", "minLength": 1, "maxLength": 256},
+                  "version": {"type": "string", "minLength": 1, "maxLength": 128},
+                  "available": {"type": "boolean"}
+                },
+                "required": ["id", "version", "available"],
+                "additionalProperties": false
+              },
+              "maxItems": 256
+            },
+            "graphicalSession": {"type": ["boolean", "null"]}
+          },
+          "required": ["os", "arch", "nodeVersion", "graphicalSession"],
+          "additionalProperties": false
+        },
+        "capacity": {"$ref": "common.json#/definitions/resourceAmounts"},
+        "occupied": {"$ref": "common.json#/definitions/resourceAmounts"},
+        "available": {"$ref": "common.json#/definitions/resourceAmounts"},
+        "accepting": {"type": "boolean"},
+        "reason": {"$ref": "common.json#/definitions/reason"},
+        "observedAt": {"$ref": "common.json#/definitions/timestamp"},
+        "observedRevision": {"$ref": "common.json#/definitions/opaqueId"},
+        "executionFeatures": {
+          "type": "object",
+          "properties": {"multiResource": {"const": false}, "multiUnit": {"const": false}, "exclusive": {"type": "boolean"}},
+          "required": ["multiResource", "multiUnit", "exclusive"],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "anyOf": [
+        {"maxProperties": 0},
+        {
+          "required": [
+            "detectedLabels",
+            "capabilities",
+            "capacity",
+            "occupied",
+            "available",
+            "accepting",
+            "observedAt",
+            "observedRevision",
+            "executionFeatures"
+          ]
+        }
+      ],
+      "description": "空对象表示未知；非空为持有端完整事实，不是在线或预留保证"
+    }
+  },
+  "required": ["spec", "status"],
+  "additionalProperties": false
+}

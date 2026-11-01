@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://coda.pub/schemas/executor/v1/common.json",
+  "title": "运行器协议共享静态定义",
+  "definitions": {
+    "opaqueId": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "适配层给出的不透明标识；不解析或拼接机器路由"},
+    "resourceRef": {
+      "type": "object",
+      "properties": {"kind": {"type": "string", "minLength": 1, "maxLength": 128}, "id": {"$ref": "common.json#/definitions/opaqueId"}},
+      "required": ["kind", "id"],
+      "additionalProperties": false
+    },
+    "executorRef": {
+      "type": "object",
+      "properties": {"kind": {"const": "executor"}, "id": {"$ref": "common.json#/definitions/opaqueId"}},
+      "required": ["kind", "id"],
+      "additionalProperties": false
+    },
+    "snapshotRef": {
+      "type": "object",
+      "properties": {"kind": {"const": "sourceSnapshot"}, "id": {"$ref": "common.json#/definitions/opaqueId"}},
+      "required": ["kind", "id"],
+      "additionalProperties": false
+    },
+    "repositoryRef": {
+      "type": "object",
+      "properties": {"kind": {"const": "gitSource"}, "id": {"$ref": "common.json#/definitions/opaqueId"}},
+      "required": ["kind", "id"],
+      "additionalProperties": false
+    },
+    "labels": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1, "maxLength": 40, "pattern": "^[a-z0-9][a-z0-9._-]*$(?![\\s\\S])"},
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "userLabels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 40,
+        "pattern": "^[a-z0-9][a-z0-9._-]*$(?![\\s\\S])",
+        "not": {
+          "pattern": "^(darwin|linux|win32|aix|android|freebsd|openbsd|sunos|cygwin|netbsd|haiku|arm|arm64|ia32|x64|loong64|mips|mipsel|ppc|ppc64|riscv64|s390|s390x|gui)$|^(xcode|ios|node)-"
+        }
+      },
+      "maxItems": 64,
+      "uniqueItems": true,
+      "description": "用户自定义标签，不占用 OS、架构、gui 与 xcode-/ios-/node- 探测命名空间"
+    },
+    "resourceAmounts": {
+      "type": "object",
+      "properties": {"slots": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}},
+      "required": ["slots"],
+      "additionalProperties": false,
+      "description": "首版只有 slots；容量与占用可大于 1，请求量另限为 1"
+    },
+    "reason": {
+      "type": "object",
+      "properties": {
+        "code": {"type": "string", "minLength": 1, "maxLength": 128},
+        "message": {"type": "string", "minLength": 1, "maxLength": 4096}
+      },
+      "required": ["code", "message"],
+      "additionalProperties": false
+    },
+    "timestamp": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d{1,9})?Z$(?![\\s\\S])",
+      "description": "UTC 时间文字；schema 检查形状，真实日历时间由写入方保证"
+    },
+    "assignmentId": {"type": "string", "minLength": 1, "maxLength": 256, "description": "每次绑定生成的新 token，与 executor 同次 CAS 更新"},
+    "workingDirectory": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*[\\u0000-\\u001f\\u007f])(?!.*(?:^|/)\\.\\.(?:/|$)).+$",
+      "description": "工作根下的相对路径；拒绝绝对路径、反斜线和 .. 段，真实落点与符号链接仍须执行方检查"
+    }
+  }
+}
