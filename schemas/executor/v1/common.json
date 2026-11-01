@@ -49,12 +49,17 @@
       "uniqueItems": true,
       "description": "用户自定义标签，不占用 OS、架构、gui 与 xcode-/ios-/node- 探测命名空间"
     },
+    "resourceName": {
+      "type": "string",
+      "pattern": "^(?:slots|group:(?!host$(?![\\s\\S]))[^\\s\\u0000-\\u001f\\u007f]{1,100})$(?![\\s\\S])",
+      "description": "slots 对应 host；其他本机命名组用 group:<原名>，不将不同组折叠为 slots"
+    },
     "resourceAmounts": {
       "type": "object",
-      "properties": {"slots": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}},
-      "required": ["slots"],
-      "additionalProperties": false,
-      "description": "首版只有 slots；容量与占用可大于 1，请求量另限为 1"
+      "propertyNames": {"$ref": "common.json#/definitions/resourceName"},
+      "maxProperties": 128,
+      "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+      "description": "可报告多个独立资源的容量；每个请求仍至多申请一个资源的一单位"
     },
     "reason": {
       "type": "object",

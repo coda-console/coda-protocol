@@ -26,6 +26,12 @@
         "retry": {"type": "string", "pattern": "^[1-5]$", "description": "coda:retry 是失败后最多再试几次，须为 1 到 5 的整数"}
       }
     },
+    "PlacementProperties": {
+      "type": "object",
+      "properties": {
+        "placement": {"enum": ["local", "any"], "description": "coda:placement 只能是 local 或 any；local 限制为发起端，不能隐式回退或被子节点放宽"}
+      }
+    },
     "RunsOnProperties": {
       "type": "object",
       "properties": {

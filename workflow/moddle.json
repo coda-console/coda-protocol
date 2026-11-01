@@ -48,6 +48,13 @@
       ]
     },
     {
+      "name": "PlacementProperties",
+      "isAbstract": true,
+      "extends": ["bpmn:Process", "bpmn:ScriptTask", "bpmn:SubProcess"],
+      "description": "local 将脚本限制在发起端；any 允许符合要求的执行器。上层 local 不可被子节点放宽；显式执行器绑定仍须满足此约束",
+      "properties": [{"name": "placement", "isAttr": true, "type": "String"}]
+    },
+    {
       "name": "RunsOnProperties",
       "isAbstract": true,
       "extends": ["bpmn:ScriptTask", "bpmn:SubProcess"],

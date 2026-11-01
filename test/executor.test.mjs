@@ -75,17 +75,56 @@ test('both specs require identity and their core fields; unsupported versions an
   }
 });
 
-test('request resources are slots=1 or slots=1 with explicit exclusivity, not a resource vector', () => {
+test('requests are unmetered or one unit of one resource; capacity is a map, not permission for resource vectors', () => {
   for (const exclusiveResources of [[], ['slots']]) valid(execution.spec, { ...spec, exclusiveResources });
-  for (const resources of [{}, { slots: 0 }, { slots: 2 }, { slots: -1 }, { slots: 0.5 }, { slots: '1' }, { cpu: 1 }, { slots: 1, gpu: 1 }])
+  for (const resources of [{}, { 'group:device/iphone': 1 }, { 'group:构建': 1 }]) valid(execution.spec, { ...spec, resources });
+  valid(execution.spec, { ...spec, resources: { 'group:device': 1 }, exclusiveResources: ['group:device'] });
+  invalid(execution.spec, { ...spec, resources: {}, exclusiveResources: ['slots'] });
+  for (const resources of [{ slots: 0 }, { slots: 2 }, { slots: -1 }, { slots: 0.5 }, { slots: '1' }, { cpu: 1 }, { slots: 1, 'group:device': 1 }])
     invalid(execution.spec, { ...spec, resources });
+  for (const key of ['', 'gpu', 'group:', 'group:host', 'group:two words', 'group:x\n', 'group:x\0', `group:${'a'.repeat(101)}`]) {
+    invalid(execution.spec, { ...spec, resources: { [key]: 1 } });
+    invalid(execution.spec, { ...spec, exclusiveResources: [key] });
+    invalid(executor.spec, { ...executorSpec, capacity: { [key]: 1 } });
+  }
   for (const exclusiveResources of [['gpu'], ['slots', 'slots'], ['slots', 'gpu'], 'slots', null]) invalid(execution.spec, { ...spec, exclusiveResources });
   for (const slots of [0, 1, 8]) valid(executor.spec, { ...executorSpec, capacity: { slots } });
-  for (const capacity of [{}, { slots: -1 }, { slots: 1.5 }, { slots: Infinity }, { slots: 1, gpu: 0 }]) invalid(executor.spec, { ...executorSpec, capacity });
+  for (const capacity of [{}, { slots: 2, 'group:device': 1 }]) valid(executor.spec, { ...executorSpec, capacity });
+  for (const capacity of [{ slots: -1 }, { slots: 1.5 }, { slots: Infinity }, { slots: 1, gpu: 0 }]) invalid(executor.spec, { ...executorSpec, capacity });
   for (const key of ['multiResource', 'multiUnit']) invalid(executor.status, { ...executorStatus, executionFeatures: { ...executorStatus.executionFeatures, [key]: true } });
   valid(executor.status, { ...executorStatus, executionFeatures: { multiResource: false, multiUnit: false, exclusive: false } });
+  for (const key of ['noResources', 'namedResources', 'context']) {
+    valid(executor.status, { ...executorStatus, executionFeatures: { ...executorStatus.executionFeatures, [key]: true } });
+    invalid(executor.status, { ...executorStatus, executionFeatures: { ...executorStatus.executionFeatures, [key]: 'true' } });
+  }
   // Capacity shrink and exclusivity are ledger facts, not an incorrect occupied <= capacity schema rule.
   valid(executor.status, { ...executorStatus, capacity: { slots: 0 }, occupied: { slots: 2 }, available: { slots: 0 }, accepting: false });
+});
+
+test('placement constrains scheduling without creating a binding or accepting topology parameters', () => {
+  for (const placement of [{}, { locality: 'local' }, { locality: 'any' }, { executor: resource('executor') },
+    { locality: 'local', executor: resource('executor') }]) valid(execution.spec, { ...spec, placement });
+  for (const placement of [null, [], { locality: 'fallback' }, { locality: '' }, { machine: 'macmini' }, { executor: null },
+    { executor: resource('runs') }, { executor: [resource('executor')] }, { executor: { ...resource('executor'), machine: 'macmini' } }])
+    invalid(execution.spec, { ...spec, placement });
+  const input = { ...structuredClone(spec), placement: { locality: 'local' } };
+  const defaults = new Ajv({ useDefaults: true }).compile(EXECUTION_PROTOCOL.spec);
+  valid(defaults, input);
+  assert.equal(input.executor, null);
+  assert.equal(input.assignmentId, null);
+  assert.deepEqual(input.placement, { locality: 'local' });
+});
+
+test('workflow context is bounded provenance and output declarations, never paths, credentials or arbitrary launch environment', () => {
+  const workflow = { name: 'check', job: 'build', runId: 'run-id', runAttempt: 1, sha: 'a'.repeat(40), ref: 'refs/heads/main', repository: 'owner/repo' };
+  const context = { workflow, plugin: { id: 'host', version: '1.2.2' }, audience: 'user', outputNames: ['answer'] };
+  for (const patch of [{}, context, { workflow: { ...workflow, sha: '', ref: '', repository: '' } }, { outputNames: [] }])
+    valid(execution.spec, { ...spec, context: patch });
+  for (const key of Object.keys(workflow)) invalid(execution.spec, { ...spec, context: { workflow: without(workflow, key) } });
+  for (const patch of [{ env: { SECRET: 'value' } }, { plugin: { ...context.plugin, path: '/tmp/plugin' } },
+    { plugin: { id: 'host' } }, { workflow: { ...workflow, sha: 'HEAD' } }, { workflow: { ...workflow, runAttempt: 0 } },
+    { outputNames: ['answer', 'answer'] }, { outputNames: Array.from({ length: 65 }, (_, i) => `key${i}`) },
+    { outputNames: [''] }, { audience: 'agent' }]) invalid(execution.spec, { ...spec, context: patch });
 });
 
 test('user labels cannot impersonate detection; requirements and detected labels retain runsOn syntax', () => {
@@ -161,6 +200,11 @@ test('phase and outcome combinations reject incomplete running and terminal fact
     { ...without(finished, 'startedAt'), outcome: 'rejected', exitCode: 0 },
     { ...running, admission: { lease: 'lease', slots: [0, 0] } }, { ...running, admission: { lease: 'lease', slots: [-1] } }]) invalid(execution.status, status);
   valid(execution.status, { ...running, admission: { lease: 'lease', slots: [0, 1] } });
+  // Separate spec/status schemas cannot compare the request: the executor must enforce null iff resources is empty.
+  valid(execution.status, { ...running, admission: null });
+  valid(execution.status, { ...running, admission: { resource: 'group:device', lease: 'lease', slots: [0] } });
+  for (const admission of [{}, { resource: 'group:device', lease: 'lease', slots: [] }, { resource: 'gpu', lease: 'lease', slots: [0] }])
+    invalid(execution.status, { ...running, admission });
 });
 
 test('outputs and references have finite static limits without custom byte or path validators', () => {
@@ -185,8 +229,22 @@ test('raw JSON schemas and exported parts agree on the documented wire examples'
     ajv.addSchema(read('common'));
     const raw = ajv.compile(read(protocol.kind));
     valid(raw, examples[i]);
+    const extended = structuredClone(examples[i]);
+    if (protocol.kind === 'executor') {
+      extended.spec.capacity['group:device'] = 1;
+      extended.status.executionFeatures.noResources = true;
+      extended.status.executionFeatures.namedResources = true;
+    } else {
+      extended.spec.resources = {};
+      extended.spec.exclusiveResources = [];
+      extended.spec.placement = { locality: 'local' };
+      extended.spec.context = { outputNames: [] };
+      extended.status.admission = null;
+    }
+    valid(raw, extended);
     for (const part of ['spec', 'status']) {
       valid(checks[i][part], examples[i][part]);
+      valid(checks[i][part], extended[part]);
       const invalidExample = structuredClone(examples[i]);
       invalidExample[part].unknown = true;
       invalid(raw, invalidExample);
