@@ -1,0 +1,199 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://coda.pub/schemas/executor/v1/execution.json",
+  "title": "execution：一次执行尝试的请求与完整结果",
+  "type": "object",
+  "properties": {
+    "spec": {
+      "type": "object",
+      "properties": {
+        "protocolVersion": {"const": 1},
+        "run": {"$ref": "common.json#/definitions/resourceRef"},
+        "step": {"type": "string", "minLength": 1, "maxLength": 256},
+        "attempt": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+        "source": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "properties": {"snapshot": {"$ref": "common.json#/definitions/snapshotRef"}},
+              "required": ["snapshot"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "repository": {"$ref": "common.json#/definitions/repositoryRef"},
+                "commit": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$(?![\\s\\S])"}
+              },
+              "required": ["repository", "commit"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "requirements": {
+          "type": "object",
+          "properties": {"labels": {"$ref": "common.json#/definitions/labels"}},
+          "required": ["labels"],
+          "additionalProperties": false
+        },
+        "resources": {
+          "type": "object",
+          "properties": {"slots": {"const": 1}},
+          "required": ["slots"],
+          "additionalProperties": false,
+          "description": "首版仅 slots: 1；不接受多单位或其他资源"
+        },
+        "exclusiveResources": {
+          "type": "array",
+          "items": {"const": "slots"},
+          "maxItems": 1,
+          "uniqueItems": true,
+          "default": [],
+          "description": "空数组或独占 slots；不换算成观察到的容量数字"
+        },
+        "task": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "script": {"type": "string", "minLength": 1, "maxLength": 65536},
+                "shell": {"type": "string", "minLength": 1, "maxLength": 4096}
+              },
+              "required": ["script", "shell"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "command": {"type": "string", "minLength": 1, "maxLength": 4096},
+                "args": {"type": "array", "items": {"type": "string", "minLength": 0, "maxLength": 16384}, "maxItems": 256}
+              },
+              "required": ["command", "args"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "workingDirectory": {"$ref": "common.json#/definitions/workingDirectory", "default": "."},
+        "env": {
+          "type": "object",
+          "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$(?![\\s\\S])"},
+          "maxProperties": 128,
+          "additionalProperties": {"type": "string", "minLength": 0, "maxLength": 16384}
+        },
+        "timeoutMs": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+        "cancelGraceMs": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+        "cancel": {"type": "boolean", "default": false},
+        "executor": {
+          "oneOf": [{"type": "null"}, {"$ref": "common.json#/definitions/executorRef"}],
+          "description": "scheduler 写入的顶层单值绑定，与 assignmentId 同次 CAS 更新，不参与补充合并"
+        },
+        "assignmentId": {"oneOf": [{"type": "null"}, {"$ref": "common.json#/definitions/assignmentId"}]}
+      },
+      "required": ["protocolVersion", "run", "attempt", "source", "requirements", "resources", "task", "env", "executor", "assignmentId"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {"properties": {"executor": {"type": "null"}}},
+          "then": {"properties": {"assignmentId": {"type": "null"}}},
+          "else": {"properties": {"assignmentId": {"$ref": "common.json#/definitions/assignmentId"}}}
+        }
+      ],
+      "description": "一次执行尝试；绑定后任务、源码和需求冻结，取消为单向意图"
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "phase": {"enum": ["queued", "preparing", "running", "finished"]},
+        "reason": {"$ref": "common.json#/definitions/reason"},
+        "assignmentId": {"oneOf": [{"type": "null"}, {"$ref": "common.json#/definitions/assignmentId"}]},
+        "startedAt": {"$ref": "common.json#/definitions/timestamp"},
+        "finishedAt": {"$ref": "common.json#/definitions/timestamp"},
+        "executionRun": {"$ref": "common.json#/definitions/resourceRef"},
+        "admission": {
+          "type": "object",
+          "properties": {
+            "lease": {"$ref": "common.json#/definitions/opaqueId"},
+            "slots": {
+              "type": "array",
+              "items": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "maxItems": 4096,
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "required": ["lease", "slots"],
+          "additionalProperties": false
+        },
+        "outcome": {"enum": ["succeeded", "failed", "cancelled", "rejected"]},
+        "exitCode": {"type": ["integer", "null"]},
+        "outputs": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {"type": "string", "minLength": 1, "maxLength": 128},
+          "additionalProperties": {"type": "string", "minLength": 0, "maxLength": 4096}
+        },
+        "summary": {"type": "string", "minLength": 0, "maxLength": 4096},
+        "outputTail": {"type": "string", "minLength": 0, "maxLength": 16384},
+        "logs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ref": {"$ref": "common.json#/definitions/resourceRef"},
+              "cursor": {"type": "string", "minLength": 1, "maxLength": 2048}
+            },
+            "required": ["ref"],
+            "additionalProperties": false
+          },
+          "maxItems": 64
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ref": {"$ref": "common.json#/definitions/resourceRef"},
+              "name": {"type": "string", "minLength": 1, "maxLength": 256},
+              "sha256": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[0-9a-fA-F]{64}$"},
+              "size": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "mediaType": {"type": "string", "minLength": 1, "maxLength": 256}
+            },
+            "required": ["ref", "name"],
+            "additionalProperties": false
+          },
+          "maxItems": 64
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "anyOf": [{"maxProperties": 0}, {"required": ["phase", "assignmentId"]}],
+      "allOf": [
+        {
+          "if": {"properties": {"phase": {"const": "finished"}}, "required": ["phase"]},
+          "then": {"required": ["outcome", "finishedAt"]},
+          "else": {"not": {"anyOf": [{"required": ["outcome"]}, {"required": ["exitCode"]}, {"required": ["finishedAt"]}]}}
+        },
+        {
+          "if": {"properties": {"phase": {"enum": ["preparing", "running"]}}, "required": ["phase"]},
+          "then": {"properties": {"assignmentId": {"$ref": "common.json#/definitions/assignmentId"}}}
+        },
+        {
+          "if": {"properties": {"phase": {"const": "running"}}, "required": ["phase"]},
+          "then": {"required": ["startedAt", "executionRun", "admission"]}
+        },
+        {
+          "if": {"properties": {"outcome": {"enum": ["succeeded", "failed"]}}, "required": ["outcome"]},
+          "then": {"properties": {"assignmentId": {"$ref": "common.json#/definitions/assignmentId"}}, "required": ["startedAt"]}
+        },
+        {
+          "if": {"properties": {"outcome": {"const": "rejected"}}, "required": ["outcome"]},
+          "then": {"not": {"required": ["startedAt"]}, "properties": {"exitCode": {"type": "null"}}}
+        }
+      ],
+      "description": "空对象表示未知；绑定后由执行方完整回传，按 assignmentId 区分旧回答"
+    }
+  },
+  "required": ["spec", "status"],
+  "additionalProperties": false
+}

@@ -96,6 +96,15 @@ agentValueProblem('review.json', review, '工具的审核');
 深层／大型 JSON 用显式栈检查，非有限数字与循环引用不会通过。会话归属、活动状态迁移、调用起因、协商、超时、重试和授权仍由宿主判断；
 丢弃未知风险值、压缩答复的裁剪与兜底等整理也留在 Coda。详见正文的兼容性与接入说明。
 
+## 运行器与执行请求
+
+从 2.1.0 起，`executor` 与 `execution` 是 Coda 预定公共对象协议，见[运行器协议正文](docs/executor-protocol.md)。
+`schemas/executor/v1/` 使用默认 Ajv 可读的 draft-07；`@coda-console/protocol/executor` 导出
+`EXECUTOR_PROTOCOL`、`EXECUTION_PROTOCOL`，其 spec/status 都自包含，可直接传给 `protocols.define`。
+首版请求仅支持 `{slots: 1}`，可独占 slots；不支持多单位或多资源。两种类型均无补充栏，execution 绑定是由调度办事员 CAS 更新的单值。
+executor 无 target，status 由持有端写；execution 绑定后由执行方完整回传，开跑前须经本机账本准入。
+对象协议 v1 与 npm 包版本、插件清单 v2 独立；旧 `contributes.executors` 不变。
+
 ## 谁在用
 
 - **Coda**：读插件时用它校验清单，再整理成自己的结构；只另看插件身份（ID、设置名在 ID 之下），以及装到一台机器上才知道的（来源、已装插件的冲突）。读流程时用 `readWorkflow` 同时校验方言、值与结构，再编译成引擎需要的数据。
