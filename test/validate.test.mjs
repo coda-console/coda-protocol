@@ -33,7 +33,7 @@ test('an agent declares external lifecycle ownership without changing the defaul
 });
 
 test('the schemas are one of Coda\'s types each, beside the manifest\'s, a setting\'s and what they share', () => {
-  assert.equal(TYPES.length, 22);
+  assert.equal(TYPES.length, 23);
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
     ['common.json', 'plugin.json', 'setting.json']);
