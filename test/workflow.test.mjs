@@ -12,23 +12,30 @@ const workflow = (body, process = '') => `<?xml version="1.0" encoding="UTF-8"?>
 </definitions>`;
 
 test('placement is a static process, subprocess or script constraint; actions and user tasks cannot select executors', async () => {
+  const connected = (body, id = 's', prefix = '') => `<startEvent id="${prefix}start" />
+    <sequenceFlow id="${prefix}in" sourceRef="${prefix}start" targetRef="${id}" />${body}
+    <sequenceFlow id="${prefix}out" sourceRef="${id}" targetRef="${prefix}end" /><endEvent id="${prefix}end" />`;
+  const script = attrs => `<scriptTask id="s" scriptFormat="bash"${attrs}><script>echo ok</script></scriptTask>`;
+  const scope = attrs => `<subProcess id="scope"${attrs}>${connected(script(''), 's', 'inner')}</subProcess>`;
   for (const placement of ['local', 'any']) {
-    for (const source of [workflow('', ` coda:placement="${placement}"`),
-      workflow(`<scriptTask id="s" scriptFormat="bash" coda:placement="${placement}"><script>echo ok</script></scriptTask>`),
-      workflow(`<subProcess id="scope" coda:placement="${placement}" />`)]) {
+    for (const source of [workflow(connected(script('')), ` coda:placement="${placement}"`),
+      workflow(connected(script(` coda:placement="${placement}"`))),
+      workflow(connected(scope(` coda:placement="${placement}"`), 'scope'))]) {
       assert.equal(await workflowProblem(source, 'placement'), null);
     }
   }
   for (const placement of ['', 'remote', '=inputs.place']) {
-    assert.match(await workflowProblem(workflow('', ` coda:placement="${placement}"`), 'placement'), /coda:placement/);
+    assert.match(await workflowProblem(workflow(connected(script('')), ` coda:placement="${placement}"`), 'placement'), /coda:placement/);
   }
-  for (const task of ['<userTask id="s" coda:placement="local" />', '<serviceTask id="s" coda:action="set-status" coda:placement="local" />'])
-    assert.notEqual(await workflowProblem(workflow(task), 'placement'), null);
+  for (const task of ['<userTask id="s" />', '<serviceTask id="s" coda:action="run-workflows" />']) {
+    assert.equal(await workflowProblem(workflow(connected(task)), 'placement'), null);
+    assert.match(await workflowProblem(workflow(connected(task.replace('id="s"', 'id="s" coda:placement="local"'))), 'placement'), /coda:placement/);
+  }
   // Inheritance is interpreted by the host; parsing must retain both declarations for its restrictive merge.
-  const { root, problem } = await readWorkflow(workflow('<subProcess id="scope" coda:placement="any" />', ' coda:placement="local"'), 'placement');
+  const { root, problem } = await readWorkflow(workflow(connected(scope(' coda:placement="any"'), 'scope'), ' coda:placement="local"'), 'placement');
   assert.equal(problem, undefined);
   assert.equal(root.rootElements[0].placement, 'local');
-  assert.equal(root.rootElements[0].flowElements[0].placement, 'any');
+  assert.equal(root.rootElements[0].flowElements.find(element => element.id === 'scope').placement, 'any');
 });
 
 test('a workflow written in the dialect is read: Coda\'s attributes and elements, an action with the parameters it takes', async () => {
