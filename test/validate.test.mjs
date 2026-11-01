@@ -40,6 +40,15 @@ test('the schemas are one of Coda\'s types each, beside the manifest\'s, a setti
   for (const [file, schema] of Object.entries(SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/plugin/v2/${file}`);
 });
 
+test('extension points cannot claim any built-in contributes type', () => {
+  const manifest = contributes => ({ contributes: { extensionPoints: {
+    sample: { description: 'sample', title: 'Sample', contributes },
+  } } });
+  assert.equal(manifestProblem(manifest('customOffers')), null);
+  for (const type of TYPES)
+    assert.match(manifestProblem(manifest(type)), /不能是 Coda 自己的类型/, type);
+});
+
 test('a manifest of the types it names is right; one key of no type, or of none Coda reads, is said where it is', () => {
   assert.equal(manifestProblem({ name: 'kit', contributes: { configuration: settings, instructions: '先读 README。', panels: [{ anything: 1 }] } }), null);
   assert.equal(manifestProblem({ name: 'kit', contributes: { 'my-panels': [] } }), 'contributes「my-panels」：contributes 的键：字母和数字，以小写字母开头');
