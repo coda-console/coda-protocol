@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/model-providers.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/model-providers.json",
   "title": "contributes.modelProviders：插件提供的模型服务",
   "description": "别的插件用 coda-model-provider 的设置按「插件/id」选它：叫什么、讲哪种接口、在哪（地址里可以写本插件的单值设置 ${config:…}）、Key 是本插件的哪个密文。",
   "type": "array",

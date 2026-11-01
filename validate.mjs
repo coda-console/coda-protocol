@@ -1,5 +1,5 @@
 // A plugin is right when what it writes is of the types it names: each key of a manifest's `contributes` is a type with a
-// JSON Schema of its own (schemas/plugin/, `https://coda.pub/schemas/plugin/v1/…`), and a key that is no type of Coda's is
+// JSON Schema of its own (schemas/plugin/, `https://coda.pub/schemas/plugin/v2/…`), and a key that is no type of Coda's is
 // one a plugin's extension point declares, for that plugin to read: of the schema that point names, a file of the declaring
 // plugin's (`extensionPoints.<point>.schema`), when it names one. Checking one is checking it against those schemas,
 // nothing else: a field joins a type by joining its schema, never by a rule here. Coda checks a plugin with this module
@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 export const SCHEMA_DIR = fileURLToPath(new URL('./schemas/plugin/', import.meta.url));
-const BASE = 'https://coda.pub/schemas/plugin/v1/';
+const BASE = 'https://coda.pub/schemas/plugin/v2/';
 // The schemas, by file name.
 export const SCHEMAS = Object.fromEntries(readdirSync(SCHEMA_DIR).filter(file => file.endsWith('.json')).sort()
   .map(file => [file, JSON.parse(readFileSync(join(SCHEMA_DIR, file), 'utf8'))]));

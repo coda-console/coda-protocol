@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/capabilities.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/capabilities.json",
   "title": "contributes.capabilities：插件带来的能力",
   "description": "能力名的数组，每个是 .coda/capabilities/<名>.bpmn；只能被调用（workflow_run、callActivity），没有触发器。",
   "type": "array",

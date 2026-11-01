@@ -2,7 +2,7 @@
 
 Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
-- **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v1/<文件>`）。`plugin.json` 是整份清单，`setting.json` 是一项设置的声明。插件写的合乎它用到的类型就对；写给别的插件扩展点的键由那个插件声明，扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
+- **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v2/<文件>`）。`plugin.json` 是整份清单，`setting.json` 是一项设置的声明。插件写的合乎它用到的类型就对；写给别的插件扩展点的键由那个插件声明，扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
 - **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是流程种类、Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
 - **Agent 接入扩展**（`schemas/agent/`、`agent.mjs`、`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
@@ -30,7 +30,7 @@ import { manifestProblem, pointProblem, valueProblem, TYPES, SCHEMAS } from '@co
 
 // 整份清单；给出插件目录时，连同它点名的文件一起查（x-file）。合乎类型返回 null，否则是一句说明：哪里、schema 怎么说。
 const problem = manifestProblem(JSON.parse(readFileSync('plugin/package.json', 'utf8')), 'plugin');
-// 某个类型里的一部分，如输入框模式的参数（插件运行时给出的）。
+// 某个类型里的一部分，如输入框模式声明的参数。
 valueProblem('composer-modes.json#/$defs/parameters', parameters, '插件给出的参数');
 // 写给别的插件扩展点的东西，按那个扩展点的 schema（已读出的对象）；给出写它的插件目录时连同它点名的文件一起查。
 pointProblem(panelsSchema, manifest.contributes.panels, 'contributes.panels', 'plugin');
@@ -62,6 +62,14 @@ fieldsProblem(JSON.parse(fieldsJSON), 'ask');
 ## 项目中的多选选项
 
 设置的 `items.anyOf` 选项可附带 `workflowKind`（`check`、`premerge`、`deploy`、`preview`、`release`）。全局设置显示全部选项；项目设置只显示该项目有的流程类别，未写此字段的选项始终显示。宿主负责按项目提供可选项，流程执行时仍需按运行的提交判断可用操作。
+
+## 输入框模式
+
+从 2.0.0 起，`contributes.composerModes` 可写 `once: true`：这个模式里发出的一条被收下后，它从输入框退出。`once` 是可选布尔值。模式不再接受 `agent`，工具栏始终使用输入框自己的执行者；旧清单须删除模式级的 `agent` 字段。
+
+模式的对象数组参数（`type: array` 且 `items.type: object`）可写 `"presets": { "from": "composer.templates", "by": "template" }`。`from` 是表格设置 ID，`by` 是分组列，两者都是必填字符串，不接受其他字段。此字段只用于模式参数，不用于普通设置。Coda 按输入框所在目录读取设置，以分组列首次出现的顺序显示预设；选中时一次性填入该组的行，只取项中声明的列，之后可普通编辑。进入模式时填入第一组，设置为空则不填。
+
+插件 schema 的 `$id` 命名空间随此不兼容变更升为 `https://coda.pub/schemas/plugin/v2/`；直接写绝对 `$ref` 的调用方须同步更新。Agent 接入和流程方言的 schema 命名空间不变。
 
 ## Agent 接入扩展
 

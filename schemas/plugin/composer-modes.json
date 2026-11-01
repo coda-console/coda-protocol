@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/composer-modes.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/composer-modes.json",
   "title": "contributes.composerModes：输入框模式",
-  "description": "输入框能处在的模式：显示什么（图标、标题、发出去是什么、占位与发送按钮），发出的给谁（agent：session 会话的 Agent，own 为它另选的、开新会话跑，off 不显示），在哪些输入框里能进（in：session 会话的、new 新任务的），参数（写法同设置）。打字进入的（trigger，如 !）没有参数，发出的就是会话的。",
+  "description": "输入框能处在的模式：显示什么（图标、标题、发出去是什么、占位与发送按钮），发出的一条被收下后是否退出（once），工具栏始终使用输入框自己的执行者，在哪些输入框里能进（in：session 会话的、new 新任务的），参数（写法同设置）。打字进入的（trigger，如 !）没有参数，发出的就是会话的。",
   "type": "array",
   "maxItems": 10,
   "items": {
@@ -14,7 +14,7 @@
       "hint": {"$ref": "common.json#/$defs/line200"},
       "placeholder": {"$ref": "common.json#/$defs/line40"},
       "sendLabel": {"$ref": "common.json#/$defs/line20"},
-      "agent": {"description": "agent 只能是 session、own、off", "enum": ["session", "own", "off"]},
+      "once": {"description": "true：这个模式里发出的一条被收下后，它从输入框退出", "type": "boolean"},
       "trigger": {"description": "trigger 是一个标点：!#$%&*+:;=?^|~ 之一", "type": "string", "pattern": "^[!#$%&*+:;=?^|~]$"},
       "in": {"description": "它出现的输入框：session、new，不重复", "type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["session", "new"]}},
       "parameters": {"$ref": "#/$defs/parameters"}
@@ -25,15 +25,8 @@
       {
         "if": {"required": ["trigger"]},
         "then": {
-          "description": "打字进入的模式（trigger）没有参数，也不另选 Agent",
-          "not": {"anyOf": [{"required": ["parameters"]}, {"properties": {"agent": {"const": "own"}}, "required": ["agent"]}]}
-        }
-      },
-      {
-        "if": {"properties": {"agent": {"const": "own"}}, "required": ["agent"]},
-        "then": {
-          "description": "开新会话的模式（agent: own）要从会话里发出，不能在 new 里",
-          "properties": {"in": {"description": "开新会话的模式（agent: own）要从会话里发出，不能在 new 里", "not": {"contains": {"const": "new"}}}}
+          "description": "打字进入的模式（trigger）没有参数",
+          "not": {"required": ["parameters"]}
         }
       }
     ]
@@ -51,8 +44,32 @@
           "maxProperties": 20,
           "propertyNames": {"description": "参数名只用字母和数字，以小写字母开头", "pattern": "^[a-z][A-Za-z0-9]{0,39}$"},
           "additionalProperties": {
+            "properties": {
+              "presets": {
+                "description": "按表格设置的分组列填入预设，只用于项是对象的数组参数",
+                "type": "object",
+                "properties": {
+                  "from": {"type": "string"},
+                  "by": {"type": "string"}
+                },
+                "required": ["from", "by"],
+                "additionalProperties": false
+              }
+            },
+            "unevaluatedProperties": false,
             "allOf": [
-              {"$ref": "setting.json"},
+              {
+                "if": {"required": ["presets"]},
+                "then": {
+                  "description": "presets 只用于 type: array 且 items.type: object 的参数",
+                  "properties": {
+                    "type": {"const": "array"},
+                    "items": {"type": "object", "properties": {"type": {"const": "object"}}, "required": ["type"]}
+                  },
+                  "required": ["type", "items"]
+                }
+              },
+              {"$ref": "setting.json#/$defs/setting"},
               {
                 "description": "参数不能是密文",
                 "not": {"properties": {"writeOnly": {"const": true}}, "required": ["writeOnly"]},

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/mcp-servers.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/mcp-servers.json",
   "title": "contributes.mcpServers：给 Agent 的 MCP 服务器",
   "description": "服务器名 → { command, args, env }，照 Claude Code 的 .mcp.json：Agent 在本机启动、经标准输入输出说话的程序（stdio），不经 shell。command 与 args 里可以写 ${CODA_PLUGIN_PATH}、${CODA_PLUGIN_STATE}、${CODA_NODE}；设置经 env 交给它（写法同 contributes.environment）。",
   "type": "object",

@@ -1,9 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/setting.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/setting.json",
   "title": "一项设置的声明",
   "description": "插件用 JSON Schema 声明设置，Coda 读的是其中一部分：单个值；多选（items.anyOf 的常量）；多个模型服务；一列行；表格（additionalProperties 是每一项）。表格的每一项是单个值、Agent 组合或几列；一列是单个值或 Agent 组合。格式只认 coda-agent（新会话用什么启动）、coda-agent-match（表格的行名：哪些会话）、duration（ISO 8601 时长）、coda-repo、coda-directory、coda-model-provider（别的插件提供的模型服务）、coda-model-url（模型服务的地址，Key 与接口写在同组的 modelKey、modelApi）。writeOnly 是密文：只写不读，放在数据库旁的文件里。",
   "$ref": "#/$defs/setting",
+  "unevaluatedProperties": false,
   "$defs": {
     "base": {
       "type": "object",
@@ -72,7 +73,6 @@
         "additionalProperties": true,
         "propertyNames": true
       },
-      "unevaluatedProperties": false,
       "allOf": [
         {
           "if": {"properties": {"writeOnly": {"const": true}}, "required": ["writeOnly"]},

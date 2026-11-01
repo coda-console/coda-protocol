@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/extensions.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/extensions.json",
   "title": "contributes.extensions：接在别的插件扩展点上的命令",
   "description": "「插件 ID/扩展点名」→ { command }；那个插件须写在 extensionDependencies 里。",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/common.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/common.json",
   "title": "插件清单里共用的写法",
   "$defs": {
     "id": {"description": "小写字母、数字和「-」，以字母开头，至多 40 个字符", "type": "string", "pattern": "^[a-z][a-z0-9-]{0,39}$"},
