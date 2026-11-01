@@ -101,7 +101,9 @@ agentValueProblem('review.json', review, '工具的审核');
 从 2.1.0 起，`executor` 与 `execution` 是 Coda 预定公共对象协议，见[运行器协议正文](docs/executor-protocol.md)。
 `schemas/executor/v1/` 使用默认 Ajv 可读的 draft-07；`@coda-console/protocol/executor` 导出
 `EXECUTOR_PROTOCOL`、`EXECUTION_PROTOCOL`，其 spec/status 都自包含，可直接传给 `protocols.define`。
-首版请求仅支持 `{slots: 1}`，可独占 slots；不支持多单位或多资源。两种类型均无补充栏，execution 绑定是由调度办事员 CAS 更新的单值。
+2.2.0 支持无资源请求或一个资源的一单位（slots 或本机 `group:<原名>`），可独占申请资源；仍不支持多单位或多资源原子申请。
+可选 placement 是生产者的位置／指定环境硬约束，context 是受控运行上下文与输出声明；执行器须显式声明支持新能力。
+流程可在 process、subProcess、scriptTask 写 `coda:placement="local|any"`，祖先 local 不可被子节点放宽。两种类型均无补充栏，execution 绑定是由调度办事员 CAS 更新的单值。
 executor 无 target，status 由持有端写；execution 绑定后由执行方完整回传，开跑前须经本机账本准入。
 对象协议 v1 与 npm 包版本、插件清单 v2 独立；旧 `contributes.executors` 不变。
 

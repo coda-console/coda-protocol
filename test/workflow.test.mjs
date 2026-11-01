@@ -11,6 +11,26 @@ const workflow = (body, process = '') => `<?xml version="1.0" encoding="UTF-8"?>
   <process id="p" isExecutable="true"${process}>${body}</process>
 </definitions>`;
 
+test('placement is a static process, subprocess or script constraint; actions and user tasks cannot select executors', async () => {
+  for (const placement of ['local', 'any']) {
+    for (const source of [workflow('', ` coda:placement="${placement}"`),
+      workflow(`<scriptTask id="s" scriptFormat="bash" coda:placement="${placement}"><script>echo ok</script></scriptTask>`),
+      workflow(`<subProcess id="scope" coda:placement="${placement}" />`)]) {
+      assert.equal(await workflowProblem(source, 'placement'), null);
+    }
+  }
+  for (const placement of ['', 'remote', '=inputs.place']) {
+    assert.match(await workflowProblem(workflow('', ` coda:placement="${placement}"`), 'placement'), /coda:placement/);
+  }
+  for (const task of ['<userTask id="s" coda:placement="local" />', '<serviceTask id="s" coda:action="set-status" coda:placement="local" />'])
+    assert.notEqual(await workflowProblem(workflow(task), 'placement'), null);
+  // Inheritance is interpreted by the host; parsing must retain both declarations for its restrictive merge.
+  const { root, problem } = await readWorkflow(workflow('<subProcess id="scope" coda:placement="any" />', ' coda:placement="local"'), 'placement');
+  assert.equal(problem, undefined);
+  assert.equal(root.rootElements[0].placement, 'local');
+  assert.equal(root.rootElements[0].flowElements[0].placement, 'any');
+});
+
 test('a workflow written in the dialect is read: Coda\'s attributes and elements, an action with the parameters it takes', async () => {
   const source = workflow(`
     <startEvent id="start" /><sequenceFlow id="a" sourceRef="start" targetRef="build"/><sequenceFlow id="b" sourceRef="build" targetRef="deploy"/><sequenceFlow id="c" sourceRef="deploy" targetRef="approve"/>

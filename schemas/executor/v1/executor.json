@@ -64,7 +64,10 @@
         "observedRevision": {"$ref": "common.json#/definitions/opaqueId"},
         "executionFeatures": {
           "type": "object",
-          "properties": {"multiResource": {"const": false}, "multiUnit": {"const": false}, "exclusive": {"type": "boolean"}},
+          "properties": {
+            "multiResource": {"const": false}, "multiUnit": {"const": false}, "exclusive": {"type": "boolean"},
+            "noResources": {"type": "boolean"}, "namedResources": {"type": "boolean"}, "context": {"type": "boolean"}
+          },
           "required": ["multiResource", "multiUnit", "exclusive"],
           "additionalProperties": false
         }
