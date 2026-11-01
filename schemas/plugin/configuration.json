@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/configuration.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/configuration.json",
   "title": "contributes.configuration：插件的设置",
   "description": "照 VS Code 的 contributes.configuration：properties 是设置名 → 声明（setting.json），设置名以「<插件 ID>.」开头；required 是缺了就不能用的设置。",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/plugin.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/plugin.json",
   "title": "插件清单（插件目录的 package.json）",
   "description": "照 VS Code 扩展的 package.json 写；Coda 读的是下面这些键，其余是 npm 的，不管。contributes 的每个键是一种类型，各有自己的 schema；不是 Coda 的键，是写给别的插件的扩展点的（它们声明的类型），由那个扩展点的 schema 校验。",
   "type": "object",

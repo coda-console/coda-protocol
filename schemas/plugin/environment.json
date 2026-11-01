@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/environment.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/environment.json",
   "title": "contributes.environment：给项目里启动的东西的环境变量",
   "description": "变量名 → 值，不超过 100 个。值里可以写 ${config:<本插件的单值设置>}（不能是密文：密文从 CODA_PLUGIN_SECRETS 给的文件读）、${CODA_PLUGIN_PATH}、${CODA_PLUGIN_STATE}。PATH 由 contributes.path 给；Coda 自己的变量与 shell 的钩子不归插件。",
   "type": "object",

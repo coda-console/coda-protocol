@@ -37,7 +37,7 @@ test('the schemas are one of Coda\'s types each, beside the manifest\'s, a setti
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
     ['common.json', 'plugin.json', 'setting.json']);
-  for (const [file, schema] of Object.entries(SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/plugin/v1/${file}`);
+  for (const [file, schema] of Object.entries(SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/plugin/v2/${file}`);
 });
 
 test('a manifest of the types it names is right; one key of no type, or of none Coda reads, is said where it is', () => {
@@ -50,7 +50,64 @@ test('a manifest of the types it names is right; one key of no type, or of none 
   assert.equal(manifestProblem({ contributes: { configuration: { properties: { 'kit.token': { type: 'integer', writeOnly: true } } } } }),
     'contributes.configuration.properties「kit.token」.type：密文设置（writeOnly）只能是没有 format、enum 与默认值的文本');
   assert.equal(manifestProblem({ contributes: { composerModes: [{ id: 'go', title: '走', icon: 'bolt', agent: 'own', in: ['new'] }] } }),
-    'contributes.composerModes[0].in：开新会话的模式（agent: own）要从会话里发出，不能在 new 里');
+    'contributes.composerModes[0] 里有不认识的键：agent');
+});
+
+test('composer modes accept optional once and reject the removed agent field', () => {
+  const mode = { id: 'go', title: '走', icon: 'bolt', hint: '提示', placeholder: '输入', sendLabel: '发送', in: ['session', 'new'] };
+  const check = extra => manifestProblem({ contributes: { composerModes: [{ ...mode, ...extra }] } });
+  for (const extra of [{}, { once: true }, { once: false }, { trigger: '!', once: true }])
+    assert.equal(check(extra), null);
+  for (const once of ['true', 1, null, [], {}]) assert.match(check({ once }), /once/);
+  for (const agent of ['session', 'own', 'off']) assert.match(check({ agent }), /不认识的键：agent/);
+  assert.match(check({ trigger: '!', parameters: { type: 'object', properties: { text: { type: 'string' } } } }), /trigger.*没有参数/);
+  assert.match(check({ trigger: 'word' }), /trigger/);
+  for (const location of [[], ['new', 'new'], ['other']]) assert.match(check({ in: location }), /in/);
+});
+
+test('presets only extend composer parameters containing object rows', () => {
+  const rows = { type: 'array', items: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } };
+  const presets = { from: 'composer.templates', by: 'template' };
+  const check = (parameter, valid) => {
+    const parameters = { type: 'object', properties: { subagents: parameter }, required: ['subagents'] };
+    const manifest = { contributes: { composerModes: [{ id: 'ultra', title: 'Ultra', icon: 'bolt', parameters }] } };
+    const original = structuredClone(manifest);
+    const results = [manifestProblem(manifest), valueProblem('composer-modes.json#/$defs/parameters', parameters, '参数')];
+    for (const result of results) {
+      if (valid) assert.equal(result, null, JSON.stringify(parameter));
+      else assert.equal(typeof result, 'string', JSON.stringify(parameter));
+    }
+    assert.deepEqual(manifest, original);
+  };
+  for (const parameter of [rows, { ...rows, presets }, { ...rows, presets: { from: '', by: '' } }]) check(parameter, true);
+  for (const invalid of [null, true, [], 'table', {}, { from: 'table' }, { by: 'group' },
+    { from: 1, by: 'group' }, { from: 'table', by: false }, { ...presets, extra: 'no' }])
+    check({ ...rows, presets: invalid }, false);
+  const otherTypes = [
+    ...['string', 'number', 'integer', 'boolean'].map(type => ({ type })),
+    { type: 'object', format: 'coda-agent' },
+    { type: 'object', additionalProperties: { type: 'string' } },
+    { type: 'array', items: { anyOf: [{ const: 'quick' }] } },
+    { type: 'array', items: { type: 'string', format: 'coda-model-provider' } },
+  ];
+  for (const parameter of otherTypes) {
+    check(parameter, true);
+    check({ ...parameter, presets }, false);
+  }
+  for (const parameter of [
+    { presets }, { type: 'array', presets },
+    ...[null, true, {}, { properties: rows.items.properties }, { type: 'string' }, { type: 'object' }]
+      .map(items => ({ type: 'array', items, presets })),
+    { ...rows, presets, extra: 'no' }, { ...rows, presets, uniqueItems: true },
+    { ...rows, presets, items: { ...rows.items, required: ['missing'] } },
+    { ...rows, presets, items: { ...rows.items, properties: { key: { type: 'string', writeOnly: true } } } },
+    { ...rows, items: { ...rows.items, presets } },
+    { type: 'string', writeOnly: true },
+    { type: 'object', additionalProperties: { type: 'object', properties: { key: { type: 'string', writeOnly: true } } } },
+  ]) check(parameter, false);
+  assert.equal(manifestProblem({ contributes: { configuration: { properties: { 'kit.rows': rows } } } }), null);
+  assert.match(manifestProblem({ contributes: { configuration: { properties: { 'kit.rows': { ...rows, presets } } } } }), /presets/);
+  assert.match(valueProblem('setting.json', { ...rows, presets }, '设置'), /presets/);
 });
 
 test('x-unique-by: a property of an array\'s objects, or a part of its texts, once', () => {
@@ -158,7 +215,7 @@ test('an extension point\'s schema is a file of its plugin\'s that compiles besi
   assert.equal(pointProblem(panels, [{ id: 'quota', title: ' ' }], 'contributes.panels'), 'contributes.panels[0].title：不超过 40 字的一行');
   assert.equal(pointProblem(panels, [{ id: 'quota', title: '额度' }, { id: 'quota', title: '又一个' }], 'contributes.panels'), 'contributes.panels：id 不能重复：quota');
   // The ID it gives itself is not where it is kept: one naming a schema of these takes nothing of it.
-  assert.equal(pointProblem({ ...panels, $id: 'https://coda.pub/schemas/plugin/v1/common.json' }, [{ id: 'quota', title: '额度' }], 'contributes.panels'), null);
+  assert.equal(pointProblem({ ...panels, $id: 'https://coda.pub/schemas/plugin/v2/common.json' }, [{ id: 'quota', title: '额度' }], 'contributes.panels'), null);
   assert.equal(valueProblem('common.json#/$defs/id', 'kit', 'x'), null);
   // The files a value names are the writing plugin's, also where a keyword's own schema names them.
   const own = { type: 'string', 'x-file': { type: 'file' } };

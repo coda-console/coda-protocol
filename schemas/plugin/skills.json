@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/skills.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/skills.json",
   "title": "contributes.skills：插件带来的 Agent Skill",
   "description": "插件目录里的目录，每个有自己的 SKILL.md；Agent 按目录名找到它，所以目录名不重复。",
   "type": "array",

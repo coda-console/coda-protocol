@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/events.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/events.json",
   "title": "contributes.events：插件发布的事件",
   "description": "流程订阅的事件名；starts（默认开）是否开始订阅它的流程，否则只送到在跑的运行；ends 是否结束它的主体（如 PR 关闭）。",
   "type": "array",

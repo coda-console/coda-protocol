@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/extension-points.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/extension-points.json",
   "title": "contributes.extensionPoints：插件声明的扩展点",
   "description": "扩展点名 → 声明。只写 description 的，别的插件用 contributes.extensions 接一条命令；写了 contributes 的，任何插件在它的 contributes 里用这个键写的东西归它，原样交给声明它的插件读，合乎它的 schema 才装得上。",
   "type": "object",

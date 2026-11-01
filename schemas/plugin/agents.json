@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/agents.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/agents.json",
   "title": "contributes.agents：插件带来的 Agent",
   "description": "每个是一个讲 ACP（加 Coda 的等待项）的程序：它是谁、客户端怎么画它、Coda 怎么启动它。",
   "type": "array",

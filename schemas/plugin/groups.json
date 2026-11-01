@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/groups.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/groups.json",
   "title": "contributes.groups：并发组",
   "description": "有名字、有容量的锁：name 是任何进程都能拿的组名，capacity 是本插件的一项整数设置，说同时放进几个。",
   "type": "array",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coda.pub/schemas/plugin/v1/executors.json",
+  "$id": "https://coda.pub/schemas/plugin/v2/executors.json",
   "title": "contributes.executors：给这台机器脚本步骤的执行环境",
   "description": "照 GitHub 的 container hooks：叫什么、有哪些标签（coda:runsOn 那样写），以及 hook——步骤的执行器为作业的每一部分调用的一行命令。",
   "type": "array",
