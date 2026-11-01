@@ -107,6 +107,25 @@ agentValueProblem('review.json', review, '工具的审核');
 executor 无 target，status 由持有端写；execution 绑定后由执行方完整回传，开跑前须经本机账本准入。
 对象协议 v1 与 npm 包版本、插件清单 v2 独立；旧 `contributes.executors` 不变。
 
+## 预定协议的实现
+
+从 2.3.0 起，插件用 `contributes.protocolImplementations` 声明实现哪些 Coda 预定公共对象协议：
+
+```json
+{ "contributes": { "protocolImplementations": [{ "kind": "executor", "version": 1, "id": "host" }] } }
+```
+
+`kind` 是类型名，`version` 是协议主版本（不是 npm 包版本），可选 `id` 将范围限到一个本机对象；
+不写 `id` 表示整个类型。声明是通用的，不枚举 executor 或其他类型，也不借用旧命令 hook `contributes.executors`。
+类型由 Coda 预定；声明不能创建类型、改它的 schema 或突破类型自己的写入约束。
+宿主核对已安装插件的声明与预定协议版本，再按范围授予 provider 写权限；未知类型、主版本不符、未声明及镜像对象均不授权并写明原因。
+实现可以用 `protocols.implement({ kind, id? })` 核验声明并取得已有对象（类型范围返回 `{ kind }`）；不会隐式创建对象。
+
+不同插件声明同一类型的重叠范围视为冲突：类型范围与该类型的任意对象重叠，相同对象 ID 互相重叠；不同对象 ID 可并存。
+宿主在安装检查拒绝冲突，若运行时目录仍出现重叠则双方都不授权并写明原因，不选择先登记者。
+范围冲突不因主版本不同而消失。卸载或移除实现声明后不再授权；没有自动改派、兼容分支或新的协调机制。
+清单 schema 只检查写法与完全重复项，类型支持、主版本和跨插件冲突由宿主按实际预定协议与安装目录核验。
+
 ## 谁在用
 
 - **Coda**：读插件时用它校验清单，再整理成自己的结构；只另看插件身份（ID、设置名在 ID 之下），以及装到一台机器上才知道的（来源、已装插件的冲突）。读流程时用 `readWorkflow` 同时校验方言、值与结构，再编译成引擎需要的数据。
