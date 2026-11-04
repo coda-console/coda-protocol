@@ -81,6 +81,16 @@ test('what the dialect does not have is said: not BPMN, an attribute or element 
     'go：coda:action run-workflows 只接受参数 kind、commit、inputs');
 });
 
+test('expire-tool-details accepts olderThan and rejects other parameter names; cold-store remains compatible', async () => {
+  const task = (action, params) => workflow(`<startEvent id="start" />
+    <sequenceFlow id="f" sourceRef="start" targetRef="clean" />
+    <serviceTask id="clean" coda:action="${action}"><extensionElements>${params}</extensionElements></serviceTask>`);
+  assert.equal(await workflowProblem(task('expire-tool-details', '<coda:param name="olderThan" value="P7D" />'), 'w'), null);
+  assert.equal(await workflowProblem(task('expire-tool-details', '<coda:param name="anyAfter" value="P7D" />'), 'w'),
+    'clean：coda:action expire-tool-details 只接受参数 olderThan');
+  assert.equal(await workflowProblem(task('cold-store', '<coda:param name="anyAfter" value="P7D" /><coda:param name="archivedAfter" value="P1D" />'), 'w'), null);
+});
+
 test('the names workflows share are the dialect\'s: the kinds, those that deploy among them, and the events Coda sends', () => {
   assert.deepEqual(WORKFLOW_KINDS, ['deploy', 'preview', 'release', 'check', 'premerge']);
   assert.ok(DEPLOYING_KINDS.every(kind => WORKFLOW_KINDS.includes(kind)));
