@@ -81,6 +81,29 @@ test('what the dialect does not have is said: not BPMN, an attribute or element 
     'go：coda:action run-workflows 只接受参数 kind、commit、inputs');
 });
 
+test('expire-tool-details requires a duration while legacy maintenance actions remain compatible', async () => {
+  const task = (action, params = '') => workflow(`<startEvent id="start" />
+    <sequenceFlow id="f" sourceRef="start" targetRef="clean" />
+    <serviceTask id="clean" coda:action="${action}"><extensionElements>${params}</extensionElements></serviceTask>`);
+  const param = value => `<coda:param name="olderThan" value="${value}" />`;
+  assert.deepEqual(CODA_ACTIONS['expire-tool-details'], ['olderThan']);
+  for (const value of ['P7D', 'PT6H', '=inputs.age', '{{ inputs.age }}'])
+    assert.equal(await workflowProblem(task('expire-tool-details', param(value)), 'w'), null, value);
+  assert.equal(await workflowProblem(task('expire-tool-details'), 'w'), 'clean 需要 olderThan');
+  for (const value of ['', 'seven days', '7', '-P7D'])
+    assert.equal(await workflowProblem(task('expire-tool-details', param(value)), 'w'),
+      'clean：olderThan 须为 ISO 8601 时长，如 P7D', value);
+  assert.equal(await workflowProblem(task('expire-tool-details', '<coda:param name="olderThan" />'), 'w'),
+    'clean 需要 olderThan');
+  assert.equal(await workflowProblem(task('expire-tool-details', '<coda:param name="anyAfter" value="P7D" />'), 'w'),
+    'clean：coda:action expire-tool-details 只接受参数 olderThan');
+  assert.deepEqual(CODA_ACTIONS['cold-store'], ['anyAfter', 'archivedAfter']);
+  assert.equal(await workflowProblem(task('cold-store', '<coda:param name="anyAfter" value="P7D" /><coda:param name="archivedAfter" value="P1D" />'), 'w'), null);
+  // Existing actions did not require parameters or validate their duration values.
+  assert.equal(await workflowProblem(task('cold-store'), 'w'), null);
+  assert.equal(await workflowProblem(task('sweep-uploads', param('legacy')), 'w'), null);
+});
+
 test('the names workflows share are the dialect\'s: the kinds, those that deploy among them, and the events Coda sends', () => {
   assert.deepEqual(WORKFLOW_KINDS, ['deploy', 'preview', 'release', 'check', 'premerge']);
   assert.ok(DEPLOYING_KINDS.every(kind => WORKFLOW_KINDS.includes(kind)));

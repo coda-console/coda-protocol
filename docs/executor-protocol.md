@@ -5,7 +5,7 @@
 2.2.0 按[第 7 步方案](https://github.com/coda-console/coda/issues/2078#issuecomment-6559423071)补齐流程接入：
 **无资源或一个资源的一单位**，可独占所申请资源；多单位、多资源原子申请仍未开放。
 
-协议对象版本 `protocolVersion: 1`、本目录的 v1、npm 包版本 2.2.0 和插件清单的 v2 分开演进。
+协议对象版本 `protocolVersion: 1`、本目录的 v1、npm 包版本 2.3.0 和插件清单的 v2 分开演进。
 本次只增加契约；不改变 `contributes.executors`，也不宣称 host、scheduler、空间引用解析或账本接口已经实现。
 
 ## 定义与登记

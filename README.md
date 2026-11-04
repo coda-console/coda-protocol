@@ -107,6 +107,20 @@ agentValueProblem('review.json', review, '工具的审核');
 executor 无 target，status 由持有端写；execution 绑定后由执行方完整回传，开跑前须经本机账本准入。
 对象协议 v1 与 npm 包版本、插件清单 v2 独立；旧 `contributes.executors` 不变。
 
+## 工具详情过期清理
+
+2.3.0 新增流程动作 `expire-tool-details`，必填参数 `olderThan` 使用与 `sweep-uploads` 相同的 ISO 8601 时长写法（如 `P7D`）。新动作校验参数是否提供、字面值是否为非负时长；表达式在运行时求值。运行所属项目的会话里，最后活动距今超过该时长的工具调用（含后台任务、用户自己的命令），删除完整输入输出，只留卡片摘要，删除不可恢复。
+
+```xml
+<serviceTask id="expire" coda:action="expire-tool-details">
+  <extensionElements>
+    <coda:param name="olderThan" value="P7D" />
+  </extensionElements>
+</serviceTask>
+```
+
+`actions.json` 的可选 `parameterSchema` 声明动作参数值与必填项，复用流程值的 schema 关键字。此次只为新动作声明，不收紧已有动作的校验；旧插件不受影响。`cold-store` 保留原参数与行为，已被 `expire-tool-details` 取代，将在下一个主版本删除。
+
 ## 谁在用
 
 - **Coda**：读插件时用它校验清单，再整理成自己的结构；只另看插件身份（ID、设置名在 ID 之下），以及装到一台机器上才知道的（来源、已装插件的冲突）。读流程时用 `readWorkflow` 同时校验方言、值与结构，再编译成引擎需要的数据。

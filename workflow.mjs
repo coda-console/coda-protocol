@@ -97,6 +97,9 @@ ajv.addKeyword({ keyword: 'x-number', type: 'string', schemaType: 'boolean', com
 ajv.addSchema(fields);
 ajv.addSchema(values);
 const structureProblem = structureChecker(ajv, { feelProblem, isExpression });
+const actionChecks = new Map(Object.entries(actions.actions)
+  .filter(([, action]) => action.parameterSchema)
+  .map(([name, action]) => [name, ajv.compile(action.parameterSchema)]));
 const checks = new Map();
 // The validator of a definition of values.json, by its name; none for a type it says nothing of.
 const check = name => {
@@ -207,6 +210,11 @@ function valuesProblem(root) {
       if (problem) return problem;
     }
     const held = (element.extensionElements?.values ?? []).filter(codaType);
+    if (element.$type === 'bpmn:ServiceTask') {
+      const params = Object.fromEntries(held.filter(e => e.$type === 'coda:Param').map(e => [e.name, e.value]));
+      const problem = failed(actionChecks.get(element.action), params, at, false);
+      if (problem) return problem;
+    }
     if (!held.length) continue;
     const grouped = {};
     for (const child of held) (grouped[lower(codaType(child).name)] ??= []).push(codaObject(child));
