@@ -44,6 +44,7 @@
         "views": {"$ref": "views.json"},
         "modelProviders": {"$ref": "model-providers.json"},
         "executors": {"$ref": "executors.json"},
+        "protocolImplementations": {"$ref": "protocol-implementations.json"},
         "composerModes": {"$ref": "composer-modes.json"}
       },
       "propertyNames": {"description": "contributes 的键：字母和数字，以小写字母开头", "pattern": "^[a-z][A-Za-z0-9]{0,39}$"}

@@ -33,11 +33,20 @@ test('an agent declares external lifecycle ownership without changing the defaul
 });
 
 test('the schemas are one of Coda\'s types each, beside the manifest\'s, a setting\'s and what they share', () => {
-  assert.equal(TYPES.length, 22);
+  assert.equal(TYPES.length, 23);
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
     ['common.json', 'plugin.json', 'setting.json']);
   for (const [file, schema] of Object.entries(SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/plugin/v2/${file}`);
+});
+
+test('extension points cannot claim any built-in contributes type', () => {
+  const manifest = contributes => ({ contributes: { extensionPoints: {
+    sample: { description: 'sample', title: 'Sample', contributes },
+  } } });
+  assert.equal(manifestProblem(manifest('customOffers')), null);
+  for (const type of TYPES)
+    assert.match(manifestProblem(manifest(type)), /不能是 Coda 自己的类型/, type);
 });
 
 test('a manifest of the types it names is right; one key of no type, or of none Coda reads, is said where it is', () => {

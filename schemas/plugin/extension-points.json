@@ -36,6 +36,7 @@
             "views",
             "modelProviders",
             "executors",
+            "protocolImplementations",
             "composerModes"
           ]
         }
