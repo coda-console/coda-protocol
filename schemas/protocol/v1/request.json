@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/protocol/v1/request.json",
+  "title": "统一调用请求",
+  "description": "对一条记录的一次操作：记录引用、操作名、输入和请求 ID。同一个请求 ID 重发只做一次。",
+  "type": "object",
+  "$defs": {
+    "reference": {
+      "description": "记录引用：类型名与不透明 ID",
+      "type": "object",
+      "properties": {
+        "kind": {"type": "string", "minLength": 1, "maxLength": 128},
+        "id": {"type": "string", "minLength": 1, "maxLength": 2048}
+      },
+      "required": ["kind", "id"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "record": {"$ref": "#/$defs/reference"},
+    "operation": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "input": true,
+    "requestId": {"type": "string", "minLength": 1, "maxLength": 2048}
+  },
+  "required": ["record", "operation", "input", "requestId"],
+  "additionalProperties": false
+}

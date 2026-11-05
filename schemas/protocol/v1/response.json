@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/protocol/v1/response.json",
+  "title": "统一调用回答",
+  "description": "一次调用要么立刻返回结果，要么返回一个运行引用；两者恰有一个。运行引用指向被调用方自己的 coda/run@1 记录，调用方 watch 它取结果。",
+  "type": "object",
+  "$defs": {
+    "reference": {
+      "description": "运行记录引用：类型名与不透明 ID",
+      "type": "object",
+      "properties": {
+        "kind": {"type": "string", "minLength": 1, "maxLength": 128},
+        "id": {"type": "string", "minLength": 1, "maxLength": 2048}
+      },
+      "required": ["kind", "id"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "result": true,
+    "run": {"$ref": "#/$defs/reference"}
+  },
+  "additionalProperties": false,
+  "oneOf": [{"required": ["result"]}, {"required": ["run"]}]
+}

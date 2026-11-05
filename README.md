@@ -4,6 +4,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 - **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v2/<文件>`）。`plugin.json` 是整份清单，`setting.json` 是一项设置的声明。插件写的合乎它用到的类型就对；写给别的插件扩展点的键由那个插件声明，扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
+- **协议定义与调用**（`schemas/protocol/`、`protocol.mjs`、`docs/protocol.md`）：协议是 `命名空间/名字@大版本` + spec/status 的 JSON Schema + 操作；插件在 `contributes.protocols` 里定义自己命名空间下的协议，在 `contributes.protocolImplementations` 里声明实现哪些协议。调用是 `{ record, operation, input, requestId }`，回答是 `{ result }` 或 `{ run }`；`coda/run@1`、`coda/executor@1`、`coda/agent@1` 是三个核心协议。
 - **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是流程种类、Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
 - **Agent 接入扩展**（`schemas/agent/`、`agent.mjs`、`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
 
@@ -37,6 +38,23 @@ pointProblem(panelsSchema, manifest.contributes.panels, 'contributes.panels', 'p
 ```
 
 ```js
+import {
+  RUN_PROTOCOL, EXECUTOR_PROTOCOL, AGENT_PROTOCOL, CORE_PROTOCOLS,
+  definitionProblem, ownedProtocolsProblem, runStatusProblem,
+  invocationRequestProblem, invocationResponseProblem,
+  parseProtocolName, formatProtocolName, protocolShortName,
+} from '@coda-console/protocol/protocol';
+
+parseProtocolName('coda/run@1'); // { namespace: 'coda', name: 'run', major: 1 }
+protocolShortName('coda/run@1'); // 'coda-1run-21'
+definitionProblem(RUN_PROTOCOL); // null，或说明
+ownedProtocolsProblem(manifest); // contributes.protocols 只能在自己的命名空间下
+runStatusProblem({ state: 'completed', result: null }, { state: 'working' }); // 终态不能再变
+invocationRequestProblem({ record: { kind: 'coda/executor@1', id: 'host' }, operation: 'execute', input: {}, requestId: 'r1' });
+invocationResponseProblem({ run: { kind: 'coda/run@1', id: 'run-1' } });
+```
+
+```js
 import { workflowProblem, readWorkflow, fieldProblem, fieldsProblem, CODA_FIELDS } from '@coda-console/protocol/workflow';
 
 // 一份流程（名字不带 .bpmn，用在说明里）：方言里都有就返回 null，否则是一句说明。
@@ -51,7 +69,7 @@ fieldsProblem(JSON.parse(fieldsJSON), 'ask');
 
 扩展点的 schema 和这里的并列：可以 `$ref` 协议的 schema（`common.json#/$defs/line40`），可以用五个关键字；它自己写的 `$id` 不算数，指针只指它校验的那份值里的位置。
 
-`TYPES` 是 Coda 自己的类型（`contributes` 的键），`SCHEMAS` 是全部 schema（按文件名）。
+`TYPES` 是 Coda 自己的类型（`contributes` 的键），`SCHEMAS` 是 `schemas/plugin/` 里的全部 schema（按文件名）。协议定义的 schema 在 `schemas/protocol/v1/`，由 `@coda-console/protocol/protocol` 导出。
 
 ## 插件的后端通道
 
@@ -96,16 +114,20 @@ agentValueProblem('review.json', review, '工具的审核');
 深层／大型 JSON 用显式栈检查，非有限数字与循环引用不会通过。会话归属、活动状态迁移、调用起因、协商、超时、重试和授权仍由宿主判断；
 丢弃未知风险值、压缩答复的裁剪与兜底等整理也留在 Coda。详见正文的兼容性与接入说明。
 
-## 运行器与执行请求
+## 协议定义与核心协议
 
-从 2.1.0 起，`executor` 与 `execution` 是 Coda 预定公共对象协议，见[运行器协议正文](docs/executor-protocol.md)。
-`schemas/executor/v1/` 使用默认 Ajv 可读的 draft-07；`@coda-console/protocol/executor` 导出
-`EXECUTOR_PROTOCOL`、`EXECUTION_PROTOCOL`，其 spec/status 都自包含，可直接传给 `protocols.define`。
-2.2.0 支持无资源请求或一个资源的一单位（slots 或本机 `group:<原名>`），可独占申请资源；仍不支持多单位或多资源原子申请。
-可选 placement 是生产者的位置／指定环境硬约束，context 是受控运行上下文与输出声明；执行器须显式声明支持新能力。
-流程可在 process、subProcess、scriptTask 写 `coda:placement="local|any"`，祖先 local 不可被子节点放宽。两种类型均无补充栏，execution 绑定是由调度办事员 CAS 更新的单值。
-executor 无 target，status 由持有端写；execution 绑定后由执行方完整回传，开跑前须经本机账本准入。
-对象协议 v1 与 npm 包版本、插件清单 v2 独立；旧 `contributes.executors` 不变。
+从 3.0.0 起，协议是 `命名空间/名字@大版本` + 记录格式（spec、status 的 JSON Schema）+ 操作，见[协议正文](docs/protocol.md)。
+插件用 `contributes.protocols` 定义自己命名空间下的协议，用 `contributes.protocolImplementations` 声明实现哪些协议；
+命名空间 `coda` 保留给核心协议。
+
+- **`coda/run@1`**：被调用方自己的运行记录。spec 记录调用的记录、操作、输入、请求 ID、父引用和是否被等待；status 是 `working`、`input-required`、`completed`、`failed`、`canceled`，后三个是终态，带 `result`、可选的 `progress` 和等输入时的 `awaiting`。操作是 `cancel`。
+- **`coda/executor@1`**：执行器。操作 `execute` 接一份执行工作并返回运行引用，运行记录在执行器那边；没有 `target`、`executor` 或 `assignmentId` 绑定，也不回写调用方的记录。
+- **`coda/agent@1`**：Agent 资源，spec 照 Coda 的 Agent 资源（`agent`、`title`、`defaultModel`、`models`、`modes` 等），删除 `plugin` 字段；status 为空对象，本版本不定义操作。
+
+统一调用是 `{ record: {kind,id}, operation, input, requestId }`，回答恰为 `{ result }` 或 `{ run: {kind,id} }` 之一。同一 `requestId` 重发只做一次；慢操作返回运行引用，调用方 watch 运行记录取结果，没有推送或回写。
+
+旧 `executor`、`execution` 对象协议与 `@coda-console/protocol/executor` 在 3.0.0 删除；`contributes.executors` 不变，仍用于流程的执行环境 hook。
+协议大版本、npm 包版本与插件清单 v2 独立演进；不提供旧格式兼容代码。
 
 ## 谁在用
 
@@ -118,6 +140,9 @@ executor 无 target，status 由持有端写；execution 绑定后由执行方�
 
 - 只加东西（新的可选字段、新的类型、放宽限制）升次版本；
 - 改名、删除、收紧（旧的清单会变得不合）升主版本，`$id` 里的 `v1` 随之变成 `v2`。
+- 协议自己的大版本写在协议名里（`coda/run@1`）；同一大版本只加可选字段和新操作，改含义或删东西升大版本，新旧可并存。
+
+3.0.0 删除了 `executor` 与 `execution`，并把执行请求并入 `coda/executor@1` 的 `execute`；这是不兼容变更，旧代码须改用 `@coda-console/protocol/protocol` 与 `coda/run@1`。
 
 改协议就在这里开 PR，说明写清动了哪个类型、旧插件受不受影响；发布后 Coda 与检查包各自升依赖。
 

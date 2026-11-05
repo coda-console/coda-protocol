@@ -1,0 +1,72 @@
+{
+  "name": "coda/run@1",
+  "title": "运行",
+  "description": "被调用方为一次调用开出的运行记录，由被调用方持有和写入。调用方 watch 这条记录取结果；状态到 completed、failed、canceled 后不再改变。",
+  "spec": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "$defs": {
+      "reference": {
+        "type": "object",
+        "properties": {
+          "kind": {"type": "string", "minLength": 1, "maxLength": 128},
+          "id": {"type": "string", "minLength": 1, "maxLength": 2048}
+        },
+        "required": ["kind", "id"],
+        "additionalProperties": false
+      }
+    },
+    "properties": {
+      "record": {"$ref": "#/$defs/reference", "description": "调用的是哪条记录"},
+      "operation": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-z][a-z0-9-]{0,63}$", "description": "调用的操作名"},
+      "input": {"description": "原样保存的调用输入"},
+      "requestId": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "调用方的请求 ID；重发只对应这条运行"},
+      "parent": {"$ref": "#/$defs/reference", "description": "谁让它存在：发起它的记录引用，必填"},
+      "awaited": {"type": "boolean", "description": "父是否在等它；不等时完成只追加消息，不叫醒父"}
+    },
+    "required": ["record", "operation", "input", "requestId", "parent", "awaited"],
+    "additionalProperties": false
+  },
+  "status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "$defs": {
+      "reference": {
+        "type": "object",
+        "properties": {
+          "kind": {"type": "string", "minLength": 1, "maxLength": 128},
+          "id": {"type": "string", "minLength": 1, "maxLength": 2048}
+        },
+        "required": ["kind", "id"],
+        "additionalProperties": false
+      }
+    },
+    "properties": {
+      "state": {"enum": ["working", "input-required", "completed", "failed", "canceled"], "description": "后三个是终态"},
+      "result": {"description": "完成或失败时的结果"},
+      "progress": {"type": "string", "maxLength": 4096, "description": "进展说明，可选"},
+      "awaiting": {"$ref": "#/$defs/reference", "description": "等输入时那张卡片的引用"}
+    },
+    "required": ["state"],
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {"properties": {"state": {"enum": ["completed", "failed"]}}, "required": ["state"]},
+        "then": {"required": ["result"]},
+        "else": {"not": {"required": ["result"]}}
+      },
+      {
+        "if": {"properties": {"state": {"const": "input-required"}}, "required": ["state"]},
+        "then": {"required": ["awaiting"]},
+        "else": {"not": {"required": ["awaiting"]}}
+      }
+    ]
+  },
+  "operations": {
+    "cancel": {
+      "description": "请求取消；立即回答空结果，实际是否停止看状态。",
+      "input": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "maxProperties": 0, "additionalProperties": false},
+      "result": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "maxProperties": 0, "additionalProperties": false}
+    }
+  }
+}
