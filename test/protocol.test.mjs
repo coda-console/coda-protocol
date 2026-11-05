@@ -152,11 +152,14 @@ test('executor execute references use the git protocol names', () => {
 });
 
 test('the invocation envelope answers with exactly one of result and run', () => {
-  const request = { record: reference('coda/executor@1', 'host'), operation: 'execute', input: { task: {} }, requestId: 'request-1' };
+  const request = { record: reference('coda/executor@1', 'host'), operation: 'execute', input: { task: {} },
+    requestId: 'request-1', parent: reference('coda/run@1', 'caller-run'), awaited: true };
+  const without = (value, key) => Object.fromEntries(Object.entries(value).filter(([name]) => name !== key));
   assert.equal(invocationRequestProblem(request), null);
   for (const value of [null, {}, { ...request, record: null }, { ...request, record: { kind: 'coda/executor@1' } },
     { ...request, operation: 'Execute' }, { ...request, operation: '' }, { ...request, requestId: '' },
-    { ...request, requestId: 1 }, { ...request, future: true }])
+    { ...request, requestId: 1 }, { ...request, future: true }, without(request, 'parent'), without(request, 'awaited'),
+    { ...request, parent: null }, { ...request, parent: { kind: 'coda/run@1' } }, { ...request, awaited: 'true' }])
     assert.equal(typeof invocationRequestProblem(value), 'string', JSON.stringify(value));
 
   assert.equal(invocationResponseProblem({ result: { ok: true } }), null);

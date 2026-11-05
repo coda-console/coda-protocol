@@ -121,7 +121,7 @@ definitionProblem(definition, { namespace: 'my-plugin' }); // 同时核对命名
 
 ## 调用信封
 
-记录引用 `{ kind, id }` 的 `kind` 是协议名，如 `coda/run@1`、`coda/executor@1`、`git/snapshot@1`、`git/source@1`；`id` 是记录的不透明 ID。
+记录引用 `{ kind, id }` 的 `kind` 是协议名，如 `coda/run@1`、`coda/executor@1`、`git/snapshot@1`、`git/source@1`；`id` 是记录的不透明 ID。Coda 自己还没定义成协议的东西（会话、流程运行等）暂用它现有的资源种类名，如 `threads`、`workflow-runs`，等后续定义成协议再改用协议名。
 
 一次调用是：
 
@@ -130,9 +130,13 @@ definitionProblem(definition, { namespace: 'my-plugin' }); // 同时核对命名
   "record": {"kind": "coda/executor@1", "id": "host"},
   "operation": "execute",
   "input": {"task": {"command": "npm", "args": ["test"]}},
-  "requestId": "request-1"
+  "requestId": "request-1",
+  "parent": {"kind": "coda/run@1", "id": "caller-run"},
+  "awaited": true
 }
 ```
+
+`parent` 是发起这次调用的一方（调用方的运行、会话或其他记录），`awaited` 表示调用方是否在等它。被调用方建运行时把这两项照抄进 `coda/run@1` 的 spec。
 
 回答二选一：
 
@@ -191,6 +195,8 @@ spec：
 | `requestId` | 调用方的请求 ID |
 | `parent` | 谁让它存在：发起它的记录引用，必填 |
 | `awaited` | 父是否在等它，布尔 |
+
+`parent` 与 `awaited` 来自调用请求，被调用方建运行时照抄这两项。
 
 status：
 
