@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/plugin/v2/views.json",
   "title": "contributes.views：客户端为插件打开的页面",
-  "description": "插件目录里的 HTML，客户端在沙箱里开：在哪常驻（side 会话旁、page 一页），图标，接管打开的引用种类（handles，像 VS Code 的自定义编辑器），读数（readout）与只给哪种工作位置的会话（checkout）。",
+  "description": "插件目录里的 HTML，客户端在沙箱里开：在哪常驻（side 会话旁、page 一页），图标，接管打开的引用种类（handles，像 VS Code 的自定义编辑器），读数（readout），只给哪种工作位置的会话（checkout）与占位（frame：document 由客户端整页滚动、横向锁死，canvas 铺满视图、自己滚动）。",
   "type": "array",
   "maxItems": 10,
   "items": {
@@ -21,7 +21,8 @@
         "items": {"$ref": "common.json#/$defs/id"}
       },
       "readout": {"description": "读数：workflow-runs、machines、changes", "enum": ["workflow-runs", "machines", "changes"]},
-      "checkout": {"description": "只给哪种工作位置的会话：worktree", "enum": ["worktree"]}
+      "checkout": {"description": "只给哪种工作位置的会话：worktree", "enum": ["worktree"]},
+      "frame": {"description": "它怎么占位：document 由客户端整页滚动、横向锁死；canvas 铺满视图、自己滚动；不写暂与 canvas 相同", "enum": ["document", "canvas"]}
     },
     "required": ["id", "title", "entry"],
     "additionalProperties": false

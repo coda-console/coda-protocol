@@ -15,6 +15,14 @@ test('plugin channel requirements are optional, nonempty and name distinct backe
     assert.match(manifestProblem({ name: 'kit', coda }), /coda/);
 });
 
+test('a view may say how it is framed: document or canvas, or nothing to keep the current frame', () => {
+  const view = { id: 'desk', title: '桌面', entry: 'desk.html' };
+  for (const frame of [undefined, 'document', 'canvas'])
+    assert.equal(manifestProblem({ contributes: { views: [frame === undefined ? view : { ...view, frame }] } }), null);
+  for (const frame of ['page', 'side', 'Document', '', null, true])
+    assert.match(manifestProblem({ contributes: { views: [{ ...view, frame }] } }), /^contributes\.views\[0\]\.frame：/);
+});
+
 after(() => { for (const dir of dirs) rmSync(dir, { recursive: true, force: true }); });
 // A plugin's directory holding `files`.
 function directory(files = {}) {
