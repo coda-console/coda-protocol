@@ -43,7 +43,7 @@
     },
     "properties": {
       "state": {"enum": ["working", "input-required", "completed", "failed", "canceled"], "description": "后三个是终态"},
-      "result": {"description": "完成或失败时的结果"},
+      "result": {"description": "完成、失败或取消时的结果；失败时约定为 { code, message }，code 为 unknown 表示结局不明"},
       "progress": {"type": "string", "maxLength": 4096, "description": "进展说明，可选"},
       "awaiting": {"$ref": "#/$defs/reference", "description": "等输入时那张卡片的引用"}
     },
@@ -52,8 +52,11 @@
     "allOf": [
       {
         "if": {"properties": {"state": {"enum": ["completed", "failed"]}}, "required": ["state"]},
-        "then": {"required": ["result"]},
-        "else": {"not": {"required": ["result"]}}
+        "then": {"required": ["result"]}
+      },
+      {
+        "if": {"properties": {"state": {"enum": ["working", "input-required"]}}, "required": ["state"]},
+        "then": {"not": {"required": ["result"]}}
       },
       {
         "if": {"properties": {"state": {"const": "input-required"}}, "required": ["state"]},

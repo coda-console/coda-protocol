@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import Ajv from 'ajv/dist/2020.js';
+import { agentMessageProblem } from '../agent.mjs';
 import { manifestProblem } from '../validate.mjs';
 import {
   AGENT_PROTOCOL, CORE_PROTOCOLS, EXECUTOR_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
@@ -114,14 +115,24 @@ test('run status is legal only when its state, result and awaiting reference agr
   const completed = { state: 'completed', result: { ok: true } };
   const failed = { state: 'failed', result: { code: 'failed' } };
   const canceled = { state: 'canceled' };
-  for (const status of [working, waiting, completed, failed, canceled]) assert.equal(runStatusProblem(working, status), null, JSON.stringify(status));
-  for (const status of [{ state: 'unknown' }, {}, { state: 'working', result: 1 }, { state: 'canceled', result: 1 },
+  const canceledWithResult = { state: 'canceled', result: { left: ['timer'] } };
+  for (const status of [working, waiting, completed, failed, canceled, canceledWithResult])
+    assert.equal(runStatusProblem(working, status), null, JSON.stringify(status));
+  for (const status of [{ state: 'unknown' }, {}, { state: 'working', result: 1 },
     { state: 'input-required' }, { state: 'input-required', awaiting: reference(), result: 1 },
     { state: 'input-required', awaiting: null }, { state: 'completed' }, { state: 'failed' },
     { state: 'working', awaiting: reference() }, { state: 'completed', result: 1, awaiting: reference() }])
     assert.equal(typeof runStatusProblem(working, status), 'string', JSON.stringify(status));
   assert.deepEqual(RUN_STATES, ['working', 'input-required', 'completed', 'failed', 'canceled']);
   assert.deepEqual(RUN_TERMINAL_STATES, ['completed', 'failed', 'canceled']);
+});
+
+test('_coda/wait awaited is optional and must be a boolean', () => {
+  const wait = { sessionId: 's1', waitId: 'build-1', state: 'waiting' };
+  assert.equal(agentMessageProblem('_coda/wait', wait), null);
+  for (const awaited of [true, false]) assert.equal(agentMessageProblem('_coda/wait', { ...wait, awaited }), null);
+  for (const awaited of [null, 'false', 0, [], {}])
+    assert.equal(typeof agentMessageProblem('_coda/wait', { ...wait, awaited }), 'string', JSON.stringify(awaited));
 });
 
 test('a terminal run cannot change again', () => {

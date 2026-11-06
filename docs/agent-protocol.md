@@ -3,7 +3,7 @@
 Coda 用 [ACP](https://agentclientprotocol.com)（Agent Client Protocol）接 Agent，要求 Agent 接受[会话指令](#会话指令)（ACP 的 `systemPrompt`），
 可选支持[插话](#插话)（`_session/steering`），另收 Agent 活动报告（`_coda/wait`）、[执行失败事实](#执行失败)（ACP 错误数据里的 `_meta.coda.failure`）和[工具调用的审核](#工具调用的审核)（`_meta.coda.review`）。本文是这份协议的唯一正文，写给要让一个 Agent（比如 Cursor 的）接入 Coda 的人：照它实现，
 Coda 就知道这个 Agent 在一轮之外还在做什么，如实显示、不回收它的进程，把它处理这些东西时的输出、审批和提问放进正确的一轮，
-并把它之后说的作为补交交回正确的调用。产品上这些规则的来由见会话行为契约（Coda 的 docs/session-contracts.md）与完成唤醒契约（Coda 的 docs/subagent-design.md「完成唤醒契约」）。
+并在这次调用结清时把结果只交回一次。产品上这些规则的来由见会话行为契约（Coda 的 docs/session-contracts.md）与完成唤醒契约（Coda 的 docs/subagent-design.md「完成唤醒契约」）。
 
 **改协议**：本文在 `coda-console/coda-protocol`，与插件清单的类型（`schemas/`）同一个仓库、同一个版本（npm 包 `@coda-console/protocol`）。Coda 与公开仓库 `coda-console/coda-plugins` 的契约检查包都依赖这个包：改协议就在这里开 PR，发布新版本后两边各自升依赖。检查要换判定方式时（新的请求怎么发、怎样算合格），另给 coda-plugins 开 PR 改检查本身。文中提到的 Coda 文档与源码在 Coda 的仓库里。
 
@@ -54,7 +54,7 @@ Coda 过去静默丢弃的值，契约检查现在可得到具体位置；过去
 插件在 `contributes.agents[]` 声明 `lifecycle`，默认 `managed`；外部自主运行的 Bot 声明 `external`。
 这是生命周期的归属，不是任务时长。普通 Agent 的长期委派仍按原有调用关系汇报。
 
-- `managed`：Coda 按轮次建立回复关系，属于调用的后台活动继续补交结果。
+- `managed`：Coda 按轮次建立回复关系；属于调用的后台活动算在等，挡这次调用结清与会话静止，结束时结果算进这次调用，只交回一次。
 - `external`：Coda 连接适配器，观测原生对话与活动；连接或本地轮次结束不代表外部 Bot 或其调度停止。
   发给它的会话消息是一次委派，附原请求编号和回传地址；没有自动回复或后续跟随，不根据原生发言的时间猜测回复对象。
   需要交回结果时调用 Coda `send`，`childId` 为回传地址，`replyTo` 为原请求编号，`prompt` 为结果，`final` 默认 `true`。
@@ -62,7 +62,7 @@ Coda 过去静默丢弃的值，契约检查现在可得到具体位置；过去
   原委派授权覆盖指定接收方到发起方的回传，Coda 校验这两方与原请求；另发新请求仍走通常授权。
   外部 Agent 使用独立会话，不能被 `spawn` 接管为受管子会话，也不接受 `takeOver` 抢占回复轮次。
 
-常驻观测连接及外部运行记录使用 `_coda/wait` 的 `kind: "observation"`，保持适配器在线，但不作为等待结果的后台任务。
+常驻观测连接及外部运行记录使用 `_coda/wait` 的 `kind: "observation"`，保持适配器在线；它不在等，不影响会话静止与调用结清。
 `waiting` 表示正在观测，界面用呼吸状态；有新原生活动要交互时仍以 `handling` 开始、回到 `waiting` 结束自主轮次。
 外部生命周期的原生活动起因记作 `external`，不归到碰巧进行中的 Coda 调用，也不向以前的调用方自动回传。
 `session/cancel` 只表达适配器明确支持的局部停止；插件必须说明它实际停止的对象。
@@ -183,7 +183,7 @@ HTTP 429 或上游的认证错误分类判断。真正的认证失败仍沿用 A
 Coda 按该类别显示「额度不足」，保留完整原因，不安排自动重试；这个类别不要求 `input`，即使带了也不进入服务故障重试。
 该回执确认本轮因额度不足而结束，轮次记为 `ended`、`stopReason: quota_exhausted` 并保留 `error`，操作记为 `completed`；
 操作已结算不代表任务成功，子会话向调用方交回 `failed`。两端同一原因只显示一次，不再标作「执行结果未知」。
-交回 `failed` 的状态文案为「失败」，涵盖准备与执行阶段。调用交回后，后续轮次的额度错误仍连同原因补交给调用方，即使没有正文或还有其他后台工作在进行。
+交回 `failed` 的状态文案为「失败」，涵盖准备与执行阶段。调用结清前，后续轮次的额度错误仍连同原因算进这次调用的结果，即使没有正文或还有其他活动在等；结清后不再另交。
 插件以普通执行错误返回（例如 -32603），不得把额度耗尽伪装成要求重新登录的 -32000。
 恢复条件（等待窗口重置、补充额度等）由插件放在原因中，重置时刻按[文字里的时刻](#文字里的时刻)写；上游没有给出确切恢复时间时，不推算时间。
 
@@ -289,10 +289,10 @@ Coda 存的就是这段文字，两端客户端显示时按看的那台设备的
 
 ## Agent 活动
 
-`session/prompt` 的回复结束一轮，也就是 Agent 说眼下的信息它处理完了：Coda 据此宣告完成，把子会话这次调用的结果交回父会话。
+`session/prompt` 的回复结束一轮，也就是 Agent 说眼下的信息它处理完了；这一轮结束不代表调用完成，Coda 还要等这次调用树下在等的东西都回来，才结清并只交回一次。
 一轮之后 Agent 还可能有东西在进行：放到后台的命令、派出去的子 Agent、到点会叫醒它的定时。ACP 不说这些，Coda 看不见就会把会话
 显示成空闲、回收它的进程，也不知道它们之后叫醒 Agent 的那一轮属于哪次调用。Agent 活动报告让 Agent 把这些告诉 Coda，
-每一样一项，从开始到结束；它们不挡完成（[规则](#规则)第 2 条）。
+每一样一项，从开始到结束；默认在等、挡会话静止与调用结清（[规则](#规则)第 2 条），`awaited: false`、反复的定时与观测除外。
 
 ### 能力协商
 
@@ -317,7 +317,7 @@ Agent 发给 Coda 的通知（没有 `id`，不回复），和 `session/update` 
 | `sessionId` | 是 | 它属于哪个会话：本会话，或 Coda 已经认得的子会话（之前某项活动的 `childSessionId`）。子 Agent 自己起的活动从子 Agent 的会话报，起因记为那个子 Agent（[规则](#规则)第 1 条）。别的会话的一律丢弃 |
 | `waitId` | 是 | Agent 自己取的身份，同一会话内不重复，至多 200 字 |
 | `state` | 是 | `waiting`、`handling`、`done`、`failed`、`cancelled`，见下 |
-| `kind` | 否 | `task`（默认）、`subagent`、`timer`，或别的词（按 `task` 算）；第一次报告时定下，之后可以省略，改了也按第一次的算 |
+| `kind` | 否 | `task`（默认）、`subagent`、`timer`、`observation`，或别的词（按 `task` 算）；第一次报告时定下，之后可以省略，改了也按第一次的算 |
 | `title` | 否 | 给人看的名字，至多 500 字 |
 | `detail` | 否 | 说明：任务在做什么，定时按什么计划触发；至多 4000 字。其中的时刻按[文字里的时刻](#文字里的时刻)写 |
 | `stoppable` | 否 | Coda 能不能经 [`_coda/wait/stop`](#_codawaitstop) 停它，默认不能 |
@@ -327,8 +327,11 @@ Agent 发给 Coda 的通知（没有 `id`，不回复），和 `session/update` 
 | `toolCallId` | 否 | 启动它的那次工具调用，同一会话里的 `toolCallId`：任务详情据此显示启动命令；它没结束时，那次调用缺结果也不被收束为结果未确认。后台命令的原调用保留 Agent 报的状态，记录 `backgroundTaskId` 关联任务；展示为已转入后台，不再计入前台执行 |
 | `at` | `timer` 知道时带 | 下次触发的时刻，ISO 8601。不带时会话底部的定时一行只写 `detail`（没有就是标题），不显示下次时间；定时照样登记，到点仍由 Agent 报 `handling` |
 | `recurring` | 否 | 定时是否反复触发 |
+| `awaited` | 否 | 是否在等；省略按 `kind`（见下表）。`false` 即「不等它了」：照样登记、显示，但不参与调用完成与会话静止，结束时结果只记下，不叫醒谁 |
 
 缺必填字段、`state` 不在上表、字段过长或 `at` 读不出时间的，整条丢弃，不报错。之后的报告只需带变了的字段，没带的保持原样。
+
+`awaited` 省略时按 `kind`：`task` 与其他词（`observation` 除外）、`subagent`、一次性 `timer` 在等；反复的 `timer` 与 `observation` 不等。第一次报告或之后任何一次都可以报 `false`；报了 `false` 之后再报 `true` 不算，不等是单向的。Coda 也可能替用户或父会话把一项改成不等，Agent 不会收到通知。
 
 | `state` | 含义 |
 | --- | --- |
@@ -338,11 +341,12 @@ Agent 发给 Coda 的通知（没有 `id`，不回复），和 `session/update` 
 
 `kind` 决定 Coda 把它当成什么，不只是怎么显示：
 
-| `kind` | Coda 当它是 | 显示 | 会话的事实（Coda 的 docs/session-contracts.md「事件」） |
-| --- | --- | --- | --- |
-| `task` 与其他词 | 后台命令 | 发起记录留在原位，任务等待时沉底、结束时留在自己的结束位置；`stoppable` 时有停止按钮；圆环「后台任务运行中」 | `background` |
-| `subagent` | 委派 | 委派清单（Coda 的 docs/subagent-design.md「委派清单」）里的一项（`kind: task`），点开是它的过程视图，子会话的输出都归它；圆环「等待后续结果」，同子会话 | `background` |
-| `timer` | 定时唤醒 | 会话底部的定时一行（计划、是否反复）；不进历史 | `scheduled`，不算 `background` |
+| `kind` | Coda 当它是 | 显示 | 会话的事实（Coda 的 docs/session-contracts.md「事件」） | 默认是否在等 |
+| --- | --- | --- | --- | --- |
+| `task` 与其他词（除 `observation`） | 后台命令 | 发起记录留在原位，任务等待时沉底、结束时留在自己的结束位置；`stoppable` 时有停止按钮；圆环「后台任务运行中」 | `background` | 是 |
+| `subagent` | 委派 | 委派清单（Coda 的 docs/subagent-design.md「委派清单」）里的一项（`kind: task`），点开是它的过程视图，子会话的输出都归它；圆环「等待后续结果」，同子会话 | `background` | 是 |
+| `timer` | 定时唤醒 | 会话底部的定时一行（计划、是否反复）；不进历史 | `scheduled`，不算 `background` | 一次性是，反复的不等 |
+| `observation` | 常驻观测 | 呼吸状态，保持适配器在线 | `observing`，不算 `background` | 否 |
 
 ```json
 {"jsonrpc":"2.0","method":"_coda/wait","params":{"sessionId":"s1","waitId":"build-1","kind":"task","state":"waiting","title":"构建","detail":"npm run build","stoppable":true,"outputFile":"/tmp/build-1.log"}}
@@ -350,6 +354,7 @@ Agent 发给 Coda 的通知（没有 `id`，不回复），和 `session/update` 
 {"jsonrpc":"2.0","method":"_coda/wait","params":{"sessionId":"s1","waitId":"build-1","state":"done"}}
 {"jsonrpc":"2.0","method":"_coda/wait","params":{"sessionId":"s1","waitId":"review","kind":"subagent","state":"waiting","title":"评审改动","childSessionId":"s1/review","stoppable":true}}
 {"jsonrpc":"2.0","method":"_coda/wait","params":{"sessionId":"s1","waitId":"hourly","kind":"timer","state":"waiting","title":"每小时看一次 CI","at":"2026-10-12T10:00:00Z","recurring":true}}
+{"jsonrpc":"2.0","method":"_coda/wait","params":{"sessionId":"s1","waitId":"watch-1","kind":"task","state":"waiting","title":"看日志","detail":"tail -f build.log","awaited":false}}
 ```
 
 ### `_coda/wait/stop`
@@ -357,7 +362,7 @@ Agent 发给 Coda 的通知（没有 `id`，不回复），和 `session/update` 
 请求参数和答复见 [wait-stop.json](../schemas/agent/wait-stop.json)。
 
 Coda 发给 Agent 的请求，参数 `{ "sessionId": …, "waitId": … }`，Agent 回 `{}`。只对声明了 `stoppable` 的活动发：
-用户点了任务或子 Agent 的停止、父会话取消这次调用（含已经交回、还在为补交跟进的）时它树下的项。
+用户点了任务或子 Agent 的停止、父会话取消这次调用时它树下的项。
 回复只表示收到；Coda 不当它已经停了，直到 Agent 随后用 `_coda/wait` 报它结束（通常是 `cancelled`）。
 
 ### 规则
@@ -366,23 +371,23 @@ Coda 发给 Agent 的请求，参数 `{ "sessionId": …, "waitId": … }`，Age
    起因是那个子 Agent 的这次运行，不论报来时有没有轮次在进行。没有轮次在进行、又不是子 Agent 起的，起因未知（见起因（Coda 的 docs/session-contracts.md「起因」））：
    Agent 在一轮之外自己开始干活，就要在这一轮里报 `handling` 说明是为哪一项（第 3 条）；说不出来时自造的那一项起因未知。
    它归起因沿链走得到的那次调用：父会话派来的那一轮里登记的，归那次调用；用户直接发的消息那一轮里登记的，不归父会话的调用；
-   起因未知的算每次调用的。
-2. **不挡完成**：活动在进行时会话照样静止（会话静止（Coda 的 docs/session-contracts.md「会话静止」））：这一轮结束就宣告完成、交回调用，
-   交回的结果写明这次调用还有哪些活动在进行；它们之后叫醒 Agent 的那一轮结束时，那一轮说的作为这次调用的补交交回，
-   都结束时再说一次（补交（Coda 的 docs/subagent-design.md「补交」））。活动在进行时进程不被空闲回收，`!` 命令不执行，会话照实显示。
+   起因未知的属于所在的会话，不算任何一次调用。
+2. **在等**：活动在进行时会话不算静止，所属调用也不结清（会话静止（Coda 的 docs/session-contracts.md「会话静止」））：
+   调用要等这些活动结束、并且它们叫醒的那一轮收尾之后才完成，结果只交回一次。报 `awaited: false` 的不等：不参与调用完成与会话静止。
+   活动在进行时进程不被空闲回收，`!` 命令不执行，会话照实显示。
 3. **处理（`handling`）**：Agent 在一轮之外处理活动时，Coda 为它开一轮自主轮次。这一轮的起因是最先进入 `handling` 的那一项，
-   所以这一轮属于那一项的调用，说的话作为它的补交交回。这一轮进行中别的项进入 `handling`，并入这一轮，起因不变。所有项都离开 `handling`
+   所以这一轮属于那一项的调用，它说的话算进这次调用的结果，调用结清时只交回一次。这一轮进行中别的项进入 `handling`，并入这一轮，起因不变。所有项都离开 `handling`
    （回到 `waiting`，或结束）时这一轮结束。这一轮里 Agent 的输出、审批与提问都归它，子会话发来的也一样；用户这时发的消息排队，等这一轮结束再送。
    在 Coda 发起的一轮（`session/prompt`）进行中进入 `handling` 的，算在那一轮里；那一轮结束时还有项在 `handling`，接着开一轮自主轮次。
    用户停止这一轮时，Coda 对本会话发 `session/cancel`：Agent 应停止处理，把这些项改回 `waiting` 或报结束；这一轮随之结束，
    因为分不清停止和做完谁先到，结果记为未知。30 秒内这一轮还没结束，Coda 关掉托管连接与它的进程组，结果未知，不自动重跑。
 4. **定时**：`kind: timer` 带 `recurring`，知道下次触发的时刻就带 `at`。到点时报 `handling`，处理完反复的回到 `waiting`（可以带新的 `at`），
    一次性的报 `done`。`at` 是触发时刻，不是期限：到点没报不算过期。父会话取消这次调用时，它树下 `stoppable` 的定时经 `_coda/wait/stop` 停掉，
-   其余的 Coda 不删除，这次调用不再为它们补交，并如实告诉父会话留下了哪几个（要删得请 Agent 自己删）。
+   其余的 Coda 不删除，改成不等，并如实告诉父会话留下了哪几个（要删得请 Agent 自己删）；到点它们仍会唤醒 Agent，但不再属于这次调用，结果不再交回。
 5. **子会话与继续**：`childSessionId` 让 Coda 认得那个会话。子 Agent 结束后，Agent 以新的 `waitId`、同一个 `childSessionId` 再登记一次，
    就是继续同一个子 Agent：委派清单里还是那一项，多一次运行，这一次的起因是再登记时进行的那一轮。
 6. **进程结束**：Agent 进程结束（崩溃、停止超时被关、空闲回收、机器重启），它所有没结束的活动以 `disconnected` 结束，结果未知，
-   Coda 不重放；为它们跟进的调用随之补交一次，写明结果未知。后端重启而托管还在时一切照旧：活动、`handling` 的那一轮都接回，
+   Coda 不重放；这次调用按结果未知收尾（`failed` 的 `result.code: "unknown"`），只交回一次。后端重启而托管还在时一切照旧：活动、`handling` 的那一轮都接回，
    后端不在期间的 `_coda/wait` 从托管日志续读，各只算一次。
 7. **会话加载中**：`session/new`、`session/load` 期间发来的 `_coda/wait` 先存着，会话身份确定后按原顺序处理，只收本会话与这些登记里公告的子会话。
    所以 Agent 恢复会话时可以把还在等的东西重报一遍：同一个 `waitId` 再报 `waiting` 不会多登记一项。
@@ -433,7 +438,7 @@ Agent、模型、强度、审批档位、其他配置、标题和任务全文；
 
 允许后在目标目录建根会话（`shared` 用原目录，`worktree` 从卡片写明的默认分支新建工作树），第一条消息就是 `prompt`，审批档位保留卡片批准的参数，不跟随 Bot；标题固定为批准的标题。
 没有 parent，但首条任务建立发起会话的一次调用（沿用 `send` 的会话间回复机制）。任务完成或失败后，结果自动送回并唤醒发起会话；
-这次任务引发的后续沿用补交规则。用户在新会话里另发的消息仍回复用户。PR 事件的 `coda.session` 仍采用新会话自己的 Agent 与配置。
+这次任务引发的后续仍算在这次调用里，结清时只交回一次；用户在新会话里另发的消息仍回复用户。PR 事件的 `coda.session` 仍采用新会话自己的 Agent 与配置。
 会话数据的 `initiatedBy` 保存 `{threadId, title, reference}`，表示「由哪个会话发起」，不附带旧上下文；回复关系由首条任务的调用保存。
 `reference` 是发起会话的 `coda://threads/…`。两端客户端尚未显示这个来源字段。
 

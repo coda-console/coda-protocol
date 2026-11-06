@@ -85,6 +85,10 @@
       "type": "boolean",
       "description": "recurring 须为 true 或 false"
     },
+    "awaited": {
+      "type": "boolean",
+      "description": "awaited 须为 true 或 false"
+    },
     "at": {
       "type": "string",
       "description": "at 读不出时间",

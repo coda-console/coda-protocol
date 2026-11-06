@@ -121,7 +121,7 @@ agentValueProblem('review.json', review, '工具的审核');
 插件用 `contributes.protocols` 定义自己命名空间下的协议，用 `contributes.protocolImplementations` 声明实现哪些协议；
 命名空间 `coda` 保留给核心协议。
 
-- **`coda/run@1`**：被调用方自己的运行记录。spec 记录调用的记录、操作、输入、请求 ID、父引用和是否被等待；status 是 `working`、`input-required`、`completed`、`failed`、`canceled`，后三个是终态，带 `result`、可选的 `progress` 和等输入时的 `awaiting`。操作是 `cancel`。
+- **`coda/run@1`**：被调用方自己的运行记录。spec 记录调用的记录、操作、输入、请求 ID、父引用和是否被等待；status 是 `working`、`input-required`、`completed`、`failed`、`canceled`，后三个是终态。`completed`/`failed` 必带 `result`，`failed` 的 `result` 约定为 `{ code, message }`（`code: "unknown"` 表示结局不明），`canceled` 可带取消前的话和留下的东西；另有可选的 `progress` 和等输入时的 `awaiting`。操作是 `cancel`。
 - **`coda/executor@1`**：执行器。操作 `execute` 接一份执行工作并返回运行引用，运行记录在执行器那边；没有 `target`、`executor` 或 `assignmentId` 绑定，也不回写调用方的记录。
 - **`coda/agent@1`**：Agent 资源，spec 照 Coda 的 Agent 资源（`agent`、`title`、`defaultModel`、`models`、`modes` 等），删除 `plugin` 字段；status 为空对象，本版本不定义操作。
 

@@ -203,9 +203,11 @@ status：
 | 字段 | 含义 |
 | --- | --- |
 | `state` | `working`、`input-required`、`completed`、`failed`、`canceled`；后三个是终态 |
-| `result` | 完成或失败时的结果，必须随 `completed`/`failed` 给出 |
+| `result` | 完成、失败或取消时的结果：`completed`/`failed` 必带；`canceled` 可带取消前说过的话和留下的东西；`working`/`input-required` 不带 |
 | `progress` | 进展说明，可选 |
 | `awaiting` | 等输入时那张卡片的引用；`input-required` 必填，其他状态不写 |
+
+`failed` 的 `result` 约定为 `{ code, message }`。`code: "unknown"` 表示结局不明（例如执行连接中断），调用方据此显示「结果未知」，不当作失败。
 
 终态是最后的写入：`runStatusProblem(previous, next)` 在 `previous` 已是终态时返回说明，同一状态再写也不行。进行中的状态可以互相转换（`working` 与 `input-required`），也可以进入任一终态。
 
