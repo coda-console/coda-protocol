@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/plugin/v2/protocol-implementations.json",
+  "title": "contributes.protocolImplementations：插件实现的协议",
+  "description": "插件实现哪些协议，写协议名「命名空间/名字@大版本」，不重复。可以实现在别的命名空间下定义的协议。",
+  "type": "array",
+  "maxItems": 100,
+  "uniqueItems": true,
+  "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"}
+}

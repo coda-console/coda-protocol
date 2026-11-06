@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/plugin/v2/protocols.json",
+  "title": "contributes.protocols：插件定义并拥有的协议",
+  "description": "每个是一份协议定义；定义里的命名空间须是本插件的 ID。宿主读清单时用 @coda-console/protocol 的 ownedProtocolsProblem 一并核对该约束。",
+  "type": "array",
+  "maxItems": 50,
+  "uniqueItems": true,
+  "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json"},
+  "x-unique-by": ["name"]
+}
