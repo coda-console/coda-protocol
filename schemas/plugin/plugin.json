@@ -7,6 +7,14 @@
   "properties": {
     "id": {"$ref": "common.json#/$defs/id", "description": "插件 ID：小写字母、数字和「-」，以字母开头，至多 40 个字符；不写就用 name"},
     "name": {"type": "string"},
+    "description": {"description": "一句话简介：插件列表里只显示一行，20 字以内为宜；更多的说明写在插件目录的 README.md，插件页里显示", "type": "string"},
+    "icon": {
+      "description": "插件的图标：插件目录里的 PDF（light 必填，dark 与 template 可选，同 Agent 的图标），或 SF Symbols 的符号画在系统色的底上（symbol 与 color）；客户端裁成圆角方块。不写时，只带一个 Agent 的插件用那个 Agent 的图标，其余用分类的默认图标",
+      "type": "object",
+      "if": {"required": ["symbol"]},
+      "then": {"$ref": "#/$defs/symbolIcon"},
+      "else": {"$ref": "#/$defs/fileIcon"}
+    },
     "categories": {"description": "分类：文本的数组，第一个是插件页里归的类", "type": "array", "items": {"type": "string"}},
     "coda": {
       "description": "Coda 宿主的安装要求；不写 channels 就不限制后端通道",
@@ -47,6 +55,23 @@
         "composerModes": {"$ref": "composer-modes.json"}
       },
       "propertyNames": {"description": "contributes 的键：字母和数字，以小写字母开头", "pattern": "^[a-z][A-Za-z0-9]{0,39}$"}
+    }
+  },
+  "$defs": {
+    "fileIcon": {
+      "type": "object",
+      "properties": {"light": {"$ref": "agents.json#/$defs/icon"}, "dark": {"$ref": "agents.json#/$defs/icon"}, "template": {"description": "单色图标：按文字颜色画", "type": "boolean"}},
+      "required": ["light"],
+      "additionalProperties": false
+    },
+    "symbolIcon": {
+      "type": "object",
+      "properties": {
+        "symbol": {"description": "SF Symbols 的符号名，如 key.fill", "type": "string", "maxLength": 100, "pattern": "^[a-z0-9]+(\\.[a-z0-9]+)*$"},
+        "color": {"description": "底色：系统色 red、orange、yellow、green、mint、teal、cyan、blue、indigo、purple、pink、brown、gray 之一", "enum": ["red", "orange", "yellow", "green", "mint", "teal", "cyan", "blue", "indigo", "purple", "pink", "brown", "gray"]}
+      },
+      "required": ["symbol", "color"],
+      "additionalProperties": false
     }
   },
   "if": {"properties": {"activationEvents": {"minItems": 1}}, "required": ["activationEvents"]},

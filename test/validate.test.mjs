@@ -156,6 +156,22 @@ test('x-placeholders: what a text may name, its own settings among them as asked
   for (const value of ['${config:kit.key}', '${config:kit.none}', '${HOME}']) assert.match(manifestProblem(env(value)), /^contributes\.environment\.KIT：/, value);
 });
 
+test('a plugin\'s icon is PDFs of its directory, as an agent\'s, or a symbol on a system colour; none keeps the default', () => {
+  const dir = directory({ 'icon.pdf': '%PDF-1.4\n', 'dark.pdf': '%PDF-1.4\n', 'icon.svg': '<svg/>' });
+  for (const icon of [undefined, { light: 'icon.pdf' }, { light: 'icon.pdf', dark: 'dark.pdf', template: true }, { symbol: 'key.fill', color: 'yellow' }, { symbol: 'gauge', color: 'indigo' }])
+    assert.equal(manifestProblem(icon === undefined ? { description: '一句话' } : { icon }, dir), null, JSON.stringify(icon));
+  assert.match(manifestProblem({ icon: { light: 'icon.svg' } }, dir), /^icon\.light：icon\.svg 不是 PDF/);
+  assert.match(manifestProblem({ icon: { light: 'gone.pdf' } }, dir), /^icon\.light：插件目录里没有 gone\.pdf/);
+  assert.equal(manifestProblem({ icon: { symbol: 'key.fill' } }, dir), 'icon 缺 color');
+  assert.match(manifestProblem({ icon: { symbol: 'key.fill', color: 'magenta' } }, dir), /^icon\.color：底色/);
+  for (const symbol of ['Key.Fill', 'key..fill', 'key fill', '', '.key'])
+    assert.match(manifestProblem({ icon: { symbol, color: 'blue' } }, dir), /^icon\.symbol：SF Symbols/, symbol);
+  assert.equal(manifestProblem({ icon: { symbol: 'key.fill', color: 'blue', light: 'icon.pdf' } }, dir), 'icon 里有不认识的键：light');
+  assert.equal(manifestProblem({ icon: { dark: 'dark.pdf' } }, dir), 'icon 缺 light');
+  assert.match(manifestProblem({ icon: 'icon.pdf' }, dir), /^icon 须为对象/);
+  assert.match(manifestProblem({ description: ['长'] }), /^description 须为/);
+});
+
 test('x-file: a file or a directory of the plugin\'s, never leaving it, of its kind, with what it holds; or none there', () => {
   const dir = directory({ 'main.mjs': '', 'icon.pdf': '%PDF-1.4\n', 'icon.svg': '<svg/>', 'big.pdf': `%PDF-1.4\n${'x'.repeat(33 * 1024)}`,
     '.coda/capabilities/check.bpmn': '', '.coda/workflows/check.bpmn': '', '.coda/capabilities/lint.bpmn': '', 'skills/empty/.keep': '' });
