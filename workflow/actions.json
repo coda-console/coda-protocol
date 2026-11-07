@@ -7,8 +7,6 @@
       "description": "整个移除运行主体的会话的工作树，分支保留提交；result 是 removed、absent、in-use、busy 或 failed"},
     "stop-process": {"params": [],
       "description": "停掉运行主体的会话托管的 Agent 进程，下次发消息时透明恢复；result 是 stopped、absent 或 busy"},
-    "hand-to-user": {"params": [],
-      "description": "把运行主体的会话的 Agent 已被告知、还没答复的流程任务都转给用户"},
     "compact-session": {"params": [],
       "description": "请运行主体的会话的 Agent 压缩上下文（_coda/session/compact，见 docs/agent-protocol.md），从不失败：没压缩就写明原因"},
     "hold-group": {"params": ["group", "capacity", "borrow", "exclusive"],
