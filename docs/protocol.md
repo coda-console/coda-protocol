@@ -6,7 +6,7 @@
 
 - 协议定义文档的 JSON Schema 与校验：`schemas/protocol/v1/definition.json`、`@coda-console/protocol/protocol`；
 - 统一调用信封：`schemas/protocol/v1/request.json`、`response.json`；
-- 三个核心协议：`coda/run@1`、`coda/executor@1`、`coda/agent@1`；
+- 五个核心协议：`coda/run@1`、`coda/executor@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`；
 - 插件清单里的 `contributes.protocols` 与 `contributes.protocolImplementations`。
 
 `executor` 与 `execution` 两个旧对象协议和 `@coda-console/protocol/executor` 在 3.0.0 删除；`execution` 的输入并入 `coda/executor@1` 的 `execute` 操作，运行由 `coda/run@1` 表达。
@@ -264,6 +264,91 @@ status：
     "modes": [{"id": "auto", "name": "自动"}]
   },
   "status": {}
+}
+```
+
+## coda/session@1
+
+插件提供的外部会话，比如一个微信群：参与者、消息和发消息。
+
+spec：
+
+| 字段 | 含义 |
+| --- | --- |
+| `title` | 给人看的名字 |
+| `container` | `{ id, title }`：Provider 给的容器，例如插件登录的微信号；列表按 provider 与 `container.id` 分组 |
+| `environment` | 可选，`{ kind: "coda/environment@1", id }`：外部会话自带的环境 |
+
+status：
+
+| 字段 | 含义 |
+| --- | --- |
+| `head` | 最新一条消息的游标，不透明；Provider 每追加一条就写，还没有消息时不写 |
+| `participants` | `[{ id, name, kind: "person"\|"agent"\|"bot", self? }]`；`self: true` 是这个 Provider 登录的账号，即 Coda 的 Bot |
+| `state` | 可选，`active` 或 `unreachable` |
+| `reason` | 可选，状态说明 |
+
+观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。两个操作都是立即结果，不开运行：
+
+- `read`：输入 `{ after?, before?, limit? }`，`after`、`before` 是游标，`limit` 为 1 到 100；结果 `{ messages, cursor, more }`，没有消息时 `cursor` 为 `null`。
+- `post`：输入 `{ text, parts?, replyTo?, mentions? }`；结果 `{ message: { id, cursor } }`。发送者固定是 `self`；Provider 按调用的 `requestId` 只发一次，发送失败就报错。
+
+消息是 `{ id, cursor, sender, text, parts?, replyTo?, mentions?, about?, createdAt? }`：
+
+- `sender` 与 `mentions` 写参与者 ID，`replyTo` 写消息 ID；
+- `text` 是纯文本兜底，看不懂 `parts` 的一方只看它；
+- 撤回、编辑、表情回应都是一条新消息，`about: { message, change: "edit"|"recall"|"reaction", value? }` 指向旧消息；
+- `createdAt` 只供显示，顺序看 `cursor`。
+
+`parts` 的每一项是下面之一：
+
+- `{ type: "text", text }`；
+- `{ type: "image"|"video"|"file", name, size?, mime?, service? }`：大文件只给引用，`service` 是插件登记的流式服务 ID，本版本只定字段；
+- `{ type: "thinking"|"tool", text }`。
+
+```json
+{
+  "spec": {"title": "项目群", "container": {"id": "wx-1", "title": "我的微信"}},
+  "status": {
+    "head": "c2",
+    "participants": [
+      {"id": "u1", "name": "小王", "kind": "person"},
+      {"id": "bot", "name": "Coda", "kind": "bot", "self": true}
+    ]
+  }
+}
+```
+
+`read` 的一条结果，第二条撤回了第一条：
+
+```json
+{
+  "messages": [
+    {"id": "m1", "cursor": "c1", "sender": "u1", "text": "@Coda 看下构建", "mentions": ["bot"]},
+    {"id": "m2", "cursor": "c2", "sender": "u1", "text": "", "about": {"message": "m1", "change": "recall"}}
+  ],
+  "cursor": "c2",
+  "more": false
+}
+```
+
+## coda/environment@1
+
+插件提供的外部环境，比如别家 Agent 自带的云主机。本版本只读。
+
+spec 是 `{ title, container?, actions }`：`container` 同 `coda/session@1` 的 `{ id, title }`；`actions` 是 `read`、`checkout`、`delete`、`exec` 的子集，界面按它显示能做什么，本版本只认 `read`。以后同一大版本里只加这几个动作对应的操作。
+
+status 是 `{ state: "available"|"unreachable", reason? }`。
+
+两个操作都是立即结果；路径是 Provider 自己的命名空间，Coda 不解析：
+
+- `list`：输入 `{ path, after? }`，`path` 为 `""` 表示根，`after` 是上一页的 `next`；结果 `{ entries: [{ name, type: "file"|"dir"|"link", size? }], next }`，没有下一页时 `next` 为 `null`。
+- `read`：输入 `{ path, offset?, length? }`，`length` 至多 1 MiB（1048576）；结果 `{ path, size, base64, more }`，`size` 是文件总字节数，`base64` 是这一段的内容，`more` 表示后面还有。
+
+```json
+{
+  "spec": {"title": "云主机", "actions": ["read"]},
+  "status": {"state": "available"}
 }
 ```
 

@@ -13,8 +13,10 @@ export const INVOCATION_RESPONSE = read('response.json');
 export const RUN_PROTOCOL = read('run.json');
 export const EXECUTOR_PROTOCOL = read('executor.json');
 export const AGENT_PROTOCOL = read('agent.json');
+export const SESSION_PROTOCOL = read('session.json');
+export const ENVIRONMENT_PROTOCOL = read('environment.json');
 export const CORE_PROTOCOLS = Object.freeze(Object.fromEntries(
-  [RUN_PROTOCOL, EXECUTOR_PROTOCOL, AGENT_PROTOCOL].map(protocol => [protocol.name, protocol])));
+  [RUN_PROTOCOL, EXECUTOR_PROTOCOL, AGENT_PROTOCOL, SESSION_PROTOCOL, ENVIRONMENT_PROTOCOL].map(protocol => [protocol.name, protocol])));
 
 const ajv = newAjv({ ownProperties: true, addUsedSchema: false, strict: false });
 const definitionCheck = ajv.compile(PROTOCOL_DEFINITION);

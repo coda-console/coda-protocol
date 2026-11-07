@@ -5,7 +5,8 @@ import Ajv from 'ajv/dist/2020.js';
 import { agentMessageProblem } from '../agent.mjs';
 import { manifestProblem } from '../validate.mjs';
 import {
-  AGENT_PROTOCOL, CORE_PROTOCOLS, EXECUTOR_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
+  AGENT_PROTOCOL, CORE_PROTOCOLS, ENVIRONMENT_PROTOCOL, EXECUTOR_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
+  SESSION_PROTOCOL,
   definitionProblem, formatProtocolName, invocationRequestProblem, invocationResponseProblem,
   ownedProtocolsProblem, parseProtocolName, protocolNameProblem, protocolShortName, runStatusProblem,
 } from '../protocol.mjs';
@@ -63,7 +64,8 @@ test('short names are deterministic, DNS-safe and keep every canonical name apar
 
 test('core definitions validate, and definitions reject malformed names, operations and schemas', () => {
   for (const protocol of Object.values(CORE_PROTOCOLS)) assert.equal(definitionProblem(protocol), null, protocol.name);
-  assert.deepEqual(Object.keys(CORE_PROTOCOLS), ['coda/run@1', 'coda/executor@1', 'coda/agent@1']);
+  assert.deepEqual(Object.keys(CORE_PROTOCOLS),
+    ['coda/run@1', 'coda/executor@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1']);
   assert.equal(definitionProblem(own), null);
   assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel']);
   assert.equal(EXECUTOR_PROTOCOL.operations.execute.run, true);
@@ -181,4 +183,89 @@ test('the invocation envelope answers with exactly one of result and run', () =>
     assert.equal(typeof invocationResponseProblem(value), 'string', JSON.stringify(value));
   for (const run of [{}, { kind: 'coda/run@1' }, { kind: 'coda/run@1', id: '' }, { kind: 'coda/run@1', id: 'x', future: true }])
     assert.equal(typeof invocationResponseProblem({ run }), 'string', JSON.stringify(run));
+});
+
+// Each schema of a definition, compiled on its own: spec, status and every operation's input and result.
+function checks(protocol) {
+  const ajv = new Ajv({ strict: false });
+  const operations = Object.fromEntries(Object.entries(protocol.operations).map(([name, operation]) =>
+    [name, { input: ajv.compile(operation.input), result: ajv.compile(operation.result) }]));
+  return { spec: ajv.compile(protocol.spec), status: ajv.compile(protocol.status), operations };
+}
+
+test('session records, messages and posts follow coda/session@1', () => {
+  const { spec, status, operations: { read, post } } = checks(SESSION_PROTOCOL);
+  assert.deepEqual(Object.keys(SESSION_PROTOCOL.operations), ['read', 'post']);
+  assert.ok(Object.values(SESSION_PROTOCOL.operations).every(operation => operation.run === undefined));
+
+  const record = { title: '项目群', container: { id: 'wx-1', title: '我的微信' } };
+  assert.equal(spec(record), true);
+  assert.equal(spec({ ...record, environment: { kind: 'coda/environment@1', id: 'box-1' } }), true);
+  for (const value of [{ title: '项目群' }, { ...record, container: { kind: 'wx', id: 'wx-1' } },
+    { ...record, environment: { kind: 'coda/run@1', id: 'box-1' } }, { ...record, future: true }])
+    assert.equal(spec(value), false, JSON.stringify(value));
+
+  const participants = [{ id: 'u1', name: '小王', kind: 'person' }, { id: 'bot', name: 'Coda', kind: 'bot', self: true }];
+  assert.equal(status({ participants: [] }), true);
+  assert.equal(status({ head: 'c9', participants, state: 'unreachable', reason: '掉线了' }), true);
+  for (const value of [{}, { head: '', participants }, { participants: [{ id: 'u1', name: '小王', kind: 'robot' }] },
+    { participants: [{ id: 'bot', name: 'Coda', kind: 'bot', self: false }] }, { participants, state: 'gone' }])
+    assert.equal(status(value), false, JSON.stringify(value));
+
+  for (const input of [{}, { after: 'c1', limit: 1 }, { before: 'c9', limit: 100 }]) assert.equal(read.input(input), true);
+  for (const input of [{ limit: 0 }, { limit: 101 }, { limit: 1.5 }, { after: '' }, { since: 'c1' }])
+    assert.equal(read.input(input), false, JSON.stringify(input));
+
+  const message = { id: 'm1', cursor: 'c1', sender: 'u1', text: '你好 @Coda' };
+  const rich = { ...message, id: 'm2', cursor: 'c2', replyTo: 'm0', mentions: ['bot'], createdAt: '2026-11-07T08:00:00Z',
+    parts: [{ type: 'text', text: '你好' }, { type: 'image', name: 'a.png', size: 10, mime: 'image/png', service: 'media' },
+      { type: 'thinking', text: '想一想' }, { type: 'tool', text: 'ls' }] };
+  const recall = { id: 'm3', cursor: 'c3', sender: 'u1', text: '', about: { message: 'm1', change: 'recall' } };
+  const reaction = { id: 'm4', cursor: 'c4', sender: 'u1', text: '👍', about: { message: 'm2', change: 'reaction', value: '👍' } };
+  assert.equal(read.result({ messages: [message, rich, recall, reaction], cursor: 'c4', more: false }), true);
+  assert.equal(read.result({ messages: [], cursor: null, more: false }), true);
+  for (const bad of [{ ...message, sender: undefined }, { ...message, parts: [{ type: 'image' }] },
+    { ...message, parts: [{ type: 'text', text: 'x', name: 'a' }] }, { ...message, parts: [{ type: 'audio', name: 'a' }] },
+    { ...message, about: { message: 'm0', change: 'delete' } }, { ...message, about: { change: 'edit' } }])
+    assert.equal(read.result({ messages: [bad], cursor: 'c1', more: false }), false, JSON.stringify(bad));
+  for (const value of [{ messages: [], more: false }, { messages: [], cursor: '', more: false }, { messages: [], cursor: null }])
+    assert.equal(read.result(value), false, JSON.stringify(value));
+
+  assert.equal(post.input({ text: '收到' }), true);
+  assert.equal(post.input({ text: '看图', parts: [{ type: 'file', name: 'a.zip' }], replyTo: 'm1', mentions: ['u1'] }), true);
+  for (const input of [{}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] }])
+    assert.equal(post.input(input), false, JSON.stringify(input));
+  assert.equal(post.result({ message: { id: 'm5', cursor: 'c5' } }), true);
+  for (const value of [{}, { message: { id: 'm5' } }, { id: 'm5', cursor: 'c5' }])
+    assert.equal(post.result(value), false, JSON.stringify(value));
+});
+
+test('environment records, listings and reads follow the read-only coda/environment@1', () => {
+  const { spec, status, operations: { list, read } } = checks(ENVIRONMENT_PROTOCOL);
+  assert.deepEqual(Object.keys(ENVIRONMENT_PROTOCOL.operations), ['list', 'read']);
+
+  assert.equal(spec({ title: '云主机', actions: ['read'] }), true);
+  assert.equal(spec({ title: '云主机', container: { id: 'acct', title: '账号' }, actions: ['read', 'checkout', 'delete', 'exec'] }), true);
+  for (const value of [{ title: '云主机' }, { title: '云主机', actions: ['write'] }, { title: '云主机', actions: ['read', 'read'] },
+    { title: '云主机', actions: ['read'], container: { id: 'acct' } }])
+    assert.equal(spec(value), false, JSON.stringify(value));
+  assert.equal(status({ state: 'available' }), true);
+  assert.equal(status({ state: 'unreachable', reason: '已停机' }), true);
+  for (const value of [{}, { state: 'active' }]) assert.equal(status(value), false, JSON.stringify(value));
+
+  assert.equal(list.input({ path: '' }), true);
+  assert.equal(list.input({ path: 'src', after: 'p2' }), true);
+  for (const input of [{}, { path: 'src', after: '' }, { path: 'src', limit: 10 }]) assert.equal(list.input(input), false, JSON.stringify(input));
+  assert.equal(list.result({ entries: [{ name: 'a.txt', type: 'file', size: 3 }, { name: 'src', type: 'dir' }, { name: 'l', type: 'link' }], next: 'p2' }), true);
+  assert.equal(list.result({ entries: [], next: null }), true);
+  for (const value of [{ entries: [] }, { entries: [{ name: 'x', type: 'socket' }], next: null }, { entries: [{ type: 'file' }], next: null }])
+    assert.equal(list.result(value), false, JSON.stringify(value));
+
+  assert.equal(read.input({ path: 'a.txt' }), true);
+  assert.equal(read.input({ path: 'a.txt', offset: 10, length: 1048576 }), true);
+  for (const input of [{}, { path: '' }, { path: 'a.txt', length: 1048577 }, { path: 'a.txt', offset: -1 }])
+    assert.equal(read.input(input), false, JSON.stringify(input));
+  assert.equal(read.result({ path: 'a.txt', size: 3, base64: 'YWJj', more: false }), true);
+  for (const value of [{ path: 'a.txt', size: 3, base64: 'YWJj' }, { path: 'a.txt', size: 3, base64: '不是', more: false }])
+    assert.equal(read.result(value), false, JSON.stringify(value));
 });

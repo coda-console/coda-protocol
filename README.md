@@ -4,7 +4,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 - **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v2/<文件>`）。`plugin.json` 是整份清单，`setting.json` 是一项设置的声明。插件写的合乎它用到的类型就对；写给别的插件扩展点的键由那个插件声明，扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
-- **协议定义与调用**（`schemas/protocol/`、`protocol.mjs`、`docs/protocol.md`）：协议是 `命名空间/名字@大版本` + spec/status 的 JSON Schema + 操作；插件在 `contributes.protocols` 里定义自己命名空间下的协议，在 `contributes.protocolImplementations` 里声明实现哪些协议。调用是 `{ record, operation, input, requestId, parent, awaited }`，回答是 `{ result }` 或 `{ run }`；`coda/run@1`、`coda/executor@1`、`coda/agent@1` 是三个核心协议。
+- **协议定义与调用**（`schemas/protocol/`、`protocol.mjs`、`docs/protocol.md`）：协议是 `命名空间/名字@大版本` + spec/status 的 JSON Schema + 操作；插件在 `contributes.protocols` 里定义自己命名空间下的协议，在 `contributes.protocolImplementations` 里声明实现哪些协议。调用是 `{ record, operation, input, requestId, parent, awaited }`，回答是 `{ result }` 或 `{ run }`；`coda/run@1`、`coda/executor@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1` 是五个核心协议。
 - **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是流程种类、Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
 - **Agent 接入扩展**（`schemas/agent/`、`agent.mjs`、`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
 
@@ -39,7 +39,7 @@ pointProblem(panelsSchema, manifest.contributes.panels, 'contributes.panels', 'p
 
 ```js
 import {
-  RUN_PROTOCOL, EXECUTOR_PROTOCOL, AGENT_PROTOCOL, CORE_PROTOCOLS,
+  RUN_PROTOCOL, EXECUTOR_PROTOCOL, AGENT_PROTOCOL, SESSION_PROTOCOL, ENVIRONMENT_PROTOCOL, CORE_PROTOCOLS,
   definitionProblem, ownedProtocolsProblem, runStatusProblem,
   invocationRequestProblem, invocationResponseProblem,
   parseProtocolName, formatProtocolName, protocolShortName,
@@ -124,6 +124,8 @@ agentValueProblem('review.json', review, '工具的审核');
 - **`coda/run@1`**：被调用方自己的运行记录。spec 记录调用的记录、操作、输入、请求 ID、父引用和是否被等待；status 是 `working`、`input-required`、`completed`、`failed`、`canceled`，后三个是终态。`completed`/`failed` 必带 `result`，`failed` 的 `result` 约定为 `{ code, message }`（`code: "unknown"` 表示结局不明），`canceled` 可带取消前的话和留下的东西；另有可选的 `progress` 和等输入时的 `awaiting`。操作是 `cancel`。
 - **`coda/executor@1`**：执行器。操作 `execute` 接一份执行工作并返回运行引用，运行记录在执行器那边；没有 `target`、`executor` 或 `assignmentId` 绑定，也不回写调用方的记录。
 - **`coda/agent@1`**：Agent 资源，spec 照 Coda 的 Agent 资源（`agent`、`title`、`defaultModel`、`models`、`modes` 等），删除 `plugin` 字段；status 为空对象，本版本不定义操作。
+- **`coda/session@1`**：插件提供的外部会话。spec 是标题、容器和可选的环境引用；status 是 `head` 游标与参与者；操作 `read`、`post` 都是立即结果，撤回、编辑、表情是用 `about` 指向旧消息的新消息。
+- **`coda/environment@1`**：插件提供的只读外部环境。spec 带 `actions`；操作 `list` 列目录、`read` 读文件（一次至多 1 MiB）。
 
 统一调用是 `{ record: {kind,id}, operation, input, requestId, parent: {kind,id}, awaited }`，回答恰为 `{ result }` 或 `{ run: {kind,id} }` 之一。同一 `requestId` 重发只做一次；慢操作返回运行引用，调用方 watch 运行记录取结果，没有推送或回写。
 
