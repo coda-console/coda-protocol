@@ -52,6 +52,12 @@ export function jsonFits(value, max) {
 export function valueKeywords(ajv, { feelProblem, isExpression }) {
   ajv.addFormat('absolute-path', value => isAbsolute(value.trim()));
   ajv.addFormat('https-url', value => { try { return new URL(value.trim()).protocol === 'https:'; } catch { return false; } });
+  ajv.addFormat('link-url', value => {
+    const url = URL.parse(value.trim());
+    return url?.protocol === 'https:' || (url?.protocol === 'itms-services:'
+      && url.searchParams.get('action') === 'download-manifest'
+      && URL.parse(url.searchParams.get('url'))?.protocol === 'https:');
+  });
   ajv.addKeyword({
     keyword: 'x-length', type: 'string', schemaType: ['number', 'object'], errors: true,
     metaSchema: { anyOf: [{ type: 'integer', minimum: 0 }, { type: 'object', properties: { property: { type: 'string' } }, required: ['property'], additionalProperties: false }] },

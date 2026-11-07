@@ -16,7 +16,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 流程方言的 **卡片字段**由 `workflow/fields.json` 定义：七种字段各能写哪些属性、必填项、文字长度与单行限制、路径与网址、视图参数、输入框与密钥选项；`values.json` 的 `Field` 引用它，`Fields` 声明读出 JSON 字段列表的表达式，`UserTask.children` 限定最多 12 个静态字段、id 不重复，以及全部字段已知时答复的 `fields` 只能引用输入字段（含按住出现的答复）。
 
-定义和运行时共用这一份 schema。`x-deferred` 包住一个 schema：读定义时，文字先检查 FEEL，表达式或含 `{{ … }}` 的模板留到打开任务后查；运行时只按包住的 schema 严格检查，不再把结果当表达式。只有内容属性使用它，`type`、`id`、布尔值、枚举和 `maxLength` 不放宽。另有 `x-length`（沿用 Coda 的 UTF-16 长度，可用 `{ "property": "maxLength" }` 读取同一对象的上限）、`x-json`（解析 JSON 文字或检查 JSON 值，按序列化后的 UTF-8 字节数限制大小）；`absolute-path`、`https-url` 两个 format 按本机路径与 URL 解析器检查。已有的 `x-ref` 增加 `key`（按数组元素的属性引用）和 `split`（逐个检查分隔后的名字）。这些操作都不改写输入。
+定义和运行时共用这一份 schema。`x-deferred` 包住一个 schema：读定义时，文字先检查 FEEL，表达式或含 `{{ … }}` 的模板留到打开任务后查；运行时只按包住的 schema 严格检查，不再把结果当表达式。只有内容属性使用它，`type`、`id`、布尔值、枚举和 `maxLength` 不放宽。另有 `x-length`（沿用 Coda 的 UTF-16 长度，可用 `{ "property": "maxLength" }` 读取同一对象的上限）、`x-json`（解析 JSON 文字或检查 JSON 值，按序列化后的 UTF-8 字节数限制大小）；`absolute-path`、`https-url`、`link-url` 三个 format 按本机路径与 URL 解析器检查；`link-url` 接受 https 网址或 `action=download-manifest` 且 `url` 解码后为 https 网址的 `itms-services:` 安装链接。已有的 `x-ref` 增加 `key`（按数组元素的属性引用）和 `split`（逐个检查分隔后的名字）。这些操作都不改写输入。
 
 `fieldProblem(field, where)` 检查一个已求值的字段；`fieldsProblem(fields, where)` 检查展开并应用 `host`/`dir` 后的数组，复用同一份字段 schema、数量和唯一性规则。两者合法时返回 `null`，否则返回「位置：说明」；`where` 是调用方给出的完整位置。schema 的 `default` 仅作标注：默认值填充、去空白、域名转小写、`args` 解析后的保留、表达式求值、动态字段展开和用户答复的处理仍由 Coda 完成。`coda:fields` 的 `host`/`dir` 是可能被覆盖或忽略的备用值，定义时只检查 FEEL，合并后才检查实际字段。动态字段展开后，答复的输入引用仍须由 Coda 检查。
 
