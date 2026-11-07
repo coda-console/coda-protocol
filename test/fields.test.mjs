@@ -26,8 +26,17 @@ const cases = [
   [{ type: 'image', src: '/x\ny' }, 'src 须为一行、1–4096 个字'],
   [{ type: 'image', src: '/'.repeat(4097) }, 'src 须为一行、1–4096 个字'],
   [{ type: 'link', href: 'https://example.com' }, '须写 label'], [{ type: 'link', label: 'L' }, '须写 href'],
-  [{ type: 'link', label: 'L', href: 'http://example.com' }, 'href 须为 https 网址'],
-  [{ type: 'link', label: 'L', href: 'https://[' }, 'href 须为 https 网址'],
+  [{ type: 'link', label: 'L', href: 'http://example.com' }, 'href 须为 https 网址或 iOS 安装链接（itms-services，清单为 https）'],
+  [{ type: 'link', label: 'L', href: 'https://[' }, 'href 须为 https 网址或 iOS 安装链接（itms-services，清单为 https）'],
+  ...[
+    'javascript:alert(1)',
+    'itms-services://?action=other&url=https://example.com/manifest.plist',
+    'itms-services://?url=https://example.com/manifest.plist',
+    'itms-services://?action=download-manifest',
+    'itms-services://?action=download-manifest&url=',
+    'itms-services://?action=download-manifest&url=http%3A%2F%2Fexample.com%2Fmanifest.plist',
+    'itms-services://?action=download-manifest&url=https%3A%2F%2F%5B',
+  ].map(href => [{ type: 'link', label: 'L', href }, 'href 须为 https 网址或 iOS 安装链接（itms-services，清单为 https）']),
   [{ type: 'link', label: 'L', href: 'https://example.com/' + 'x'.repeat(2000) }, 'href 须为一行、1–2000 个字'],
   [missing(view, 'label'), '须写 label'], [missing(view, 'plugin'), '须写 plugin'], [missing(view, 'view'), '须写 view'],
   [{ ...view, plugin: 'Remote' }, 'plugin 须为插件 ID（小写字母、数字和「-」）'],
@@ -96,6 +105,8 @@ test('runtime field validation rejects non-JSON values without throwing, includi
 test('all field types, their optional properties, defaults and literal content are accepted without normalization', async () => {
   const good = [{ type: 'markdown', text: '正文\n第二行' }, { type: 'code', text: 'x'.repeat(16384), label: '代码' },
     { type: 'image', src: ' /tmp/shot.png\n' }, { type: 'link', label: '页面', href: ' https://example.com/a?q=1 ' },
+    { type: 'link', label: '安装', href: 'itms-services://?action=download-manifest&url=https://example.com/manifest.plist' },
+    { type: 'link', label: '安装', href: 'itms-services://?action=download-manifest&url=https%3A%2F%2Fexample.com%2Fmanifest.plist' },
     { ...view, plugin: ' remote ', view: ' desktop ', args: { title: '页面', values: [1, true, null] }, presentation: 'side' },
     { ...text, required: false, multiline: true, default: 'a\nb', maxLength: 4000, autofill: 'otp' },
     { ...secret, host: ' Signin.Example.com ', dir: 'site-login', keep: 'memory', autofill: 'password', masked: true, maxLength: 65536 }];
@@ -127,7 +138,7 @@ test('definitions defer only content and check FEEL with workflow names; runtime
     { ...view, plugin: '=inputs.plugin', view: '{{ inputs.view }}', args: '=inputs.args' },
     { ...secret, host: '=inputs.host', dir: '{{ inputs.dir }}' }];
   for (const field of deferred) assert.equal(await workflowProblem(workflow(fieldXML(field))), null);
-  assert.equal(fieldProblem(deferred[4]), '字段：href 须为 https 网址');
+  assert.equal(fieldProblem(deferred[4]), '字段：href 须为 https 网址或 iOS 安装链接（itms-services，清单为 https）');
   assert.equal(fieldProblem(deferred[5]), '字段：plugin 须为插件 ID（小写字母、数字和「-」）');
   for (const key of ['label', 'default']) assert.match(await workflowProblem(workflow(fieldXML({ ...text, [key]: '=1 +' }))), /^ask 的 coda:field a：「1 \+」不是有效的 FEEL 表达式/);
   for (const [field, key] of [[view, 'args'], [view, 'view'], [view, 'plugin'], [secret, 'host'], [secret, 'dir'], [{ type: 'markdown' }, 'text'], [{ type: 'image' }, 'src'], [{ type: 'link', label: 'L' }, 'href']])

@@ -158,7 +158,7 @@
               "x-deferred": {
                 "allOf": [
                   {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 2000, "description": "href 须为一行、1–2000 个字"},
-                  {"format": "https-url", "description": "href 须为 https 网址"}
+                  {"format": "link-url", "description": "href 须为 https 网址或 iOS 安装链接（itms-services，清单为 https）"}
                 ]
               }
             }
