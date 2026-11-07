@@ -59,6 +59,7 @@
   "operations": {
     "read": {
       "description": "读消息：after、before 是游标，limit 为 1 到 100；立即结果。",
+      "safe": true,
       "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -111,7 +112,7 @@
               "text": {"type": "string", "description": "纯文本兜底"},
               "parts": {"type": "array", "items": {"$ref": "#/$defs/part"}},
               "replyTo": {"$ref": "#/$defs/id", "description": "回复的消息 ID"},
-              "mentions": {"type": "array", "items": {"$ref": "#/$defs/id"}, "description": "@ 到的参与者 ID"},
+              "mentions": {"type": "array", "items": {"$ref": "#/$defs/id"}, "description": "@ 到的参与者 ID；回复一条消息就算 @ 了它的发送者，Provider 把被回复消息的发送者也写进来"},
               "about": {
                 "type": "object",
                 "description": "这条消息改的是哪条旧消息",

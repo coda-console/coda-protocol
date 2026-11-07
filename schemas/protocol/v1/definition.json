@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/protocol/v1/definition.json",
   "title": "协议定义",
-  "description": "一个协议的名字、记录格式与操作。名字是「命名空间/名字@大版本」；spec、status 与每个操作的输入、结果都是 JSON Schema（draft 2020-12），只引用定义自身的 $defs。操作要么立刻返回结果（result），要么返回运行引用（run: true）。",
+  "description": "一个协议的名字、记录格式与操作。名字是「命名空间/名字@大版本」；spec、status 与每个操作的输入、结果都是 JSON Schema（draft 2020-12），只引用定义自身的 $defs。操作要么立刻返回结果（result），要么返回运行引用（run: true）；只读的立即结果可标 safe: true。",
   "type": "object",
   "properties": {
     "name": {"$ref": "#/$defs/name"},
@@ -39,17 +39,19 @@
     "title": {"description": "给人看的名字", "type": "string", "maxLength": 100, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
     "description": {"description": "一句话说明", "type": "string", "maxLength": 1000, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
     "operation": {
-      "description": "操作：input 必有；result 是立即结果的 schema，或写 run: true 表示返回运行引用。两者恰写一个。",
+      "description": "操作：input 必有；result 是立即结果的 schema，或写 run: true 表示返回运行引用。两者恰写一个。safe: true 只能与 result 一起写。",
       "type": "object",
       "properties": {
         "description": {"$ref": "#/$defs/description"},
         "input": {"$ref": "#/$defs/schema"},
         "result": {"$ref": "#/$defs/schema"},
-        "run": {"const": true, "description": "返回运行引用，而不是立即结果"}
+        "run": {"const": true, "description": "返回运行引用，而不是立即结果"},
+        "safe": {"const": true, "description": "只读、没有副作用：调用双方都不按 requestId 留请求和回答，重发就再做一次"}
       },
       "required": ["input"],
       "additionalProperties": false,
-      "oneOf": [{"required": ["result"]}, {"required": ["run"]}]
+      "oneOf": [{"required": ["result"]}, {"required": ["run"]}],
+      "dependentRequired": {"safe": ["result"]}
     }
   }
 }

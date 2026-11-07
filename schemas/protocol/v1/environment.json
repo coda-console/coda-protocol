@@ -40,6 +40,7 @@
   "operations": {
     "list": {
       "description": "列目录：path 为空字符串表示根，after 是上一页的 next；立即结果。",
+      "safe": true,
       "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -75,6 +76,7 @@
     },
     "read": {
       "description": "读文件的一段：offset 默认 0，length 至多 1 MiB；立即结果。",
+      "safe": true,
       "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

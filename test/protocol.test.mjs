@@ -71,6 +71,9 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.equal(EXECUTOR_PROTOCOL.operations.execute.run, true);
   assert.equal(Object.hasOwn(EXECUTOR_PROTOCOL, 'target'), false);
   assert.deepEqual(AGENT_PROTOCOL.operations, {});
+  const safe = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
+    Object.entries(protocol.operations).filter(([, operation]) => operation.safe).map(([name]) => `${protocol.name} ${name}`));
+  assert.deepEqual(safe, ['coda/session@1 read', 'coda/environment@1 list', 'coda/environment@1 read']);
 
   const without = (value, key) => Object.fromEntries(Object.entries(value).filter(([name]) => name !== key));
   for (const definition of [null, [], {}, without(own, 'spec'), without(own, 'status'), without(own, 'operations'),
@@ -83,10 +86,13 @@ test('core definitions validate, and definitions reject malformed names, operati
     { ...own, operations: { do: {} } },
     { ...own, operations: { do: { input: {}, result: {}, run: true } } },
     { ...own, operations: { do: { input: {}, run: false } } },
+    { ...own, operations: { do: { input: {}, run: true, safe: true } } },
+    { ...own, operations: { do: { input: {}, result: {}, safe: false } } },
     { ...own, operations: { do: { input: { type: 'not-a-type' }, result: {} } } },
     { ...own, operations: { do: { input: { $ref: '#/$defs/missing' }, result: {} } } },
   ]) assert.equal(typeof definitionProblem(definition), 'string', JSON.stringify(definition));
   assert.equal(definitionProblem({ ...own, operations: { start: { input: {}, run: true } } }), null);
+  assert.equal(definitionProblem({ ...own, operations: { peek: { input: {}, result: {}, safe: true } } }), null);
 
   assert.match(definitionProblem(own, { namespace: 'other' }), /命名空间须为「other」/);
   assert.equal(definitionProblem(own, { namespace: 'my-plugin' }), null);

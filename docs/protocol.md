@@ -66,12 +66,14 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `description` | 一句话说明，可选 |
 | `spec` | 记录的 spec 的 JSON Schema，必填 |
 | `status` | 记录的 status 的 JSON Schema，必填 |
-| `operations` | 操作名 → `{ input, result }` 或 `{ input, run: true }`，必填；不定义操作写 `{}` |
+| `operations` | 操作名 → `{ description?, input, result, safe? }` 或 `{ description?, input, run: true }`，必填；不定义操作写 `{}` |
 
 `spec`、`status`、`input`、`result` 都是 JSON Schema draft 2020-12，只引用自己文档里的 `#/$defs/...`，不引用别的文件。`input` 必有。操作的输出二选一：
 
 - `result`：立即返回结果的 schema；
 - `run: true`：返回一个运行引用，运行记录由被调用方持有。
+
+`safe: true` 只能和 `result` 一起写，不能和 `run` 一起写，表示只读、没有副作用、立即给结果的操作；调用方和被调用方都不按 `requestId` 留它的请求和回答（见「调用信封」）。
 
 ```json
 {
@@ -106,7 +108,8 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
         "properties": {"title": {"type": "string"}},
         "required": ["title"],
         "additionalProperties": false
-      }
+      },
+      "safe": true
     }
   }
 }
@@ -148,7 +151,7 @@ definitionProblem(definition, { namespace: 'my-plugin' }); // 同时核对命名
 {"run": {"kind": "coda/run@1", "id": "run-1"}}
 ```
 
-`requestId` 由调用方给，重发同一个请求只做一次。立即结果用 `result`；慢的操作用 `run` 指向被调用方自己的 `coda/run@1` 记录，调用方 watch 这条记录取结果，被调用方不推送。取消也是一次调用（`coda/run@1` 的 `cancel` 操作），不是写别人的记录。
+`requestId` 由调用方给，重发同一个请求只做一次。`safe` 的操作例外：调用双方都不按 `requestId` 留请求和回答，重发就再读一次。读回来的是对方的数据，比如群消息、环境里的文件内容，留在调用双方的库里就成了镜像。立即结果用 `result`；慢的操作用 `run` 指向被调用方自己的 `coda/run@1` 记录，调用方 watch 这条记录取结果，被调用方不推送。取消也是一次调用（`coda/run@1` 的 `cancel` 操作），不是写别人的记录。
 
 ```js
 import { invocationRequestProblem, invocationResponseProblem } from '@coda-console/protocol/protocol';
@@ -288,7 +291,7 @@ status：
 | `state` | 可选，`active` 或 `unreachable` |
 | `reason` | 可选，状态说明 |
 
-观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。两个操作都是立即结果，不开运行：
+观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。两个操作都是立即结果，不开运行；`read` 是 `safe` 的：
 
 - `read`：输入 `{ after?, before?, limit? }`，`after`、`before` 是游标，`limit` 为 1 到 100；结果 `{ messages, cursor, more }`，没有消息时 `cursor` 为 `null`。
 - `post`：输入 `{ text, parts?, replyTo?, mentions? }`；结果 `{ message: { id, cursor } }`。发送者固定是 `self`；Provider 按调用的 `requestId` 只发一次，发送失败就报错。
@@ -296,6 +299,7 @@ status：
 消息是 `{ id, cursor, sender, text, parts?, replyTo?, mentions?, about?, createdAt? }`：
 
 - `sender` 与 `mentions` 写参与者 ID，`replyTo` 写消息 ID；
+- 回复一条消息就算 @ 了它的发送者，Provider 把被回复消息的发送者也写进 `mentions`：只有 Provider 知道被回复的那条是谁发的，观察方不用记住 Bot 发过哪些消息；
 - `text` 是纯文本兜底，看不懂 `parts` 的一方只看它；
 - 撤回、编辑、表情回应都是一条新消息，`about: { message, change: "edit"|"recall"|"reaction", value? }` 指向旧消息；
 - `createdAt` 只供显示，顺序看 `cursor`。
@@ -340,7 +344,7 @@ spec 是 `{ title, container?, actions }`：`container` 同 `coda/session@1` 的
 
 status 是 `{ state: "available"|"unreachable", reason? }`。
 
-两个操作都是立即结果；路径是 Provider 自己的命名空间，Coda 不解析：
+两个操作都是立即结果，都是 `safe` 的；路径是 Provider 自己的命名空间，Coda 不解析：
 
 - `list`：输入 `{ path, after? }`，`path` 为 `""` 表示根，`after` 是上一页的 `next`；结果 `{ entries: [{ name, type: "file"|"dir"|"link", size? }], next }`，没有下一页时 `next` 为 `null`。
 - `read`：输入 `{ path, offset?, length? }`，`length` 至多 1 MiB（1048576）；结果 `{ path, size, base64, more }`，`size` 是文件总字节数，`base64` 是这一段的内容，`more` 表示后面还有。

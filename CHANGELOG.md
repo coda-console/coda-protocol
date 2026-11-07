@@ -19,6 +19,8 @@
 - 核心协议 `coda/run@1`、`coda/executor@1`、`coda/agent@1`；`execute` 的源码引用使用 `git/snapshot@1`、`git/source@1`。`coda/run@1` 的 `canceled` 可带 `result`，`failed` 的 `result` 约定为 `{ code, message }`，`code: "unknown"` 表示结局不明。
 - `_coda/wait` 增加可选 `awaited`；Agent 活动默认在等、挡会话静止，`false` 为单向的「不等它了」；Agent 协议按调用只交回一次改写。
 - 核心协议 `coda/session@1`（外部会话：参与者、`head` 游标，操作 `read`、`post`；撤回、编辑、表情用 `about` 指向旧消息）与只读的 `coda/environment@1`（操作 `list`、`read`），导出 `SESSION_PROTOCOL`、`ENVIRONMENT_PROTOCOL`。
+- 操作定义的 `safe: true`：只读、没有副作用、立即给结果，只能与 `result` 一起写；调用双方都不按 `requestId` 留它的请求和回答，重发就再做一次。`coda/session@1` 的 `read` 与 `coda/environment@1` 的 `list`、`read` 标为 `safe`。
+- `coda/session@1` 消息的 `mentions`：回复一条消息就算 @ 了它的发送者，Provider 把被回复消息的发送者也写进来。
 - `docs/protocol.md`：名字、版本、短名推导、调用信封与五个核心协议。
 
 ## 2.6.0 — 2026-11-07
