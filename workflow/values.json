@@ -81,7 +81,7 @@
     "UserTaskProperties": {
       "type": "object",
       "properties": {
-        "assignee": {"enum": ["agent", "user"], "description": "coda:assignee 只能是 agent（先交给发起会话的 Agent，它停下后转给用户）或 user（直接交给用户）"}
+        "assignee": {"enum": ["agent", "user"], "description": "coda:assignee 只能是 agent（先给运行所属会话的 Agent 一轮，没答就逐层往上，最上面是用户；有输入字段的直接到用户）或 user（直接交给用户）"}
       }
     },
     "Input": {
@@ -140,7 +140,7 @@
     "Choice": {
       "type": "object",
       "properties": {
-        "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$", "not": {"const": "handback"}, "description": "id 须为字母开头的字母、数字、「_」「-」，不能是 handback"},
+        "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$", "description": "id 须为字母开头的字母、数字、「_」「-」"},
         "name": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "name 须为 1–40 个字"},
         "detail": {"type": "string", "maxLength": 200, "x-feel": true, "description": "detail 不超过 200 字"},
         "choices": {"type": "array", "maxItems": 6, "description": "最多 6 个按住出现的选项"},

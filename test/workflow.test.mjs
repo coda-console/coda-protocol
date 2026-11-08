@@ -64,6 +64,8 @@ test('what the dialect does not have is said: not BPMN, an attribute or element 
   assert.match(await workflowProblem(workflow('<startEvent id="s" />', ' coda:knd="deploy"'), 'w'), /^w\.bpmn 有无法识别的内容：unknown attribute <coda:knd>/);
   assert.match(await workflowProblem(workflow('<scriptTask id="s"><extensionElements><coda:envv name="A" /></extensionElements></scriptTask>'), 'w'),
     /^w\.bpmn 有无法识别的内容：unparsable content <coda:envv>[\s\S]*unknown type <coda:Envv>/);
+  assert.match(await workflowProblem(workflow('<userTask id="ask" coda:handback="false" />'), 'w'), /^w\.bpmn 有无法识别的内容：unknown attribute <coda:handback>/);
+  assert.match(await workflowProblem(workflow('<serviceTask id="go" coda:action="hand-to-user" />'), 'w'), /^go：coda:action 只能是 /);
   // In a subprocess as at the top.
   assert.match(await workflowProblem(workflow('<subProcess id="sub"><serviceTask id="go" coda:action="deploy-all" /></subProcess>'), 'w'),
     /^go：coda:action 只能是 publish-stage、/);
@@ -123,7 +125,6 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     ...['1e999', '-1e999', '9'.repeat(400)].map(huge =>
       [workflow(`<extensionElements><coda:input name="n" type="number" default="${huge}" /></extensionElements>`), /^p 的 coda:input n：default 须为数字/]),
     [workflow('<extensionElements><coda:input name="b" type="boolean" defaultFrom="session.branch" /></extensionElements>'), /^p 的 coda:input b：defaultFrom="session\.branch" 只用于 type 为 branch、string 的参数$/],
-    [task('<coda:choice id="handback" name="交回" />'), /^ask 的 coda:choice handback：id 须为字母开头/],
     [task('<coda:choice id="a" name="甲" primary="true" /><coda:choice id="b" name="乙" primary="true" />'), /^ask：最多 6 个 coda:choice，最多一个主按钮；/],
     [task('<coda:choice id="a" name="甲"><coda:choice id="b" name="乙" primary="true" /></coda:choice>'), /^ask 的 coda:choice b：只有最外层的选项能是主按钮$/],
     // Answers are told apart by id across the task: one inside another, or inside two others, is not to have one twice.
@@ -140,6 +141,8 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     [workflow('<task id="each"><multiInstanceLoopCharacteristics coda:inputCollection="=inputs.items" /></task>'), /^each 需要 coda:inputElement：写 coda:inputElement/],
   ];
   for (const [source, said] of cases) assert.match(await workflowProblem(source, 'w'), said, source);
+  // handback is an id like any other.
+  assert.equal(await workflowProblem(workflow('<startEvent id="start"/><sequenceFlow id="f" sourceRef="start" targetRef="ask"/><userTask id="ask"><extensionElements><coda:choice id="handback" name="交回" /></extensionElements></userTask>'), 'w'), null);
   // Any number that is one: however large, small or precise.
   for (const number of ['-1.5e99', '1e100', '1e-100', `0.${'3'.repeat(40)}`, '1e308'])
     assert.equal(await workflowProblem(workflow(`<extensionElements><coda:input name="n" type="number" default="${number}" /></extensionElements><startEvent id="start"/><userTask id="ask"/><sequenceFlow id="f" sourceRef="start" targetRef="ask"/>`), 'w'), null, number);

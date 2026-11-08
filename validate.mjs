@@ -32,6 +32,8 @@ const BASE = 'https://coda.pub/schemas/plugin/v2/';
 // The schemas, by file name.
 export const SCHEMAS = Object.fromEntries(readdirSync(SCHEMA_DIR).filter(file => file.endsWith('.json')).sort()
   .map(file => [file, JSON.parse(readFileSync(join(SCHEMA_DIR, file), 'utf8'))]));
+// The protocol definition schema the manifest schemas reference; it is not a contributes type of its own.
+const PROTOCOL_DEFINITION = JSON.parse(readFileSync(new URL('./schemas/protocol/v1/definition.json', import.meta.url), 'utf8'));
 // The types a plugin may contribute to Coda itself, as the manifest's schema names them.
 export const TYPES = Object.keys(SCHEMAS['plugin.json'].properties.contributes.properties);
 
@@ -193,6 +195,7 @@ export function newAjv(options = {}) {
   return made;
 }
 const ajv = newAjv();
+ajv.addSchema(PROTOCOL_DEFINITION);
 for (const schema of Object.values(SCHEMAS)) ajv.addSchema(schema);
 // The validators of the schemas here, by file.
 const compiled = new Map();
@@ -304,7 +307,7 @@ export function explain(errors, base = '', schemas = [], { style = 'keyword', re
 // A manifest checked against its schema, the files it names in `dir` when given. Returns null, or what is wrong.
 export function manifestProblem(manifest, dir = null) {
   const validate = validator('plugin.json');
-  return validate.call({ dir }, manifest) ? null : explain(validate.errors);
+  return validate.call({ dir }, manifest) ? null : explain(validate.errors, '', [PROTOCOL_DEFINITION]);
 }
 // A value checked against one of the schemas (`ref`: a file, with a fragment, as `composer-modes.json#/$defs/parameters`),
 // as a plugin gives it while it runs: null, or what is wrong, at `where`.

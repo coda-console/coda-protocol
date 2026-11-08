@@ -1,7 +1,7 @@
 {
   "name": "@coda-console/protocol",
-  "version": "2.6.0",
-  "description": "Coda 的协议：插件清单的类型（JSON Schema）、通用校验器、流程方言与 Agent 接入协议",
+  "version": "3.0.0",
+  "description": "Coda 的协议：插件清单的类型（JSON Schema）、通用校验器、协议定义与调用信封、流程方言与 Agent 接入协议",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -18,7 +18,8 @@
     "workflow",
     "workflow.mjs",
     "docs",
-    "executor.mjs"
+    "protocol.mjs",
+    "CHANGELOG.md"
   ],
   "exports": {
     "./validate": "./validate.mjs",
@@ -28,7 +29,7 @@
     "./docs/*": "./docs/*",
     "./package.json": "./package.json",
     "./agent": "./agent.mjs",
-    "./executor": "./executor.mjs"
+    "./protocol": "./protocol.mjs"
   },
   "engines": {
     "node": ">=24"

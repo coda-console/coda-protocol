@@ -1,0 +1,206 @@
+{
+  "name": "coda/session@1",
+  "title": "会话",
+  "description": "插件提供的外部会话：参与者、消息与发消息。Provider 每追加一条消息就推进 status.head，观察方 watch 记录后用 read 读游标之后的消息；撤回、编辑、表情回应都是一条用 about 指向旧消息的新消息。",
+  "spec": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "title": {"type": "string", "maxLength": 200, "description": "给人看的名字"},
+      "container": {
+        "type": "object",
+        "description": "Provider 给的容器，例如插件登录的微信号；列表按 provider 与 container.id 分组",
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "title": {"type": "string", "maxLength": 200}
+        },
+        "required": ["id", "title"],
+        "additionalProperties": false
+      },
+      "environment": {
+        "type": "object",
+        "description": "外部会话自带的环境",
+        "properties": {
+          "kind": {"const": "coda/environment@1"},
+          "id": {"type": "string", "minLength": 1, "maxLength": 2048}
+        },
+        "required": ["kind", "id"],
+        "additionalProperties": false
+      }
+    },
+    "required": ["title", "container"],
+    "additionalProperties": false
+  },
+  "status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "head": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "最新一条消息的游标，不透明；Provider 每追加一条就写，还没有消息时不写"},
+      "participants": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string", "minLength": 1, "maxLength": 2048},
+            "name": {"type": "string", "maxLength": 200},
+            "kind": {"enum": ["person", "agent", "bot"]},
+            "self": {"const": true, "description": "这个 Provider 登录的账号，即 Coda 的 Bot"}
+          },
+          "required": ["id", "name", "kind"],
+          "additionalProperties": false
+        }
+      },
+      "state": {"enum": ["active", "unreachable"]},
+      "reason": {"type": "string", "maxLength": 4096, "description": "状态说明，可选"}
+    },
+    "required": ["participants"],
+    "additionalProperties": false
+  },
+  "operations": {
+    "read": {
+      "description": "读消息：after、before 是游标，limit 为 1 到 100；立即结果。",
+      "safe": true,
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "after": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "before": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100}
+        },
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "$defs": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "part": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {"type": {"const": "text"}, "text": {"type": "string"}},
+                "required": ["type", "text"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {"enum": ["image", "video", "file"]},
+                  "name": {"type": "string", "maxLength": 1024},
+                  "size": {"type": "integer", "minimum": 0},
+                  "mime": {"type": "string", "maxLength": 255},
+                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "插件登记的流式服务 ID"}
+                },
+                "required": ["type", "name"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {"type": {"enum": ["thinking", "tool"]}, "text": {"type": "string"}},
+                "required": ["type", "text"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "message": {
+            "type": "object",
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "cursor": {"$ref": "#/$defs/id"},
+              "sender": {"$ref": "#/$defs/id", "description": "参与者 ID"},
+              "text": {"type": "string", "description": "纯文本兜底"},
+              "parts": {"type": "array", "items": {"$ref": "#/$defs/part"}},
+              "replyTo": {"$ref": "#/$defs/id", "description": "回复的消息 ID"},
+              "mentions": {"type": "array", "items": {"$ref": "#/$defs/id"}, "description": "@ 到的参与者 ID；回复一条消息就算 @ 了它的发送者，Provider 把被回复消息的发送者也写进来"},
+              "about": {
+                "type": "object",
+                "description": "这条消息改的是哪条旧消息",
+                "properties": {
+                  "message": {"$ref": "#/$defs/id"},
+                  "change": {"enum": ["edit", "recall", "reaction"]},
+                  "value": {"description": "编辑后的内容或表情等，可选"}
+                },
+                "required": ["message", "change"],
+                "additionalProperties": false
+              },
+              "createdAt": {"type": "string", "minLength": 1, "maxLength": 40, "description": "只供显示"}
+            },
+            "required": ["id", "cursor", "sender", "text"],
+            "additionalProperties": false
+          }
+        },
+        "properties": {
+          "messages": {"type": "array", "items": {"$ref": "#/$defs/message"}},
+          "cursor": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}], "description": "下一次读从哪里接着读；没有消息时为 null"},
+          "more": {"type": "boolean"}
+        },
+        "required": ["messages", "cursor", "more"],
+        "additionalProperties": false
+      }
+    },
+    "post": {
+      "description": "以 self 发一条消息；Provider 按 requestId 只发一次，立即结果。",
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "$defs": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "part": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {"type": {"const": "text"}, "text": {"type": "string"}},
+                "required": ["type", "text"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {"enum": ["image", "video", "file"]},
+                  "name": {"type": "string", "maxLength": 1024},
+                  "size": {"type": "integer", "minimum": 0},
+                  "mime": {"type": "string", "maxLength": 255},
+                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "插件登记的流式服务 ID"}
+                },
+                "required": ["type", "name"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {"type": {"enum": ["thinking", "tool"]}, "text": {"type": "string"}},
+                "required": ["type", "text"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "properties": {
+          "text": {"type": "string", "description": "纯文本兜底"},
+          "parts": {"type": "array", "items": {"$ref": "#/$defs/part"}},
+          "replyTo": {"$ref": "#/$defs/id", "description": "回复的消息 ID"},
+          "mentions": {"type": "array", "items": {"$ref": "#/$defs/id"}, "description": "@ 到的参与者 ID"}
+        },
+        "required": ["text"],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string", "minLength": 1, "maxLength": 2048},
+              "cursor": {"type": "string", "minLength": 1, "maxLength": 2048}
+            },
+            "required": ["id", "cursor"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

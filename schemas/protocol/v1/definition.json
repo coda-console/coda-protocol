@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/protocol/v1/definition.json",
+  "title": "协议定义",
+  "description": "一个协议的名字、记录格式与操作。名字是「命名空间/名字@大版本」；spec、status 与每个操作的输入、结果都是 JSON Schema（draft 2020-12），只引用定义自身的 $defs。操作要么立刻返回结果（result），要么返回运行引用（run: true）；只读的立即结果可标 safe: true。",
+  "type": "object",
+  "properties": {
+    "name": {"$ref": "#/$defs/name"},
+    "title": {"$ref": "#/$defs/title"},
+    "description": {"$ref": "#/$defs/description"},
+    "spec": {"$ref": "#/$defs/schema"},
+    "status": {"$ref": "#/$defs/schema"},
+    "operations": {
+      "description": "操作名 → 输入与输出；不定义操作的协议写空对象",
+      "type": "object",
+      "maxProperties": 50,
+      "propertyNames": {"$ref": "#/$defs/operationName"},
+      "additionalProperties": {"$ref": "#/$defs/operation"}
+    }
+  },
+  "required": ["name", "spec", "status", "operations"],
+  "additionalProperties": false,
+  "$defs": {
+    "name": {
+      "description": "命名空间以小写字母开头，名字以小写字母或数字开头，两者只用小写字母、数字和「-」，各不超过 40 个字符；大版本是正整数。短名（见文档）至多 63 个字符；每个「-」在短名里占两个字符，所以协议名本身至多 61 个字符，parseProtocolName 还会按实际短名再核一次。命名空间为 coda 的由 Coda 保留。",
+      "type": "string",
+      "maxLength": 61,
+      "pattern": "^[a-z][a-z0-9-]{0,39}/[a-z0-9][a-z0-9-]{0,39}@[1-9][0-9]*$"
+    },
+    "operationName": {
+      "description": "操作名：小写字母开头，只用小写字母、数字和「-」，不超过 64 个字符",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "schema": {
+      "description": "JSON Schema（draft 2020-12）",
+      "type": ["object", "boolean"]
+    },
+    "title": {"description": "给人看的名字", "type": "string", "maxLength": 100, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
+    "description": {"description": "一句话说明", "type": "string", "maxLength": 1000, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
+    "operation": {
+      "description": "操作：input 必有；result 是立即结果的 schema，或写 run: true 表示返回运行引用。两者恰写一个。safe: true 只能与 result 一起写。",
+      "type": "object",
+      "properties": {
+        "description": {"$ref": "#/$defs/description"},
+        "input": {"$ref": "#/$defs/schema"},
+        "result": {"$ref": "#/$defs/schema"},
+        "run": {"const": true, "description": "返回运行引用，而不是立即结果"},
+        "safe": {"const": true, "description": "只读、没有副作用：调用双方都不按 requestId 留请求和回答，重发就再做一次"}
+      },
+      "required": ["input"],
+      "additionalProperties": false,
+      "oneOf": [{"required": ["result"]}, {"required": ["run"]}],
+      "dependentRequired": {"safe": ["result"]}
+    }
+  }
+}

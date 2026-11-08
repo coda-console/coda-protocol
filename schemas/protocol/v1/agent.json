@@ -1,0 +1,69 @@
+{
+  "name": "coda/agent@1",
+  "title": "Agent",
+  "description": "一台机器上装着的 Agent 程序及其模型与审批模式，照 Coda 的 Agent 资源 spec。插件不再写在 spec 里，由记录的 provider 表达；本版本不定义操作。",
+  "spec": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "$defs": {
+      "level": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 200},
+          "name": {"type": "string", "maxLength": 200},
+          "shortName": {"type": "string", "maxLength": 40}
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "option": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "minLength": 1, "maxLength": 200},
+          "name": {"type": "string", "maxLength": 200},
+          "shortName": {"type": "string", "maxLength": 40},
+          "type": {"enum": ["boolean", "select"], "description": "开关，或几个选项里选一个"},
+          "choices": {"type": "array", "items": {"$ref": "#/$defs/level"}, "description": "能选的选项"}
+        },
+        "required": ["id", "type"],
+        "additionalProperties": false,
+        "if": {"properties": {"type": {"const": "select"}}, "required": ["type"]},
+        "then": {"required": ["choices"]},
+        "else": {"not": {"required": ["choices"]}}
+      }
+    },
+    "properties": {
+      "agent": {"type": "string", "minLength": 1, "maxLength": 200, "description": "Agent 的 ID：spawn 的 agent 写它"},
+      "title": {"type": "string", "maxLength": 200, "description": "给人看的名字"},
+      "defaultModel": {"type": "string", "maxLength": 200, "description": "不指定模型时用的模型 ID；读到目录前为空"},
+      "models": {
+        "type": "array",
+        "description": "它在那台能用的模型，最近读到的目录",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string", "minLength": 1, "maxLength": 200},
+            "name": {"type": "string", "maxLength": 200},
+            "shortName": {"type": "string", "maxLength": 40},
+            "group": {"type": "string", "maxLength": 200, "description": "来源：Agent 自带的没有，模型服务的是服务的标题"},
+            "efforts": {"type": "array", "items": {"$ref": "#/$defs/level"}},
+            "options": {"type": "array", "items": {"$ref": "#/$defs/option"}}
+          },
+          "required": ["id", "efforts", "options"],
+          "additionalProperties": false
+        }
+      },
+      "modes": {"type": "array", "description": "它的审批模式", "items": {"$ref": "#/$defs/level"}}
+    },
+    "required": ["agent", "title", "defaultModel", "models", "modes"],
+    "additionalProperties": false
+  },
+  "status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "maxProperties": 0,
+    "additionalProperties": false,
+    "description": "Agent 记录没有 status 字段"
+  },
+  "operations": {}
+}

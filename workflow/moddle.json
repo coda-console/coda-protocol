@@ -108,10 +108,9 @@
       "name": "UserTaskProperties",
       "isAbstract": true,
       "extends": ["bpmn:UserTask"],
-      "description": "人工任务的：assignee 交给谁，handback 为 false 时卡片不给「交回 Agent」，三个按钮的名字",
+      "description": "人工任务的：assignee 交给谁，三个按钮的名字",
       "properties": [
         {"name": "assignee", "isAttr": true, "type": "String"},
-        {"name": "handback", "isAttr": true, "type": "Boolean"},
         {"name": "completeLabel", "isAttr": true, "type": "String"},
         {"name": "rejectLabel", "isAttr": true, "type": "String"},
         {"name": "noteLabel", "isAttr": true, "type": "String"}
