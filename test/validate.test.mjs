@@ -274,7 +274,7 @@ test('multi-select options may require a declared workflow kind', () => {
   const spec = workflowKind => ({ contributes: { configuration: { properties: { 'kit.defaults': {
     type: 'array', items: { anyOf: [{ const: 'notify' }, { const: 'deploy', workflowKind }] }, default: []
   } } } } });
-  for (const kind of ['check', 'premerge', 'deploy', 'preview', 'release']) assert.equal(manifestProblem(spec(kind)), null);
+  for (const kind of ['check', 'premerge', 'prebuild', 'deploy', 'preview', 'release']) assert.equal(manifestProblem(spec(kind)), null);
   for (const kind of ['', 'unknown', true, ['deploy']]) assert.match(manifestProblem(spec(kind)), /workflowKind/);
 });
 
