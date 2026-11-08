@@ -1,7 +1,8 @@
 {
   "name": "coda/agent@1",
   "title": "Agent",
-  "description": "一台机器上装着的 Agent 程序及其模型与审批模式，照 Coda 的 Agent 资源 spec。插件不再写在 spec 里，由记录的 provider 表达；本版本不定义操作。",
+  "description": "一台机器上装着的 Agent 程序及其模型与审批模式，照 Coda 的 Agent 资源 spec。记录的 provider 是写记录的一方（编排），提供 Agent 程序的插件写在 spec.plugin；spawn 在那台机器上用它开一个子会话。",
+  "plural": "agents",
   "spec": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -35,6 +36,7 @@
     "properties": {
       "agent": {"type": "string", "minLength": 1, "maxLength": 200, "description": "Agent 的 ID：spawn 的 agent 写它"},
       "title": {"type": "string", "maxLength": 200, "description": "给人看的名字"},
+      "plugin": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,39}$", "description": "提供这个 Agent 程序的插件 ID；不是记录的 provider"},
       "defaultModel": {"type": "string", "maxLength": 200, "description": "不指定模型时用的模型 ID；读到目录前为空"},
       "models": {
         "type": "array",
@@ -65,5 +67,25 @@
     "additionalProperties": false,
     "description": "Agent 记录没有 status 字段"
   },
-  "operations": {}
+  "operations": {
+    "spawn": {
+      "description": "在这台机器上用这个 Agent 开一个子会话：项目与工作树、Agent 的设置、标题与第一条任务；子会话的 ID 由调用方给，重试找到的是同一个，为谁工作由调用信封的 parent 说",
+      "run": true,
+      "input": {
+        "type": "object",
+        "properties": {
+          "projectId": {"type": "string"},
+          "threadId": {"type": "string"},
+          "title": {"type": "string"},
+          "text": {"type": "string"},
+          "settings": {"type": "object", "additionalProperties": true},
+          "checkout": {"type": "object", "additionalProperties": true},
+          "parentTitle": {"type": "string"},
+          "parentUnattended": {"type": "boolean"}
+        },
+        "required": ["projectId", "threadId", "title", "text", "parentTitle", "parentUnattended"],
+        "additionalProperties": false
+      }
+    }
+  }
 }

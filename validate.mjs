@@ -1,9 +1,11 @@
 // A plugin is right when what it writes is of the types it names: each key of a manifest's `contributes` is a type with a
-// JSON Schema of its own (schemas/plugin/, `https://coda.pub/schemas/plugin/v2/…`), and a key that is no type of Coda's is
-// one a plugin's extension point declares, for that plugin to read: of the schema that point names, a file of the declaring
-// plugin's (`extensionPoints.<point>.schema`), when it names one. Checking one is checking it against those schemas,
-// nothing else: a field joins a type by joining its schema, never by a rule here. Coda checks a plugin with this module
-// when it reads one, and coda-plugins' contract check does where a plugin is written.
+// JSON Schema of its own. The manifest's schema names only the general ones (schemas/plugin/,
+// `https://coda.pub/schemas/plugin/v2/…`); every other key is one Coda's registry of contribution points declares, with a
+// schema of its provider's (those of Coda's own still kept here, by file), or one a plugin's extension point declares, for
+// that plugin to read: of the schema that point names, a file of the declaring plugin's (`extensionPoints.<point>.schema`),
+// when it names one. Checking one is checking it against those schemas, nothing else: a field joins a type by joining its
+// schema, never by a rule here. Coda checks a plugin with this module when it reads one, and coda-plugins' contract check
+// does where a plugin is written.
 // What JSON Schema cannot say of one value alone it says with five keywords, each meaning one thing wherever it is written,
 // as Kubernetes extends its OpenAPI with `x-kubernetes-*`:
 // - `x-unique-by`: [name, { part } or { key, nested }] — in an array, each named property of its objects is unique among the
@@ -34,7 +36,7 @@ export const SCHEMAS = Object.fromEntries(readdirSync(SCHEMA_DIR).filter(file =>
   .map(file => [file, JSON.parse(readFileSync(join(SCHEMA_DIR, file), 'utf8'))]));
 // The protocol definition schema the manifest schemas reference; it is not a contributes type of its own.
 const PROTOCOL_DEFINITION = JSON.parse(readFileSync(new URL('./schemas/protocol/v1/definition.json', import.meta.url), 'utf8'));
-// The types a plugin may contribute to Coda itself, as the manifest's schema names them.
+// The general types a manifest's schema checks itself; a key of none of them is for whoever declares it.
 export const TYPES = Object.keys(SCHEMAS['plugin.json'].properties.contributes.properties);
 
 // What a pointer names, from where a keyword is: the manifest's root, or levels up from the value itself; and where that is.
@@ -322,4 +324,13 @@ export function valueProblem(ref, value, where) {
 export function pointProblem(schema, value, where, dir = null) {
   const point = declared(schema);
   return point.validate.call({ dir }, value) ? null : explain(point.validate.errors, where, [point.schema]);
+}
+// A key of a manifest's `contributes` checked against the schema whoever declares the key gives for it (a file of these, as
+// `SCHEMAS['agents.json']`, or a provider's own), in the whole manifest: its pointers name places from the manifest's root
+// (`/contributes/configuration/properties`), as they do in the manifest's own schema. `dir`: the plugin's directory, for the
+// files it names. Null, or what is wrong, said as `manifestProblem` says it.
+export function contributionProblem(schema, manifest, key, dir = null) {
+  const point = declared(schema);
+  return point.validate.call({ dir }, manifest.contributes[key], { instancePath: `/contributes/${escape(key)}`, parentData: manifest.contributes,
+    parentDataProperty: key, rootData: manifest, dynamicAnchors: {} }) ? null : explain(point.validate.errors, '', [point.schema]);
 }

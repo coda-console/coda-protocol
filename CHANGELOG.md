@@ -2,6 +2,19 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 4.0.0 — 2026-11-09
+
+不兼容变更：
+
+- 插件清单 `plugin.json` 的 `contributes` 只列 11 个通用键（`configuration`、`extensionPoints`、`extensions`、`services`、`setup`、`environment`、`path`、`endpoints`、`views`、`protocols`、`protocolImplementations`）。`capabilities`、`instructions`、`agents`、`groups`、`events`、`commands`、`gitCredentials`、`repositories`、`skills`、`mcpServers`、`modelProviders`、`executors`、`composerModes` 由 Coda 的贡献点登记表声明（Coda #1917）：`manifestProblem` 不再校验它们的形状，只按 `propertyNames` 查键的写法；它们的 schema 文件留在 `schemas/plugin/`，照旧能按文件名从 `SCHEMAS` 取到。
+- `validate.mjs` 的 `TYPES` 只含这 11 个通用键。
+
+新增：
+
+- `validate.mjs` 导出 `contributionProblem(schema, manifest, key, dir?)`：把一个键按声明方给的 schema 放在整份清单里校验，指针从清单的根算（如 `groups` 的 `capacity`、`modelProviders` 的 `${config:…}` 指向本插件的设置），`x-file` 在给出插件目录时查；说法同 `manifestProblem`。
+- 协议定义的可选 `plural`：给人寻址的复数名（Kubernetes CRD 的 `names.plural`），`^[a-z][a-z0-9-]{0,62}$`，不写就是短名；同一大版本内不可改。
+- `coda/agent@1`：`"plural": "agents"`；spec 加可选 `plugin`（提供 Agent 程序的插件 ID，记录的 provider 是写记录的编排）；操作 `spawn`（`run: true`），输入同 Coda 的 `agents`/`spawn`。
+
 ## 3.3.0 — 2026-11-09
 
 - `coda:choice` 的 `note`：`required` 时选它必须附言（写说明或附上文件），默认 `optional`（Coda #2303 第 3 步：卡片在输入框里填写）。
