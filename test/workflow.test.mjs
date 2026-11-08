@@ -49,7 +49,7 @@ test('a workflow written in the dialect is read: Coda\'s attributes and elements
       <extensionElements><coda:param name="kind" value="deploy" /><coda:param name="commit" value="=inputs.head" /></extensionElements>
     </serviceTask>
     <userTask id="approve" coda:assignee="user">
-      <extensionElements><coda:choice id="merge" name="合并" primary="true"><coda:option id="deploy" name="部署" /></coda:choice></extensionElements>
+      <extensionElements><coda:choice id="merge" name="合并" primary="true"><coda:option id="deploy" name="部署" /></coda:choice><coda:choice id="stop" name="暂不合并" note="required" /></extensionElements>
     </userTask><sequenceFlow id="d" sourceRef="approve" targetRef="brief"/><userTask id="brief" coda:wake="false" />`, ' coda:kind="deploy" coda:title="部署"');
   const { root, problem } = await readWorkflow(source, 'deploy');
   assert.equal(problem, undefined);
@@ -132,6 +132,7 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     [task('<coda:choice id="a" name="甲"><coda:choice id="same" name="一" /></coda:choice><coda:choice id="b" name="乙"><coda:choice id="same" name="二" /></coda:choice>'),
       /^ask：id 不能重复：same$/],
     [task('<coda:choice id="a" name="甲"><coda:option id="o" name="部署" shown="true" /></coda:choice>'), /^ask 的 coda:option o：coda:shown 须为表达式（以 = 开头）$/],
+    [task('<coda:choice id="no" name="不行" note="always" />'), /^ask 的 coda:choice no：note 只能是 required/],
     [workflow('<userTask id="ask" coda:assignee="me" />'), /^ask：coda:assignee 只能是 agent/],
     [workflow('<userTask id="ask" coda:wake="later" />'), /^ask：coda:wake 只能是 true（默认，派出就叫醒 Agent）或 false/],
     [workflow('<startEvent id="due" coda:reportOn="always"><timerEventDefinition><timeCycle>R/PT6H</timeCycle></timerEventDefinition></startEvent>'),

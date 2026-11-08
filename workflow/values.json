@@ -144,6 +144,7 @@
         "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$", "description": "id 须为字母开头的字母、数字、「_」「-」"},
         "name": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "name 须为 1–40 个字"},
         "detail": {"type": "string", "maxLength": 200, "x-feel": true, "description": "detail 不超过 200 字"},
+        "note": {"enum": ["required", "optional"], "description": "note 只能是 required（选它必须附言：写说明或附上文件）或 optional（默认）"},
         "choices": {"type": "array", "maxItems": 6, "description": "最多 6 个按住出现的选项"},
         "options": {"type": "array", "maxItems": 12, "x-unique-by": ["id"], "description": "最多 12 个勾选项"}
       },

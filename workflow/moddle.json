@@ -171,12 +171,13 @@
     {
       "name": "Choice",
       "superClass": ["Element"],
-      "description": "人工任务给的一个答复：id 是任务输出里的 choice；可以套着更多答复，按住时给出；fields 是它检查并发送的输入（不写是全部，空串是没有）",
+      "description": "人工任务给的一个答复：id 是任务输出里的 choice；可以套着更多答复，按住时给出；fields 是它检查并发送的输入（不写是全部，空串是没有）；note 是选它时要不要附言",
       "properties": [
         {"name": "id", "isAttr": true, "type": "String"},
         {"name": "name", "isAttr": true, "type": "String"},
         {"name": "detail", "isAttr": true, "type": "String"},
         {"name": "primary", "isAttr": true, "type": "Boolean"},
+        {"name": "note", "isAttr": true, "type": "String"},
         {"name": "fields", "isAttr": true, "type": "String"},
         {"name": "choices", "type": "Choice", "isMany": true},
         {"name": "options", "type": "Option", "isMany": true}
