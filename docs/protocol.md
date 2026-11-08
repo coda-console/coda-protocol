@@ -293,12 +293,17 @@ status：
 
 观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。两个操作都是立即结果，不开运行；`read` 是 `safe` 的：
 
-- `read`：输入 `{ after?, before?, limit? }`，`after`、`before` 是游标，`limit` 为 1 到 100；结果 `{ messages, cursor, more }`，没有消息时 `cursor` 为 `null`。
+- `read`：输入 `{ after?, before?, limit? }`，`after`、`before` 是游标，`limit` 为 1 到 100；结果 `{ messages, cursor, more }`，没有消息时 `cursor` 为 `null`。`messages` 总按先后排，旧的在前：
+  - 都不带游标：最新的 `limit` 条，`more` 表示更早还有没有；客户端打开会话时先读这一页；
+  - 只带 `after`：这个游标之后的，`more` 表示之后还有没有；
+  - 只带 `before`：这个游标之前最新的 `limit` 条，`more` 表示更早还有没有；往前翻页就拿这一页第一条的 `cursor` 作下一次的 `before`；
+  - `after` 与 `before` 不能同时带。
 - `post`：输入 `{ text, parts?, replyTo?, mentions? }`；结果 `{ message: { id, cursor } }`。发送者固定是 `self`；Provider 按调用的 `requestId` 只发一次，发送失败就报错。
 
-消息是 `{ id, cursor, sender, text, parts?, replyTo?, mentions?, about?, createdAt? }`：
+消息是 `{ id, cursor, sender, senderName?, text, parts?, replyTo?, mentions?, about?, createdAt? }`：
 
 - `sender` 与 `mentions` 写参与者 ID，`replyTo` 写消息 ID；
+- `senderName` 是发送者当时的显示名，可选：大群不必把每个发送者都写进 `status.participants`；
 - 回复一条消息就算 @ 了它的发送者，Provider 把被回复消息的发送者也写进 `mentions`：只有 Provider 知道被回复的那条是谁发的，观察方不用记住 Bot 发过哪些消息；
 - `text` 是纯文本兜底，看不懂 `parts` 的一方只看它；
 - 撤回、编辑、表情回应都是一条新消息，`about: { message, change: "edit"|"recall"|"reaction", value? }` 指向旧消息；

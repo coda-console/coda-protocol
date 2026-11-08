@@ -2,6 +2,11 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 3.4.0 — 2026-11-09
+
+- `coda/session@1` 的 `read`：都不带游标时读最新的 `limit` 条；写清 `before` 是这个游标之前最新的 `limit` 条、`more` 表示更早还有没有；消息总按先后排；`after` 与 `before` 不能同时带（Coda #2311）。
+- `coda/session@1` 的消息加可选的 `senderName`：发送者当时的显示名，大群不必把每个发送者都写进 `status.participants`。
+
 ## 3.3.0 — 2026-11-09
 
 - `coda:choice` 的 `note`：`required` 时选它必须附言（写说明或附上文件），默认 `optional`（Coda #2303 第 3 步：卡片在输入框里填写）。
