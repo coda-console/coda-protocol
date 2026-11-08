@@ -50,11 +50,11 @@ test('a workflow written in the dialect is read: Coda\'s attributes and elements
     </serviceTask>
     <userTask id="approve" coda:assignee="user">
       <extensionElements><coda:choice id="merge" name="合并" primary="true"><coda:option id="deploy" name="部署" /></coda:choice></extensionElements>
-    </userTask>`, ' coda:kind="deploy" coda:title="部署"');
+    </userTask><sequenceFlow id="d" sourceRef="approve" targetRef="brief"/><userTask id="brief" coda:wake="false" />`, ' coda:kind="deploy" coda:title="部署"');
   const { root, problem } = await readWorkflow(source, 'deploy');
   assert.equal(problem, undefined);
   const [process] = root.rootElements;
-  assert.deepEqual([process.kind, process.flowElements.find(e => e.id === 'build').timeout], ['deploy', 10]);
+  assert.deepEqual([process.kind, process.flowElements.find(e => e.id === 'build').timeout, process.flowElements.find(e => e.id === 'brief').wake], ['deploy', 10, 'false']);
   assert.equal(await workflowProblem(source, 'deploy'), null);
 });
 
@@ -133,6 +133,7 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
       /^ask：id 不能重复：same$/],
     [task('<coda:choice id="a" name="甲"><coda:option id="o" name="部署" shown="true" /></coda:choice>'), /^ask 的 coda:option o：coda:shown 须为表达式（以 = 开头）$/],
     [workflow('<userTask id="ask" coda:assignee="me" />'), /^ask：coda:assignee 只能是 agent/],
+    [workflow('<userTask id="ask" coda:wake="later" />'), /^ask：coda:wake 只能是 true（默认，派出就叫醒 Agent）或 false/],
     [workflow('<startEvent id="due" coda:reportOn="always"><timerEventDefinition><timeCycle>R/PT6H</timeCycle></timerEventDefinition></startEvent>'),
       /^due 需要 coda:reportTo：写了 coda:reportOn 就要写 coda:reportTo（结果交给谁）$/],
     [workflow('<subProcess id="sub" coda:expect="soon" />'), /^sub：coda:expect 须为 ISO 8601 时长，如 PT1H，或读出时长的表达式$/],

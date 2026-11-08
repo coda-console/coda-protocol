@@ -475,6 +475,34 @@
       }
     },
     {
+      "description": "coda:wake=\"false\" 只写在交给 Agent 的任务上：交给用户的（coda:assignee=\"user\"、有输入字段的）本来就不叫醒 Agent",
+      "schema": {
+        "properties": {
+          "assignee": {
+            "not": {
+              "const": "user"
+            }
+          },
+          "hasInputFields": {
+            "const": false
+          }
+        }
+      },
+      "on": [
+        "bpmn:UserTask"
+      ],
+      "when": {
+        "required": [
+          "wake"
+        ],
+        "properties": {
+          "wake": {
+            "const": "false"
+          }
+        }
+      }
+    },
+    {
       "description": "不支持标准循环（standardLoopCharacteristics）：重复做一件事写成连回去的连线加网关，按集合或次数做多份写多实例",
       "schema": {
         "properties": {

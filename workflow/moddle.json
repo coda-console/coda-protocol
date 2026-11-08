@@ -108,9 +108,10 @@
       "name": "UserTaskProperties",
       "isAbstract": true,
       "extends": ["bpmn:UserTask"],
-      "description": "人工任务的：assignee 交给谁，三个按钮的名字",
+      "description": "人工任务的：assignee 交给谁，wake 派出时叫不叫醒 Agent，三个按钮的名字",
       "properties": [
         {"name": "assignee", "isAttr": true, "type": "String"},
+        {"name": "wake", "isAttr": true, "type": "String"},
         {"name": "completeLabel", "isAttr": true, "type": "String"},
         {"name": "rejectLabel", "isAttr": true, "type": "String"},
         {"name": "noteLabel", "isAttr": true, "type": "String"}
