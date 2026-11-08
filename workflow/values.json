@@ -81,7 +81,8 @@
     "UserTaskProperties": {
       "type": "object",
       "properties": {
-        "assignee": {"enum": ["agent", "user"], "description": "coda:assignee 只能是 agent（先给运行所属会话的 Agent 一轮，没答就逐层往上，最上面是用户；有输入字段的直接到用户）或 user（直接交给用户）"}
+        "assignee": {"enum": ["agent", "user"], "description": "coda:assignee 只能是 agent（先交给运行所属会话的 Agent，它处理不了才逐层往上，最上面是用户；有输入字段的直接到用户）或 user（直接交给用户）"},
+        "wake": {"enum": ["true", "false"], "description": "coda:wake 只能是 true（默认，派出就叫醒 Agent）或 false（不叫醒，任务随会话的下一条输入告诉 Agent）"}
       }
     },
     "Input": {

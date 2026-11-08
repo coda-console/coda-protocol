@@ -37,6 +37,7 @@ const wrong = [
   [one('<userTask id="n"/>', `<endEvent id="e">${ext('<coda:output name="x"/>')}</endEvent>`), 'e 的 coda:output x 需要 value（不超过 4000 字）'],
   [one(`<userTask id="n"><documentation>${'x'.repeat(4001)}</documentation></userTask>`), 'n：documentation 过长'],
   [one(`<userTask id="n">${ext('<coda:field type="text" id="x" label="X"/>')}</userTask>`), 'n：有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee="user"'],
+  [one('<userTask id="n" coda:assignee="user" coda:wake="false"/>'), 'n：coda:wake="false" 只写在交给 Agent 的任务上：交给用户的（coda:assignee="user"、有输入字段的）本来就不叫醒 Agent'],
   [one(job('n', '<standardLoopCharacteristics/>')), 'p/n：不支持标准循环（standardLoopCharacteristics）：重复做一件事写成连回去的连线加网关，按集合或次数做多份写多实例'],
   [one('<userTask id="n"/>', `<subProcess id="sub" triggeredByEvent="true">${loop('<loopCardinality>1</loopCardinality>')}</subProcess>`), 'p/sub：多实例只写在任务、子流程与 callActivity 上'],
   [one(job('n', loop(''))), 'p/n：多实例要写做几份：coda:inputCollection（按集合，每份一个元素）或 loopCardinality（次数）'],
