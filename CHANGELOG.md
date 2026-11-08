@@ -2,6 +2,10 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 3.5.0 — 2026-11-09
+
+- 流程参数的 `agent` 类型：值是一组 Agent 选择，与插件设置的 Agent 组合（`format: coda-agent`）相同：`agent`，以及可选的 `model`、`effort`、`mode`、`options`。不写 `default`；`defaultFrom="session.agent"` 是从会话发起、没给值时取那个会话的 Agent 选择，只用于这种参数（Coda #2303 第 4 步）。
+
 ## 3.4.0 — 2026-11-09
 
 - `coda/session@1` 的 `read`：都不带游标时读最新的 `limit` 条；写清 `before` 是这个游标之前最新的 `limit` 条、`more` 表示更早还有没有；消息总按先后排；`after` 与 `before` 不能同时带（Coda #2311）。

@@ -92,13 +92,15 @@
           "not": {"enum": ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "__proto__", "constructor", "hasOwnProperty", "isPrototypeOf",
             "propertyIsEnumerable", "toLocaleString", "toString", "valueOf"]},
           "description": "name 不合法：须为字母开头的字母、数字、「_」，且不是 JavaScript 对象自带的名字（如 constructor、toString、__proto__）：运行按名字记和取输入"},
-        "type": {"enum": ["string", "boolean", "number", "branch"], "description": "type 只能是 string、boolean、number、branch"},
+        "type": {"enum": ["string", "boolean", "number", "branch", "agent"], "description": "type 只能是 string、boolean、number、branch、agent"},
         "label": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "label 须为 1–40 个字"},
-        "defaultFrom": {"enum": ["session.branch"], "description": "defaultFrom 只能是 session.branch"}
+        "defaultFrom": {"enum": ["session.branch", "session.agent"], "description": "defaultFrom 只能是 session.branch 或 session.agent"}
       },
       "required": ["name"],
       "allOf": [
-        {"if": {"required": ["defaultFrom"]}, "then": {"properties": {"type": {"enum": ["branch", "string"], "description": "defaultFrom=\"session.branch\" 只用于 type 为 branch、string 的参数"}}}},
+        {"if": {"required": ["defaultFrom"], "properties": {"defaultFrom": {"const": "session.branch"}}}, "then": {"properties": {"type": {"enum": ["branch", "string"], "description": "defaultFrom=\"session.branch\" 只用于 type 为 branch、string 的参数"}}}},
+        {"if": {"required": ["defaultFrom"], "properties": {"defaultFrom": {"const": "session.agent"}}}, "then": {"required": ["type"], "description": "defaultFrom=\"session.agent\" 只用于 type 为 agent 的参数", "properties": {"type": {"enum": ["agent"], "description": "defaultFrom=\"session.agent\" 只用于 type 为 agent 的参数"}}}},
+        {"if": {"required": ["type"], "properties": {"type": {"const": "agent"}}}, "then": {"not": {"required": ["default"]}, "description": "type 为 agent 的参数不写 default：值是一组 Agent 选择，从会话取用 defaultFrom=\"session.agent\""}},
         {"if": {"required": ["type"], "properties": {"type": {"const": "number"}}},
           "then": {"properties": {"default": {"pattern": "^\\s*[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?\\s*$", "x-number": true, "description": "default 须为数字"}}}}
       ]
