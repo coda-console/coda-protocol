@@ -8,6 +8,7 @@
     "name": {"$ref": "#/$defs/name"},
     "title": {"$ref": "#/$defs/title"},
     "description": {"$ref": "#/$defs/description"},
+    "plural": {"$ref": "#/$defs/plural"},
     "spec": {"$ref": "#/$defs/schema"},
     "status": {"$ref": "#/$defs/schema"},
     "operations": {
@@ -26,6 +27,11 @@
       "type": "string",
       "maxLength": 61,
       "pattern": "^[a-z][a-z0-9-]{0,39}/[a-z0-9][a-z0-9-]{0,39}@[1-9][0-9]*$"
+    },
+    "plural": {
+      "description": "给人寻址的复数名（Kubernetes CRD 的 names.plural）：小写字母开头，只用小写字母、数字和「-」，至多 63 个字符；不写就是协议的短名。同一大版本内不可改，改名等于新协议",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,62}$"
     },
     "operationName": {
       "description": "操作名：小写字母开头，只用小写字母、数字和「-」，不超过 64 个字符",

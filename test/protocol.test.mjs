@@ -70,7 +70,7 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel']);
   assert.equal(EXECUTOR_PROTOCOL.operations.execute.run, true);
   assert.equal(Object.hasOwn(EXECUTOR_PROTOCOL, 'target'), false);
-  assert.deepEqual(AGENT_PROTOCOL.operations, {});
+  assert.equal(AGENT_PROTOCOL.operations.spawn.run, true);
   const safe = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
     Object.entries(protocol.operations).filter(([, operation]) => operation.safe).map(([name]) => `${protocol.name} ${name}`));
   assert.deepEqual(safe, ['coda/session@1 read', 'coda/environment@1 list', 'coda/environment@1 read']);
@@ -94,8 +94,18 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.equal(definitionProblem({ ...own, operations: { start: { input: {}, run: true } } }), null);
   assert.equal(definitionProblem({ ...own, operations: { peek: { input: {}, result: {}, safe: true } } }), null);
 
+  for (const plural of ['agents', 'a', 'my-things2', `a${'b'.repeat(62)}`]) assert.equal(definitionProblem({ ...own, plural }), null, plural);
+  for (const plural of ['', 'Agents', '1agents', '-agents', 'my_things', 'a.b', `a${'b'.repeat(63)}`, 1, null])
+    assert.match(definitionProblem({ ...own, plural }), /^协议定义\.plural：给人寻址的复数名/, String(plural));
+
   assert.match(definitionProblem(own, { namespace: 'other' }), /命名空间须为「other」/);
   assert.equal(definitionProblem(own, { namespace: 'my-plugin' }), null);
+});
+
+test('core protocols are addressed by plurals of their own: coda/agent@1 by agents, the rest by their short names', () => {
+  const plurals = Object.values(CORE_PROTOCOLS).map(protocol => protocol.plural ?? protocolShortName(protocol.name));
+  assert.equal(new Set(plurals).size, plurals.length, plurals.join(', '));
+  assert.equal(AGENT_PROTOCOL.plural, 'agents');
 });
 
 test('a plugin owns definitions only in its own namespace', () => {
@@ -195,9 +205,29 @@ test('the invocation envelope answers with exactly one of result and run', () =>
 function checks(protocol) {
   const ajv = new Ajv({ strict: false });
   const operations = Object.fromEntries(Object.entries(protocol.operations).map(([name, operation]) =>
-    [name, { input: ajv.compile(operation.input), result: ajv.compile(operation.result) }]));
+    [name, { input: ajv.compile(operation.input), result: operation.result && ajv.compile(operation.result) }]));
   return { spec: ajv.compile(protocol.spec), status: ajv.compile(protocol.status), operations };
 }
+
+test('agent records name the plugin of their program, and spawn takes a child\'s project, thread, settings and first task', () => {
+  const { spec, status, operations: { spawn } } = checks(AGENT_PROTOCOL);
+  assert.deepEqual(Object.keys(AGENT_PROTOCOL.operations), ['spawn']);
+  const record = { agent: 'codex', title: 'Codex', defaultModel: 'gpt-5', models: [{ id: 'gpt-5', efforts: [], options: [] }],
+    modes: [{ id: 'auto', name: '自动' }] };
+  for (const value of [record, { ...record, plugin: 'codex' }, { ...record, plugin: 'my-agent-2' }]) assert.equal(spec(value), true, JSON.stringify(value));
+  for (const plugin of ['', 'Codex', '1codex', 'my_agent', 'a'.repeat(41), 1])
+    assert.equal(spec({ ...record, plugin }), false, JSON.stringify(plugin));
+  assert.equal(spec({ ...record, provider: 'codex' }), false);
+  assert.equal(status({}), true);
+
+  const input = { projectId: 'p1', threadId: 't1', title: '修 bug', text: '先读 README', parentTitle: '主会话', parentUnattended: false };
+  for (const value of [input, { ...input, settings: { model: 'gpt-5', effort: 'high' }, checkout: { branch: 'main' } }])
+    assert.equal(spawn.input(value), true, JSON.stringify(value));
+  const without = key => Object.fromEntries(Object.entries(input).filter(([name]) => name !== key));
+  for (const value of [{}, ...Object.keys(input).map(without), { ...input, agent: 'codex' }, { ...input, parentUnattended: 'no' },
+    { ...input, settings: 'gpt-5' }, { ...input, checkout: [] }, { ...input, threadId: 1 }])
+    assert.equal(spawn.input(value), false, JSON.stringify(value));
+});
 
 test('session records, messages and posts follow coda/session@1', () => {
   const { spec, status, operations: { read, post } } = checks(SESSION_PROTOCOL);

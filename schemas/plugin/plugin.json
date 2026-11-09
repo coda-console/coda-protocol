@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/plugin/v2/plugin.json",
   "title": "插件清单（插件目录的 package.json）",
-  "description": "照 VS Code 扩展的 package.json 写；Coda 读的是下面这些键，其余是 npm 的，不管。contributes 的每个键是一种类型，各有自己的 schema；不是 Coda 的键，是写给别的插件的扩展点的（它们声明的类型），由那个扩展点的 schema 校验。",
+  "description": "照 VS Code 扩展的 package.json 写；Coda 读的是下面这些键，其余是 npm 的，不管。contributes 下这里只写通用键，各有自己的 schema；其余键由 Coda 的贡献点登记表或某个插件的扩展点声明，由声明它的一方的 schema 校验。",
   "type": "object",
   "properties": {
     "id": {"$ref": "common.json#/$defs/id", "description": "插件 ID：小写字母、数字和「-」，以字母开头，至多 40 个字符；不写就用 name"},
@@ -28,33 +28,20 @@
     "activationEvents": {"description": "宿主什么时候加载 main：onStartupFinished（后端一启动），不重复", "type": "array", "items": {"enum": ["onStartupFinished"]}, "uniqueItems": true},
     "extensionDependencies": {"description": "需要先装的插件的 ID，不重复", "type": "array", "items": {"$ref": "common.json#/$defs/id"}, "uniqueItems": true},
     "contributes": {
-      "description": "插件带来的东西：每个键一种类型",
+      "description": "插件带来的东西：每个键一种类型。这里只列通用键；其余键由 Coda 的贡献点登记表或某个插件的扩展点声明",
       "type": "object",
       "properties": {
         "configuration": {"$ref": "configuration.json"},
-        "capabilities": {"$ref": "capabilities.json"},
-        "instructions": {"$ref": "instructions.json"},
-        "agents": {"$ref": "agents.json"},
         "extensionPoints": {"$ref": "extension-points.json"},
         "extensions": {"$ref": "extensions.json"},
-        "groups": {"$ref": "groups.json"},
-        "events": {"$ref": "events.json"},
-        "commands": {"$ref": "commands.json"},
-        "gitCredentials": {"$ref": "git-credentials.json"},
-        "repositories": {"$ref": "repositories.json"},
         "services": {"$ref": "services.json"},
         "setup": {"$ref": "setup.json"},
-        "skills": {"$ref": "skills.json"},
         "environment": {"$ref": "environment.json"},
         "path": {"$ref": "path.json"},
         "endpoints": {"$ref": "endpoints.json"},
-        "mcpServers": {"$ref": "mcp-servers.json"},
         "views": {"$ref": "views.json"},
-        "modelProviders": {"$ref": "model-providers.json"},
-        "executors": {"$ref": "executors.json"},
         "protocols": {"$ref": "protocols.json"},
-        "protocolImplementations": {"$ref": "protocol-implementations.json"},
-        "composerModes": {"$ref": "composer-modes.json"}
+        "protocolImplementations": {"$ref": "protocol-implementations.json"}
       },
       "propertyNames": {"description": "contributes 的键：字母和数字，以小写字母开头", "pattern": "^[a-z][A-Za-z0-9]{0,39}$"}
     }

@@ -55,6 +55,12 @@ import { protocolShortName } from '@coda-console/protocol/protocol';
 protocolShortName('coda/run@1'); // 'coda-1run-21'
 ```
 
+### 复数名
+
+定义可以写 `plural`，给人寻址用的复数名，和 Kubernetes CRD 的 `names.plural` 同一个位置：引用 `coda://<复数名>/<ID>`、资源列表的种类、节点内核 CRD 的复数名都用它。不写就是协议的短名。写法是小写字母开头，只用小写字母、数字和「-」，至多 63 个字符（`^[a-z][a-z0-9-]{0,62}$`）。
+
+复数名是协议的一部分：同一大版本内不可改，改名等于新协议。核心协议之间的复数名（不写的按短名算）互不相同，本包的自测会拦下重复的。`coda/agent@1` 写 `"plural": "agents"`，所以 Agent 的引用仍是 `coda://agents/<ID>`。
+
 ## 定义文档
 
 一份定义是一个 JSON 对象：
@@ -64,6 +70,7 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `name` | 协议名，必填 |
 | `title` | 给人看的名字，可选 |
 | `description` | 一句话说明，可选 |
+| `plural` | 复数名（见「复数名」），可选；不写就是短名 |
 | `spec` | 记录的 spec 的 JSON Schema，必填 |
 | `status` | 记录的 status 的 JSON Schema，必填 |
 | `operations` | 操作名 → `{ description?, input, result, safe? }` 或 `{ description?, input, run: true }`，必填；不定义操作写 `{}` |
@@ -176,7 +183,7 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 
 `contributes.protocols` 是插件拥有的定义，每份都按定义文档 schema 校验；定义里的命名空间必须等于插件 ID。`contributes.protocolImplementations` 是插件实现的协议名列表，可以包含别的命名空间下的协议（包括 `coda/...`），不重复。
 
-`manifestProblem` 校验清单的形状。命名空间约束需要插件 ID，单独用：
+`manifestProblem` 校验清单的外壳与通用键（这两个键在其中）；别的键由 Coda 的贡献点登记表或某个插件的扩展点声明，按声明方的 schema 校验，本包不管它们的形状。命名空间约束需要插件 ID，单独用：
 
 ```js
 import { ownedProtocolsProblem } from '@coda-console/protocol/protocol';
@@ -245,23 +252,27 @@ status：
 
 ## coda/agent@1
 
-一台机器上装着的 Agent 程序，记录格式照 Coda 的 Agent 资源 spec：
+一台机器上装着的 Agent 程序，记录格式照 Coda 的 Agent 资源 spec。复数名是 `agents`。记录的 provider 是写记录的一方，即编排（现在是 `coda`），不是提供 Agent 程序的插件；那个插件写在 `spec.plugin`。
 
 | 字段 | 含义 |
 | --- | --- |
 | `agent` | Agent 的 ID，必填 |
 | `title` | 给人看的名字 |
+| `plugin` | 提供这个 Agent 程序的插件 ID，可选 |
 | `defaultModel` | 不指定模型时用的模型 ID；读到目录前为空 |
 | `models` | `[{ id, name?, shortName?, group?, efforts, options }]` |
 | `modes` | `[{ id, name?, shortName? }]` |
 
-`models[].efforts` 是 `[{ id, name?, shortName? }]`；`models[].options` 是 `{ id, name?, shortName?, type: "boolean"|"select", choices? }`，`select` 带 `choices`，`boolean` 不带。旧 spec 里的 `plugin` 字段删除，由记录的 provider 表达。status 是空对象；本版本不定义操作。
+`models[].efforts` 是 `[{ id, name?, shortName? }]`；`models[].options` 是 `{ id, name?, shortName?, type: "boolean"|"select", choices? }`，`select` 带 `choices`，`boolean` 不带。status 是空对象。
+
+操作 `spawn`（`run: true`）：在这台机器上用这个 Agent 开一个子会话，返回运行引用。输入是 `{ projectId, threadId, title, text, settings?, checkout?, parentTitle, parentUnattended }`：子会话所在的项目与工作树（`checkout`）、Agent 的设置（`settings`，如模型与推理强度）、标题与第一条任务（`text`）；`threadId` 是调用方给的子会话 ID，重试找到的是同一个；`parentTitle` 是发起方在这里显示的名字，`parentUnattended` 说发起方是否无人值守。子会话为谁工作由调用信封的 `parent` 说，不写在输入里。
 
 ```json
 {
   "spec": {
     "agent": "codex",
     "title": "Codex",
+    "plugin": "codex",
     "defaultModel": "gpt-5",
     "models": [{"id": "gpt-5", "efforts": [], "options": []}],
     "modes": [{"id": "auto", "name": "自动"}]
@@ -365,4 +376,5 @@ status 是 `{ state: "available"|"unreachable", reason? }`。
 
 - 协议名里的大版本是协议自己的版本，和 npm 包版本、插件清单的 v2 独立。
 - 同一大版本只加可选字段和新操作；改含义、删字段或删操作就升大版本。新旧版本可并存，插件在 `contributes.protocolImplementations` 里声明实现哪个。
+- 复数名同一大版本内不可改。
 - 3.0.0 删除了 `executor`、`execution` 两个旧协议与 `@coda-console/protocol/executor`，是不兼容变更；不提供旧格式兼容代码。
