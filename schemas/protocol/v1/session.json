@@ -94,12 +94,13 @@
                   "width": {"type": "integer", "minimum": 1, "description": "像素宽，已按拍摄方向转正；图片和视频用"},
                   "height": {"type": "integer", "minimum": 1, "description": "像素高，已按拍摄方向转正；图片和视频用"},
                   "duration": {"type": "number", "minimum": 0, "description": "时长，秒；视频用"},
-                  "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀，长边不超过 64 像素；视频用封面帧"},
+                  "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀；自己生成时长边取 64 像素左右，已有的小缩略图在上限内可原样放；视频用封面帧"},
                   "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID"},
-                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"}
+                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "原文件的服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"},
+                  "preview": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "预览图在同一个 service 里的服务内路径：图片是长边一般不超过约 1280 像素的静图，视频是封面帧"}
                 },
                 "required": ["type", "name"],
-                "dependentRequired": {"path": ["service"]},
+                "dependentRequired": {"path": ["service"], "preview": ["service"]},
                 "additionalProperties": false
               },
               {
@@ -172,12 +173,13 @@
                   "width": {"type": "integer", "minimum": 1, "description": "像素宽，已按拍摄方向转正；图片和视频用"},
                   "height": {"type": "integer", "minimum": 1, "description": "像素高，已按拍摄方向转正；图片和视频用"},
                   "duration": {"type": "number", "minimum": 0, "description": "时长，秒；视频用"},
-                  "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀，长边不超过 64 像素；视频用封面帧"},
+                  "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀；自己生成时长边取 64 像素左右，已有的小缩略图在上限内可原样放；视频用封面帧"},
                   "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID"},
-                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"}
+                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "原文件的服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"},
+                  "preview": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "预览图在同一个 service 里的服务内路径：图片是长边一般不超过约 1280 像素的静图，视频是封面帧"}
                 },
                 "required": ["type", "name"],
-                "dependentRequired": {"path": ["service"]},
+                "dependentRequired": {"path": ["service"], "preview": ["service"]},
                 "additionalProperties": false
               },
               {
