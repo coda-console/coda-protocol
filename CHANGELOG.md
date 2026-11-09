@@ -2,6 +2,12 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.4.0 — 2026-11-10
+
+- Agent 接入协议加通知 `_coda/unrecognized`（`schemas/agent/unrecognized.json`，登记在 `messages.json`）：入口把没适配的东西报给 Coda，参数 `{ sessionId, kind, name, lost, detail? }`。`kind` 为 `output`（上游 Agent 发来、入口没按登记处理的东西，含没送到 Coda 的用户可见文字）或 `tool`（模型能用、入口没登记的原生工具）；`name` 是至多 200 字的稳定标识，只含类型名、字段名与取值，不含用户内容；`lost` 表示用户本该看到的没显示出来，`tool` 一律 `false`；`detail` 至多 2000 字，只用于会话里的说明。Coda 对 `lost: true` 在会话里记一条说明（同一会话同一 `name` 一次），所有上报按 Agent ID、Agent 版本、`kind`、`name`、`lost` 计数，随后端遥测上报，不带 `detail`；缺必填、超长、`kind` 不认识的整条丢弃。
+- `clientCapabilities._meta.coda.unrecognized`：Coda 收这条通知；没看到它，Agent 不发。
+- 内置入口的说明：Codex 照常显示 `delivery: "async"` 的消息，异步提问（`request_user_input_async`）转成这一轮里的表单卡片，字段写法同 Claude 的提问；Codex 与 Claude 的入口登记上游的每种输出，没登记的、没送到的经 `_coda/unrecognized` 报，会话开始时对照原生工具清单，新工具报 `kind: tool`。
+
 ## 5.3.0 — 2026-11-09
 
 - `coda/session@1` 的媒体 part（`read` 的消息与 `post` 的输入）加 `type: "audio"`：一段语音消息（对方平台的「语音条」），不是任意音频文件；用 `name`、`size`、`mime`、`duration`、`service`、`path`，`width`、`height`、`thumb`、`preview` 不用。`path` 给的文件应是常见播放器能直接播放的格式（如 AAC/M4A、MP3、WAV），`mime` 写实际格式，原始编码不能直接播时由 Provider 转换；Provider 给语音消息写可读的 `text` 兜底（例如「[语音] 5″」）。`duration` 改为视频和语音用。

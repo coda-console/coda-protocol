@@ -12,6 +12,11 @@
       "params": "wait-stop.json#/$defs/params",
       "result": "wait-stop.json#/$defs/result"
     },
+    "_coda/unrecognized": {
+      "kind": "notification",
+      "direction": "agent-to-client",
+      "params": "unrecognized.json"
+    },
     "_coda/session/compact": {
       "kind": "request",
       "direction": "client-to-agent",
