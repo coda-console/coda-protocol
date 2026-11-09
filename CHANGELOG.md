@@ -2,6 +2,17 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.0.0 — 2026-11-09
+
+不兼容变更：
+
+- `coda/session@1` 的 `post` 从立即结果改为开运行（`run: true`），输入不变：发一条消息可能要十几秒到几十秒（排队、按真人节奏输入、发出后确认）。发送者固定是 `self`，重发同一个 `requestId` 得到同一个运行、只发一次；`completed` 的 `result` 是 `{ message: { id, cursor } }`，即以后 `read` 读到的那条；`failed` 的 `result` 是 `{ code, message }`，不确定发没发出去时 `code` 为 `unknown`，调用方显示「结果未知」、不自动重发；取消沿用 `coda/run@1`。协议名仍是 `coda/session@1`，不升大版本：目前还没有第三方实现 `post`。
+
+新增：
+
+- 操作定义的 `idempotent: true`：可以改状态、但重发做的是同一件事的立即结果操作；调用双方和 `safe` 一样，都不按 `requestId` 留请求和回答。只能与 `result` 一起写，不能与 `run` 同时出现；`safe` 已含 `idempotent`，两者不同时写。
+- `coda/session@1` 的操作 `draft`（`idempotent`）：设定 `self` 还没发出去的草稿，结果 `{}`。输入 `{ text, version, steps? }`：`text` 是全文（空串为清空），`version` 是非负整数、比大小，Provider 丢掉不大于已见最大版本的，建议用毫秒时间；`steps` 是从上一版到这一版的中间状态 `{ text, delayMs }`，可照节奏回放，最后一步等于 `text`。用户发出时仍调 `post`，全文在 `post` 的输入里，没写过草稿的 `post` 也照常发。
+
 ## 4.2.0 — 2026-11-09
 
 - `coda/session@1` 的媒体 part（`read` 的消息与 `post` 的输入）加可选的 `width`、`height`（像素，已按拍摄方向转正）、`duration`（秒）、`thumb`（内嵌 JPEG 的 base64，长边不超过 64 像素，至多 8192 字符）与 `path`（服务内路径，须和 `service` 一起出现）；文档写清原文件在记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`，Range 与流中断沿用本机流式服务，以及缺尺寸、缩略图、`service` 时怎么显示（Coda #2342 第 1 步）。

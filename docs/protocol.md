@@ -73,7 +73,7 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `plural` | 复数名（见「复数名」），可选；不写就是短名 |
 | `spec` | 记录的 spec 的 JSON Schema，必填 |
 | `status` | 记录的 status 的 JSON Schema，必填 |
-| `operations` | 操作名 → `{ description?, input, result, safe? }` 或 `{ description?, input, run: true }`，必填；不定义操作写 `{}` |
+| `operations` | 操作名 → `{ description?, input, result, safe?, idempotent? }` 或 `{ description?, input, run: true }`，必填；不定义操作写 `{}` |
 
 `spec`、`status`、`input`、`result` 都是 JSON Schema draft 2020-12，只引用自己文档里的 `#/$defs/...`，不引用别的文件。`input` 必有。操作的输出二选一：
 
@@ -81,6 +81,8 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 - `run: true`：返回一个运行引用，运行记录由被调用方持有。
 
 `safe: true` 只能和 `result` 一起写，不能和 `run` 一起写，表示只读、没有副作用、立即给结果的操作；调用方和被调用方都不按 `requestId` 留它的请求和回答（见「调用信封」）。
+
+`idempotent: true` 也只能和 `result` 一起写，不能和 `run` 一起写，表示可以改状态、但重发做的是同一件事的立即结果操作，比如把草稿设成某一段：调用双方和 `safe` 一样，都不按 `requestId` 留请求和回答。两者是 HTTP 的 safe 与 idempotent 之分：`safe` 只读，`idempotent` 可以改状态。`safe` 已含 `idempotent`，两个不同时写。
 
 ```json
 {
@@ -158,7 +160,7 @@ definitionProblem(definition, { namespace: 'my-plugin' }); // 同时核对命名
 {"run": {"kind": "coda/run@1", "id": "run-1"}}
 ```
 
-`requestId` 由调用方给，重发同一个请求只做一次。`safe` 的操作例外：调用双方都不按 `requestId` 留请求和回答，重发就再读一次。读回来的是对方的数据，比如群消息、环境里的文件内容，留在调用双方的库里就成了镜像。立即结果用 `result`；慢的操作用 `run` 指向被调用方自己的 `coda/run@1` 记录，调用方 watch 这条记录取结果，被调用方不推送。取消也是一次调用（`coda/run@1` 的 `cancel` 操作），不是写别人的记录。
+`requestId` 由调用方给，重发同一个请求只做一次。`safe` 与 `idempotent` 的操作例外：调用双方都不按 `requestId` 留请求和回答，重发就再做一次。`safe` 读回来的是对方的数据，比如群消息、环境里的文件内容，留在调用双方的库里就成了镜像；`idempotent` 重做一遍结果相同，留着也没用。立即结果用 `result`；慢的操作用 `run` 指向被调用方自己的 `coda/run@1` 记录，调用方 watch 这条记录取结果，被调用方不推送。取消也是一次调用（`coda/run@1` 的 `cancel` 操作），不是写别人的记录。
 
 ```js
 import { invocationRequestProblem, invocationResponseProblem } from '@coda-console/protocol/protocol';
@@ -283,7 +285,7 @@ status：
 
 ## coda/session@1
 
-插件提供的外部会话，比如一个微信群：参与者、消息和发消息。
+插件提供的外部会话，比如一个微信群：参与者、消息、草稿和发消息。
 
 spec：
 
@@ -302,14 +304,24 @@ status：
 | `state` | 可选，`active` 或 `unreachable` |
 | `reason` | 可选，状态说明 |
 
-观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。两个操作都是立即结果，不开运行；`read` 是 `safe` 的：
+观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。`read` 与 `draft` 是立即结果，`read` 是 `safe` 的，`draft` 是 `idempotent` 的；`post` 开运行：
 
 - `read`：输入 `{ after?, before?, limit? }`，`after`、`before` 是游标，`limit` 为 1 到 100；结果 `{ messages, cursor, more }`，没有消息时 `cursor` 为 `null`。`messages` 总按先后排，旧的在前：
   - 都不带游标：最新的 `limit` 条，`more` 表示更早还有没有；客户端打开会话时先读这一页；
   - 只带 `after`：这个游标之后的，`more` 表示之后还有没有；
   - 只带 `before`：这个游标之前最新的 `limit` 条，`more` 表示更早还有没有；往前翻页就拿这一页第一条的 `cursor` 作下一次的 `before`；
   - `after` 与 `before` 不能同时带。
-- `post`：输入 `{ text, parts?, replyTo?, mentions? }`；结果 `{ message: { id, cursor } }`。发送者固定是 `self`；Provider 按调用的 `requestId` 只发一次，发送失败就报错。
+- `post`（`run: true`）：输入 `{ text, parts?, replyTo?, mentions? }`，以 `self` 发一条消息。发一条可能要十几秒到几十秒（排队、按真人节奏输入、发出后确认），所以开运行：
+  - 发送者固定是 `self`；重发同一个 `requestId`，得到的是同一个运行，只发一次；
+  - 运行 `completed` 时，`result` 是 `{ message: { id, cursor } }`，就是以后 `read` 会读到的那条消息；
+  - 发送失败时运行为 `failed`，`result` 是 `{ code, message }`；不确定发没发出去时（例如输入到一半进程没了）`code` 为 `unknown`，调用方显示「结果未知」，不自动重发；
+  - 取消沿用 `coda/run@1` 的 `cancel`：还没开始发的停下，得到 `canceled`；已经开始发的，Provider 可以不停，是否停下看 status；
+  - 全文总在 `post` 的输入里；没有先写过草稿的 `post` 也照常发出去。
+- `draft`（`idempotent`）：设定 `self` 在这个会话里还没发出去的文字，结果 `{}`。输入 `{ text, version, steps? }`：
+  - `text` 是当前草稿的全文，至多 65536 个字符；空串表示清空或放弃；
+  - `version` 是调用方给的非负整数版本号，比大小：Provider 收到不大于已见最大版本的直接丢掉，多台设备都在写时后写的为准；建议用毫秒时间；
+  - `steps` 可选，至多 1000 项，是从上一版到这一版之间按先后排的中间状态 `{ text, delayMs }`：每一步的全文，以及距上一步的间隔（毫秒，0 到 600000）；Provider 可以照这个节奏回放，最后一步等于 `text`；
+  - Provider 可以把草稿同步到对方平台的输入框，用户发出时那边基本已经打完；用不上草稿的 Provider 直接答 `{}`。
 
 消息是 `{ id, cursor, sender, senderName?, text, parts?, replyTo?, mentions?, about?, createdAt? }`：
 
