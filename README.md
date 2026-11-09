@@ -127,7 +127,7 @@ agentValueProblem('review.json', review, '工具的审核');
 - **`coda/run@1`**：被调用方自己的运行记录。spec 记录调用的记录、操作、输入、请求 ID、父引用和是否被等待；status 是 `working`、`input-required`、`completed`、`failed`、`canceled`，后三个是终态。`completed`/`failed` 必带 `result`，`failed` 的 `result` 约定为 `{ code, message }`（`code: "unknown"` 表示结局不明），`canceled` 可带取消前的话和留下的东西；另有可选的 `progress` 和等输入时的 `awaiting`。操作是 `cancel`。
 - **`coda/executor@1`**：执行器。操作 `execute` 接一份执行工作并返回运行引用，运行记录在执行器那边；没有 `target`、`executor` 或 `assignmentId` 绑定，也不回写调用方的记录。
 - **`coda/agent@1`**：Agent 资源，复数名 `agents`；spec 照 Coda 的 Agent 资源（`agent`、`title`、`plugin?`、`defaultModel`、`models`、`modes` 等），`plugin` 是提供 Agent 程序的插件、不是记录的 provider；status 为空对象；操作 `spawn`（`run: true`）开一个子会话。
-- **`coda/session@1`**：插件提供的外部会话。spec 是标题、容器和可选的环境引用；status 是 `head` 游标与参与者；操作 `read`（`safe`）与 `draft`（`idempotent`）是立即结果，`post` 开运行；撤回、编辑、表情是用 `about` 指向旧消息的新消息。
+- **`coda/session@1`**：插件提供的外部会话。spec 是标题、容器和可选的环境引用；status 是 `head` 游标、参与者与 `post` 收不收语音（`accepts`）；操作 `read`（`safe`）与 `draft`（`idempotent`）是立即结果，`post` 开运行；撤回、编辑、表情是用 `about` 指向旧消息的新消息。
 - **`coda/environment@1`**：插件提供的只读外部环境。spec 带 `actions`；操作 `list` 列目录、`read` 读文件（一次至多 1 MiB）。
 
 统一调用是 `{ record: {kind,id}, operation, input, requestId, parent: {kind,id}, awaited }`，回答恰为 `{ result }` 或 `{ run: {kind,id} }` 之一。同一 `requestId` 重发只做一次；慢操作返回运行引用，调用方 watch 运行记录取结果，没有推送或回写。

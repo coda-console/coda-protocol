@@ -2,6 +2,12 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.3.0 — 2026-11-09
+
+- `coda/session@1` 的媒体 part（`read` 的消息与 `post` 的输入）加 `type: "audio"`：一段语音消息（对方平台的「语音条」），不是任意音频文件；用 `name`、`size`、`mime`、`duration`、`service`、`path`，`width`、`height`、`thumb`、`preview` 不用。`path` 给的文件应是常见播放器能直接播放的格式（如 AAC/M4A、MP3、WAV），`mime` 写实际格式，原始编码不能直接播时由 Provider 转换；Provider 给语音消息写可读的 `text` 兜底（例如「[语音] 5″」）。`duration` 改为视频和语音用。
+- `post` 输入里的媒体 part 加 `upload`：持有这条记录的机器上 Coda 上传的 ID（`POST /v1/uploads` 返回的，1 到 200 字符），与 `service`、`path`、`preview` 互斥；`read` 的消息里没有。调用方先把文件传到持有方再引用，持有方的 Coda 把上传交给 Provider 读取，Provider 不经网络取；本版本只要求 Provider 对 `audio` 支持。
+- status 加可选的 `accepts`：`post` 除文字以外还收哪些媒体 part，形状是 `{ audio?: { maxDuration? } }`，本版本只有 `audio` 一个键，`maxDuration` 是语音最长秒数（大于 0）；不写就是只收文字，客户端据此显示录音入口并到时自动停止。`post` 收到没声明的媒体 part 或超出限制时运行 `failed`，`code` 为 `unsupported`（Coda #2364）。
+
 ## 5.2.0 — 2026-11-09
 
 - 新核心协议 `coda/card@1`（复数名 `cards`，`CARD_PROTOCOL`，在 `CORE_PROTOCOLS` 里）：会话向用户或上层 Agent 要的一个输入，由提出它的会话所在的后端持有，可按持有方自己的表读穿给出、不另存。spec 是 `{ kind, title, thread, location?, answers: "user"|"any", shown? }`，不带答案的 schema；status 是 `{ state: "pending"|"submitting"|"answered"|"expired"|"unknown", holder?, reason?, note?, toldAlong?, setAside? }`，`holder` 是字符串（`user` 或会话 ID），不是引用；没有操作。
