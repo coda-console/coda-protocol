@@ -2,6 +2,10 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 4.2.0 — 2026-11-09
+
+- `coda/session@1` 的媒体 part（`read` 的消息与 `post` 的输入）加可选的 `width`、`height`（像素，已按拍摄方向转正）、`duration`（秒）、`thumb`（内嵌 JPEG 的 base64，长边不超过 64 像素，至多 8192 字符）与 `path`（服务内路径，须和 `service` 一起出现）；文档写清原文件在记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`，Range 与流中断沿用本机流式服务，以及缺尺寸、缩略图、`service` 时怎么显示（Coda #2342 第 1 步）。
+
 ## 4.1.0 — 2026-11-09
 
 - 流程属性 `coda:autoRun`：事件（如 PR）来时，会话与目录都没设「自动运行」的，按它决定起不起运行：`true`、`false`，或插件的一项设置 `=vars.<插件>.<设置>`（如 `=vars.review.autoRun`；事件来时还没有运行，别的都读不到，所以只收这种写法），不写为起。手动发起不受它影响（Coda #2303 后续：在插件设置里关掉 PR 生命流程的自动运行）。

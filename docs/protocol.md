@@ -323,8 +323,38 @@ status：
 `parts` 的每一项是下面之一：
 
 - `{ type: "text", text }`；
-- `{ type: "image"|"video"|"file", name, size?, mime?, service? }`：大文件只给引用，`service` 是插件登记的流式服务 ID，本版本只定字段；
+- `{ type: "image"|"video"|"file", name, size?, mime?, width?, height?, duration?, thumb?, service?, path? }`：媒体，大文件只给引用，字段见下；
 - `{ type: "thinking"|"tool", text }`。
+
+媒体 part 在 `read` 的消息和 `post` 的输入里是同一种形状，`type`、`name` 以外都可选：
+
+| 字段 | 含义 |
+| --- | --- |
+| `name`、`size`、`mime` | 文件名、字节数、MIME 类型 |
+| `width`、`height` | 像素，整数，至少 1，已按拍摄方向转正；图片和视频用 |
+| `duration` | 时长，秒，不为负；视频用 |
+| `thumb` | 内嵌 JPEG 的 base64（不带 `data:` 前缀），长边不超过 64 像素，至多 8192 个字符；视频用封面帧 |
+| `service` | provider 插件登记的本机流式服务 ID |
+| `path` | 服务内路径，1 到 2048 个字符；有 `path` 就必须有 `service` |
+
+尺寸和缩略图让框在原图到达前就是最终大小：先显示放大、模糊的 `thumb`，原图到了在原地换上。
+原文件：观察方读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`（别的机器经空间到达持有方）；`path` 原样接在后面，Provider 写它时就按 URL 路径编码好，不以 `/` 开头。
+字节、Range 和流中断语义沿用 Coda 的本机流式服务。
+
+缺字段时这样降级，旧消息不补算：
+
+- 缺 `width`、`height`：按默认比例占位；
+- 缺 `thumb`：空框；
+- 缺 `service`（或有 `service` 没有 `path`）：只显示文件卡，不能打开原文件。
+
+一个图片 part：
+
+```json
+{"type": "image", "name": "IMG_0412.jpg", "size": 2310144, "mime": "image/jpeg", "width": 3024, "height": 4032,
+ "thumb": "/9j/4AAQSkZJRgABAQ…", "service": "media", "path": "msg/m7/IMG_0412.jpg"}
+```
+
+一条记录：
 
 ```json
 {
