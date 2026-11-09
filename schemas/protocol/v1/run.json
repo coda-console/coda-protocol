@@ -1,7 +1,7 @@
 {
   "name": "coda/run@1",
   "title": "运行",
-  "description": "被调用方为一次调用开出的运行记录，由被调用方持有和写入。调用方 watch 这条记录取结果；状态到 completed、failed、canceled 后不再改变。",
+  "description": "被调用方为一次调用开出的运行记录，由被调用方持有和写入。调用方 watch 这条记录取结果；状态到 completed、failed、canceled 后不再改变。等输入时 status.awaiting 指向一条 coda/card@1；answer 和 cancel 一样，按 spec.record.kind 交给运行的持有者。",
   "spec": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -70,6 +70,34 @@
       "description": "请求取消；立即回答空结果，实际是否停止看状态。",
       "input": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "maxProperties": 0, "additionalProperties": false},
       "result": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "maxProperties": 0, "additionalProperties": false}
+    },
+    "answer": {
+      "description": "回答运行在等的那张卡片（status.awaiting），交给运行的持有者处理；立即回答，运行接着怎样看 status。答案里可能有密钥原文，所以标 idempotent：调用双方都不按 requestId 保存这次调用，重复提交由持有者按卡片挡住。",
+      "idempotent": true,
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "$defs": {
+          "reference": {
+            "type": "object",
+            "properties": {
+              "kind": {"type": "string", "minLength": 1, "maxLength": 128},
+              "id": {"type": "string", "minLength": 1, "maxLength": 2048}
+            },
+            "required": ["kind", "id"],
+            "additionalProperties": false
+          }
+        },
+        "properties": {
+          "card": {"$ref": "#/$defs/reference", "description": "须等于 status.awaiting"},
+          "answer": {"type": "object", "description": "回答卡片时提交的内容，形状由卡片种类定"},
+          "answeredBy": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "代答的会话；用户答时不写"},
+          "attachments": {"type": "array", "maxItems": 20, "items": {"type": "string", "minLength": 1, "maxLength": 100}, "description": "随答案带的上传文件 ID"}
+        },
+        "required": ["card", "answer"],
+        "additionalProperties": false
+      },
+      "result": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "properties": {"state": {"type": "string"}}, "additionalProperties": false}
     }
   }
 }

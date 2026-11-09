@@ -5,7 +5,7 @@ import Ajv from 'ajv/dist/2020.js';
 import { agentMessageProblem } from '../agent.mjs';
 import { manifestProblem } from '../validate.mjs';
 import {
-  AGENT_PROTOCOL, CORE_PROTOCOLS, ENVIRONMENT_PROTOCOL, EXECUTOR_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
+  AGENT_PROTOCOL, CARD_PROTOCOL, CORE_PROTOCOLS, ENVIRONMENT_PROTOCOL, EXECUTOR_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
   SESSION_PROTOCOL,
   definitionProblem, formatProtocolName, invocationRequestProblem, invocationResponseProblem,
   ownedProtocolsProblem, parseProtocolName, protocolNameProblem, protocolShortName, runStatusProblem,
@@ -65,9 +65,9 @@ test('short names are deterministic, DNS-safe and keep every canonical name apar
 test('core definitions validate, and definitions reject malformed names, operations and schemas', () => {
   for (const protocol of Object.values(CORE_PROTOCOLS)) assert.equal(definitionProblem(protocol), null, protocol.name);
   assert.deepEqual(Object.keys(CORE_PROTOCOLS),
-    ['coda/run@1', 'coda/executor@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1']);
+    ['coda/run@1', 'coda/executor@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1', 'coda/card@1']);
   assert.equal(definitionProblem(own), null);
-  assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel']);
+  assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel', 'answer']);
   assert.equal(EXECUTOR_PROTOCOL.operations.execute.run, true);
   assert.equal(Object.hasOwn(EXECUTOR_PROTOCOL, 'target'), false);
   assert.equal(AGENT_PROTOCOL.operations.spawn.run, true);
@@ -76,7 +76,7 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.deepEqual(safe, ['coda/session@1 read', 'coda/environment@1 list', 'coda/environment@1 read']);
   const idempotent = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
     Object.entries(protocol.operations).filter(([, operation]) => operation.idempotent).map(([name]) => `${protocol.name} ${name}`));
-  assert.deepEqual(idempotent, ['coda/session@1 draft']);
+  assert.deepEqual(idempotent, ['coda/run@1 answer', 'coda/session@1 draft']);
 
   const without = (value, key) => Object.fromEntries(Object.entries(value).filter(([name]) => name !== key));
   for (const definition of [null, [], {}, without(own, 'spec'), without(own, 'status'), without(own, 'operations'),
@@ -109,10 +109,11 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.equal(definitionProblem(own, { namespace: 'my-plugin' }), null);
 });
 
-test('core protocols are addressed by plurals of their own: coda/agent@1 by agents, the rest by their short names', () => {
+test('core protocols are addressed by plurals of their own: coda/agent@1 by agents, coda/card@1 by cards, the rest by their short names', () => {
   const plurals = Object.values(CORE_PROTOCOLS).map(protocol => protocol.plural ?? protocolShortName(protocol.name));
   assert.equal(new Set(plurals).size, plurals.length, plurals.join(', '));
   assert.equal(AGENT_PROTOCOL.plural, 'agents');
+  assert.equal(CARD_PROTOCOL.plural, 'cards');
 });
 
 test('a plugin owns definitions only in its own namespace', () => {
@@ -137,11 +138,12 @@ test('the manifest has the two protocol keys, with names and definitions checked
 test('run status is legal only when its state, result and awaiting reference agree', () => {
   const working = { state: 'working' };
   const waiting = { state: 'input-required', awaiting: reference('card', 'card-1') };
+  const waitingOnCard = { state: 'input-required', awaiting: reference('coda/card@1', 'card-1') };
   const completed = { state: 'completed', result: { ok: true } };
   const failed = { state: 'failed', result: { code: 'failed' } };
   const canceled = { state: 'canceled' };
   const canceledWithResult = { state: 'canceled', result: { left: ['timer'] } };
-  for (const status of [working, waiting, completed, failed, canceled, canceledWithResult])
+  for (const status of [working, waiting, waitingOnCard, completed, failed, canceled, canceledWithResult])
     assert.equal(runStatusProblem(working, status), null, JSON.stringify(status));
   for (const status of [{ state: 'unknown' }, {}, { state: 'working', result: 1 },
     { state: 'input-required' }, { state: 'input-required', awaiting: reference(), result: 1 },
@@ -340,4 +342,42 @@ test('environment records, listings and reads follow the read-only coda/environm
   assert.equal(read.result({ path: 'a.txt', size: 3, base64: 'YWJj', more: false }), true);
   for (const value of [{ path: 'a.txt', size: 3, base64: 'YWJj' }, { path: 'a.txt', size: 3, base64: '不是', more: false }])
     assert.equal(read.result(value), false, JSON.stringify(value));
+});
+
+test('run answer is an idempotent immediate result that names the awaited card', () => {
+  const { operations: { answer } } = checks(RUN_PROTOCOL);
+  const operation = RUN_PROTOCOL.operations.answer;
+  assert.equal(operation.idempotent, true);
+  assert.equal(operation.run, undefined);
+  assert.equal(operation.safe, undefined);
+
+  const input = { card: reference('coda/card@1', 'card-1'), answer: { choice: 'ok' } };
+  for (const value of [input, { ...input, answer: {} }, { ...input, answeredBy: 'thread-1', attachments: ['upload-1'] }])
+    assert.equal(answer.input(value), true, JSON.stringify(value));
+  for (const value of [{}, { card: input.card }, { answer: input.answer }, { ...input, card: { kind: 'coda/card@1' } },
+    { ...input, answer: 'ok' }, { ...input, answeredBy: '' }, { ...input, attachments: [''] },
+    { ...input, attachments: Array.from({ length: 21 }, (_, index) => `upload-${index}`) }, { ...input, future: true }])
+    assert.equal(answer.input(value), false, JSON.stringify(value));
+  for (const value of [{}, { state: 'completed' }]) assert.equal(answer.result(value), true, JSON.stringify(value));
+  for (const value of [{ state: 1 }, { ok: true }]) assert.equal(answer.result(value), false, JSON.stringify(value));
+});
+
+test('card records follow coda/card@1 and have no operations', () => {
+  const { spec, status } = checks(CARD_PROTOCOL);
+  assert.deepEqual(CARD_PROTOCOL.operations, {});
+
+  const record = { kind: 'workflow_task', title: '确认发布', thread: 't1', answers: 'user' };
+  for (const value of [record, { ...record, answers: 'any', location: 'Mac mini', shown: { text: '要发布吗？' } }, { ...record, title: '' }])
+    assert.equal(spec(value), true, JSON.stringify(value));
+  const without = key => Object.fromEntries(Object.entries(record).filter(([name]) => name !== key));
+  for (const value of [...Object.keys(record).map(without), { ...record, answers: 'agent' }, { ...record, answers: ['user'] },
+    { ...record, kind: '' }, { ...record, thread: '' }, { ...record, shown: 'text' }, { ...record, schema: {} }, { ...record, future: true }])
+    assert.equal(spec(value), false, JSON.stringify(value));
+
+  for (const value of [{ state: 'pending' }, { state: 'pending', holder: 'user', reason: 'assigned', note: '先看', toldAlong: true, setAside: true },
+    ...['submitting', 'answered', 'expired', 'unknown'].map(state => ({ state }))])
+    assert.equal(status(value), true, JSON.stringify(value));
+  for (const value of [{}, { state: 'open' }, { state: 'pending', holder: { kind: 'coda/thread@1', id: 't1' } }, { state: 'pending', holder: '' },
+    { state: 'pending', toldAlong: false }, { state: 'pending', setAside: false }, { state: 'pending', future: true }])
+    assert.equal(status(value), false, JSON.stringify(value));
 });
