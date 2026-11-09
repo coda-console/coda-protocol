@@ -15,6 +15,15 @@
 - 协议定义的可选 `plural`：给人寻址的复数名（Kubernetes CRD 的 `names.plural`），`^[a-z][a-z0-9-]{0,62}$`，不写就是短名；同一大版本内不可改。
 - `coda/agent@1`：`"plural": "agents"`；spec 加可选 `plugin`（提供 Agent 程序的插件 ID，记录的 provider 是写记录的编排）；操作 `spawn`（`run: true`），输入同 Coda 的 `agents`/`spawn`。
 
+## 3.5.0 — 2026-11-09
+
+- 流程参数的 `agent` 类型：值是一组 Agent 选择，与插件设置的 Agent 组合（`format: coda-agent`）相同：`agent`，以及可选的 `model`、`effort`、`mode`、`options`。不写 `default`；`defaultFrom="session.agent"` 是从会话发起、没给值时取那个会话的 Agent 选择，只用于这种参数（Coda #2303 第 4 步）。
+
+## 3.4.0 — 2026-11-09
+
+- `coda/session@1` 的 `read`：都不带游标时读最新的 `limit` 条；写清 `before` 是这个游标之前最新的 `limit` 条、`more` 表示更早还有没有；消息总按先后排；`after` 与 `before` 不能同时带（Coda #2311）。
+- `coda/session@1` 的消息加可选的 `senderName`：发送者当时的显示名，大群不必把每个发送者都写进 `status.participants`。
+
 ## 3.3.0 — 2026-11-09
 
 - `coda:choice` 的 `note`：`required` 时选它必须附言（写说明或附上文件），默认 `optional`（Coda #2303 第 3 步：卡片在输入框里填写）。

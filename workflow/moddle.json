@@ -120,7 +120,7 @@
     {
       "name": "Input",
       "superClass": ["Element"],
-      "description": "运行的一个输入：label 是表单上的名字，defaultFrom 是从会话发起、没给值时从哪里取（在 default 之前）",
+      "description": "运行的一个输入：label 是表单上的名字，defaultFrom 是从会话发起、没给值时从哪里取（在 default 之前）；type 为 agent 的值是一组 Agent 选择（agent，以及可选的 model、effort、mode、options）",
       "properties": [
         {"name": "name", "isAttr": true, "type": "String"},
         {"name": "type", "isAttr": true, "type": "String"},

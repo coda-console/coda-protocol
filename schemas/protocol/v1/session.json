@@ -58,7 +58,7 @@
   },
   "operations": {
     "read": {
-      "description": "读消息：after、before 是游标，limit 为 1 到 100；立即结果。",
+      "description": "读消息，limit 为 1 到 100，消息总按先后排（旧在前）；立即结果。都不带游标时读最新的 limit 条，more 表示更早还有没有；带 after 读这个游标之后的，more 表示之后还有没有；带 before 读这个游标之前最新的 limit 条，more 表示更早还有没有。after 与 before 不能同时带。",
       "safe": true,
       "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -68,6 +68,7 @@
           "before": {"type": "string", "minLength": 1, "maxLength": 2048},
           "limit": {"type": "integer", "minimum": 1, "maximum": 100}
         },
+        "not": {"required": ["after", "before"]},
         "additionalProperties": false
       },
       "result": {
@@ -109,6 +110,7 @@
               "id": {"$ref": "#/$defs/id"},
               "cursor": {"$ref": "#/$defs/id"},
               "sender": {"$ref": "#/$defs/id", "description": "参与者 ID"},
+              "senderName": {"type": "string", "maxLength": 200, "description": "发送者当时的显示名，可选；大群不必把每个发送者都写进 status.participants"},
               "text": {"type": "string", "description": "纯文本兜底"},
               "parts": {"type": "array", "items": {"$ref": "#/$defs/part"}},
               "replyTo": {"$ref": "#/$defs/id", "description": "回复的消息 ID"},

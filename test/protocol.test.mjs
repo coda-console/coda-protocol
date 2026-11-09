@@ -248,11 +248,14 @@ test('session records, messages and posts follow coda/session@1', () => {
     { participants: [{ id: 'bot', name: 'Coda', kind: 'bot', self: false }] }, { participants, state: 'gone' }])
     assert.equal(status(value), false, JSON.stringify(value));
 
-  for (const input of [{}, { after: 'c1', limit: 1 }, { before: 'c9', limit: 100 }]) assert.equal(read.input(input), true);
-  for (const input of [{ limit: 0 }, { limit: 101 }, { limit: 1.5 }, { after: '' }, { since: 'c1' }])
+  for (const input of [{}, { limit: 20 }, { after: 'c1', limit: 1 }, { before: 'c9' }, { before: 'c9', limit: 100 }])
+    assert.equal(read.input(input), true, JSON.stringify(input));
+  for (const input of [{ limit: 0 }, { limit: 101 }, { limit: 1.5 }, { after: '' }, { before: '' }, { since: 'c1' },
+    { after: 'c1', before: 'c9' }, { after: 'c1', before: 'c9', limit: 10 }])
     assert.equal(read.input(input), false, JSON.stringify(input));
 
   const message = { id: 'm1', cursor: 'c1', sender: 'u1', text: '你好 @Coda' };
+  assert.equal(read.result({ messages: [{ ...message, senderName: '小王' }], cursor: 'c1', more: true }), true);
   const rich = { ...message, id: 'm2', cursor: 'c2', replyTo: 'm0', mentions: ['bot'], createdAt: '2026-11-07T08:00:00Z',
     parts: [{ type: 'text', text: '你好' }, { type: 'image', name: 'a.png', size: 10, mime: 'image/png', service: 'media' },
       { type: 'thinking', text: '想一想' }, { type: 'tool', text: 'ls' }] };
@@ -260,7 +263,7 @@ test('session records, messages and posts follow coda/session@1', () => {
   const reaction = { id: 'm4', cursor: 'c4', sender: 'u1', text: '👍', about: { message: 'm2', change: 'reaction', value: '👍' } };
   assert.equal(read.result({ messages: [message, rich, recall, reaction], cursor: 'c4', more: false }), true);
   assert.equal(read.result({ messages: [], cursor: null, more: false }), true);
-  for (const bad of [{ ...message, sender: undefined }, { ...message, parts: [{ type: 'image' }] },
+  for (const bad of [{ ...message, sender: undefined }, { ...message, senderName: 1 }, { ...message, senderName: 'x'.repeat(201) }, { ...message, parts: [{ type: 'image' }] },
     { ...message, parts: [{ type: 'text', text: 'x', name: 'a' }] }, { ...message, parts: [{ type: 'audio', name: 'a' }] },
     { ...message, about: { message: 'm0', change: 'delete' } }, { ...message, about: { change: 'edit' } }])
     assert.equal(read.result({ messages: [bad], cursor: 'c1', more: false }), false, JSON.stringify(bad));
