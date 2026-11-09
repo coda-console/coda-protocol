@@ -111,7 +111,9 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     [workflow('', ' coda:kind="deploys"'), /^p：coda:kind 只能是 deploy、preview、release、check、premerge、prebuild$/],
     [workflow('', ` coda:title="${'长'.repeat(201)}"`), /^p：coda:title 须为 1–200 个字符$/],
     [workflow('', ' coda:agents=",,"'), /^p：coda:agents 写 Agent 的 ID/],
-    [workflow('', ' coda:autoRun="sometimes"'), /^p：coda:autoRun 须为 true、false 或一个表达式/],
+    // Whether an event starts it is decided before any run: a setting of the plugin's is all there is to read.
+    ...['sometimes', '=inputs.autoRun', '=session.autoRun', '=review.verdict', '=vars.review.autoRun and inputs.go', '=not(vars.review.autoRun)'].map(value =>
+      [workflow('', ` coda:autoRun="${value}"`), /^p：coda:autoRun 须为 true、false 或 =vars\.<插件>\.<设置>/]),
     [step(' coda:retry="9"'), /^say：coda:retry 是失败后最多再试几次，须为 1 到 5 的整数$/],
     [step(' coda:timeout="0"'), /^say：coda:timeout 须为 0–1440 之间的分钟数$/],
     [step(' coda:checkout="no"'), /^say：coda:checkout 只能是 true 或 false$/],
