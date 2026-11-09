@@ -6,7 +6,7 @@
 
 - 协议定义文档的 JSON Schema 与校验：`schemas/protocol/v1/definition.json`、`@coda-console/protocol/protocol`；
 - 统一调用信封：`schemas/protocol/v1/request.json`、`response.json`；
-- 五个核心协议：`coda/run@1`、`coda/executor@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`；
+- 六个核心协议：`coda/run@1`、`coda/executor@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1`；
 - 插件清单里的 `contributes.protocols` 与 `contributes.protocolImplementations`。
 
 `executor` 与 `execution` 两个旧对象协议和 `@coda-console/protocol/executor` 在 3.0.0 删除；`execution` 的输入并入 `coda/executor@1` 的 `execute` 操作，运行由 `coda/run@1` 表达。
@@ -217,13 +217,17 @@ status：
 | `state` | `working`、`input-required`、`completed`、`failed`、`canceled`；后三个是终态 |
 | `result` | 完成、失败或取消时的结果：`completed`/`failed` 必带；`canceled` 可带取消前说过的话和留下的东西；`working`/`input-required` 不带 |
 | `progress` | 进展说明，可选 |
-| `awaiting` | 等输入时那张卡片的引用；`input-required` 必填，其他状态不写 |
+| `awaiting` | 等输入时那张卡片的引用，指向一条 `coda/card@1`；`input-required` 必填，其他状态不写 |
 
 `failed` 的 `result` 约定为 `{ code, message }`。`code: "unknown"` 表示结局不明（例如执行连接中断），调用方据此显示「结果未知」，不当作失败。
 
 终态是最后的写入：`runStatusProblem(previous, next)` 在 `previous` 已是终态时返回说明，同一状态再写也不行。进行中的状态可以互相转换（`working` 与 `input-required`），也可以进入任一终态。
 
 操作 `cancel` 的输入是空对象，立即返回空结果；是否真的停下看 status。
+
+操作 `answer` 回答运行在等的那张卡片，立即返回 `{ state? }`，运行接着怎样看 status。输入是 `{ card, answer, answeredBy?, attachments? }`：`card` 须等于 `status.awaiting`；`answer` 是对象，形状由卡片种类定；`answeredBy` 是代答的会话，用户答时不写；`attachments` 是随答案带的上传文件 ID（至多 20 个）。它标 `idempotent`：答案里可能有密钥原文，调用双方都不按 `requestId` 保存这次调用；重复提交由持有者按卡片挡住。
+
+`cancel` 和 `answer` 都交给运行的持有者处理：被调用方按 `spec.record.kind` 找到持有这条运行的一方。
 
 ```json
 {
@@ -267,7 +271,7 @@ status：
 
 `models[].efforts` 是 `[{ id, name?, shortName? }]`；`models[].options` 是 `{ id, name?, shortName?, type: "boolean"|"select", choices? }`，`select` 带 `choices`，`boolean` 不带。status 是空对象。
 
-操作 `spawn`（`run: true`）：在这台机器上用这个 Agent 开一个子会话，返回运行引用。输入是 `{ projectId, threadId, title, text, settings?, checkout?, parentTitle, parentUnattended }`：子会话所在的项目与工作树（`checkout`）、Agent 的设置（`settings`，如模型与推理强度）、标题与第一条任务（`text`）；`threadId` 是调用方给的子会话 ID，重试找到的是同一个；`parentTitle` 是发起方在这里显示的名字，`parentUnattended` 说发起方是否无人值守。子会话为谁工作由调用信封的 `parent` 说，不写在输入里。
+操作 `spawn`（`run: true`）：在这台机器上用这个 Agent 开一个子会话，返回运行引用。输入是 `{ projectId, threadId, title, text, settings?, checkout?, parentTitle, parentUnattended }`：子会话所在的项目与工作树（`checkout`）、Agent 的设置（`settings`，如模型与推理强度）、标题与第一条任务（`text`）；`threadId` 是调用方给的子会话 ID，重试找到的是同一个；`parentTitle` 是发起方在这里显示的名字，`parentUnattended` 说发起方是否无人值守。子会话为谁工作由调用信封的 `parent` 说，不写在输入里；`parent` 不是会话、是登记过的调用方记录时，开的是顶层会话，不是子会话。
 
 ```json
 {
@@ -426,6 +430,43 @@ status 是 `{ state: "available"|"unreachable", reason? }`。
 {
   "spec": {"title": "云主机", "actions": ["read"]},
   "status": {"state": "available"}
+}
+```
+
+## coda/card@1
+
+会话向用户或上层 Agent 要的一个输入。复数名是 `cards`。由提出它的会话所在的后端持有；持有方可以按自己的表读穿给出，不另存。运行等它时，`coda/run@1` 的 `status.awaiting` 指向这条记录，回答走那条运行的 `answer`。卡片自己没有操作。
+
+spec：
+
+| 字段 | 含义 |
+| --- | --- |
+| `kind` | 卡片种类，如 `permission`、`form`、`workflow_task` |
+| `title` | 一行标题 |
+| `thread` | 提出它的会话，持有方给的 ID |
+| `location` | 提出它的会话在哪台机器，给人看；本机的不写 |
+| `answers` | 谁能答：`user` 只有用户，`any` 上层 Agent 也能代答 |
+| `shown` | 代答的 Agent 要看的内容，对象；`answers` 为 `user` 时不写 |
+
+spec 不带答案的 schema：答案的形状由卡片种类定，持有者在 `answer` 里校验。
+
+status：
+
+| 字段 | 含义 |
+| --- | --- |
+| `state` | `pending`、`submitting`、`answered`、`expired`、`unknown` |
+| `holder` | `pending` 时在谁手上：`user`，或持有它的会话 ID（持有方给的） |
+| `reason` | 到这个持有者手上的原因 |
+| `note` | 说明 |
+| `toldAlong` | `true`：持有它的会话还没被告知，下一条输入时才告诉它 |
+| `setAside` | `true`：用户把它搁置了，仍在等，不再要人处理 |
+
+`holder` 是字符串，不是 `{ kind, id }` 引用：镜像发布时会改写 status 里的引用，而持有者可能是别台的会话，本机不一定认得它的持有方。
+
+```json
+{
+  "spec": {"kind": "workflow_task", "title": "确认发布", "thread": "t1", "answers": "any", "shown": {"text": "要发布 5.2.0 吗？"}},
+  "status": {"state": "pending", "holder": "t1", "reason": "assigned", "toldAlong": true}
 }
 ```
 

@@ -1,0 +1,35 @@
+{
+  "name": "coda/card@1",
+  "title": "卡片",
+  "description": "会话向用户或上层 Agent 要的一个输入。由提出它的会话所在的后端持有；运行等它时，status.awaiting 指向这条记录，回答走那条运行的 answer。持有方可以按自己的表读穿给出，不另存。",
+  "plural": "cards",
+  "spec": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "kind": {"type": "string", "minLength": 1, "maxLength": 64, "description": "卡片种类，如 permission、form、workflow_task"},
+      "title": {"type": "string", "maxLength": 200, "description": "一行标题"},
+      "thread": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "提出它的会话，持有方给的 ID"},
+      "location": {"type": "string", "maxLength": 200, "description": "提出它的会话在哪台机器，给人看；本机的不写"},
+      "answers": {"enum": ["user", "any"], "description": "谁能答：只有用户，或者上层 Agent 也能代答"},
+      "shown": {"type": "object", "description": "代答的 Agent 要看的内容；answers 为 user 时不写"}
+    },
+    "required": ["kind", "title", "thread", "answers"],
+    "additionalProperties": false
+  },
+  "status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "state": {"enum": ["pending", "submitting", "answered", "expired", "unknown"]},
+      "holder": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "pending 时在谁手上：user，或持有它的会话 ID（持有方给的）；不用引用，镜像发布时不改写它"},
+      "reason": {"type": "string", "maxLength": 64, "description": "到这个持有者手上的原因"},
+      "note": {"type": "string", "maxLength": 2000},
+      "toldAlong": {"const": true, "description": "持有它的会话还没被告知，下一条输入时才告诉它"},
+      "setAside": {"const": true, "description": "用户把它搁置了：仍在等，不再要人处理"}
+    },
+    "required": ["state"],
+    "additionalProperties": false
+  },
+  "operations": {}
+}

@@ -1,7 +1,7 @@
 {
   "name": "coda/agent@1",
   "title": "Agent",
-  "description": "一台机器上装着的 Agent 程序及其模型与审批模式，照 Coda 的 Agent 资源 spec。记录的 provider 是写记录的一方（编排），提供 Agent 程序的插件写在 spec.plugin；spawn 在那台机器上用它开一个子会话。",
+  "description": "一台机器上装着的 Agent 程序及其模型与审批模式，照 Coda 的 Agent 资源 spec。记录的 provider 是写记录的一方（编排），提供 Agent 程序的插件写在 spec.plugin；spawn 在那台机器上用它开一个子会话；parent 不是会话、是登记过的调用方记录时，开的是顶层会话，不是子会话。",
   "plural": "agents",
   "spec": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

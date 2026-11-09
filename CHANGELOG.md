@@ -2,6 +2,12 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.2.0 — 2026-11-09
+
+- 新核心协议 `coda/card@1`（复数名 `cards`，`CARD_PROTOCOL`，在 `CORE_PROTOCOLS` 里）：会话向用户或上层 Agent 要的一个输入，由提出它的会话所在的后端持有，可按持有方自己的表读穿给出、不另存。spec 是 `{ kind, title, thread, location?, answers: "user"|"any", shown? }`，不带答案的 schema；status 是 `{ state: "pending"|"submitting"|"answered"|"expired"|"unknown", holder?, reason?, note?, toldAlong?, setAside? }`，`holder` 是字符串（`user` 或会话 ID），不是引用；没有操作。
+- `coda/run@1` 加操作 `answer`（立即结果 `{ state? }`，`idempotent`）：回答运行在等的卡片，输入 `{ card, answer, answeredBy?, attachments? }`，`card` 须等于 `status.awaiting`。答案里可能有密钥原文，调用双方都不按 `requestId` 保存这次调用，重复提交由持有者按卡片挡住。`answer` 和 `cancel` 一样按 `spec.record.kind` 交给运行的持有者；`status.awaiting` 指向 `coda/card@1`（Coda S2）。
+- `coda/agent@1` 的说明补上：`spawn` 的 `parent` 不是会话、是登记过的调用方记录时，开的是顶层会话，不是子会话。
+
 ## 5.1.0 — 2026-11-09
 
 - `coda/session@1` 的媒体 part（`read` 的消息与 `post` 的输入）加可选的 `preview`：同一个 `service` 里预览图的服务内路径（1 到 2048 字符，须和 `service` 一起出现），图片是长边一般不超过约 1280 像素的静图，视频是封面帧。文档把媒体写成三档：内嵌的 `thumb`（只限至多 8192 字符，自己生成时长边取 64 像素左右，Provider 已有的小缩略图可原样放）、会话里画的 `preview`、打开时才取的原文件 `path`；取 `path` 回 404 而有 `preview` 时显示预览图并注明原图不在持有方，不当成文件已清理，`preview` 也取不到时退回 `thumb`，都没有时显示文件卡（Coda #2342）。
