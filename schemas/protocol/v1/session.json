@@ -91,9 +91,15 @@
                   "name": {"type": "string", "maxLength": 1024},
                   "size": {"type": "integer", "minimum": 0},
                   "mime": {"type": "string", "maxLength": 255},
-                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "插件登记的流式服务 ID"}
+                  "width": {"type": "integer", "minimum": 1, "description": "像素宽，已按拍摄方向转正；图片和视频用"},
+                  "height": {"type": "integer", "minimum": 1, "description": "像素高，已按拍摄方向转正；图片和视频用"},
+                  "duration": {"type": "number", "minimum": 0, "description": "时长，秒；视频用"},
+                  "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀，长边不超过 64 像素；视频用封面帧"},
+                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID"},
+                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"}
                 },
                 "required": ["type", "name"],
+                "dependentRequired": {"path": ["service"]},
                 "additionalProperties": false
               },
               {
@@ -163,9 +169,15 @@
                   "name": {"type": "string", "maxLength": 1024},
                   "size": {"type": "integer", "minimum": 0},
                   "mime": {"type": "string", "maxLength": 255},
-                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "插件登记的流式服务 ID"}
+                  "width": {"type": "integer", "minimum": 1, "description": "像素宽，已按拍摄方向转正；图片和视频用"},
+                  "height": {"type": "integer", "minimum": 1, "description": "像素高，已按拍摄方向转正；图片和视频用"},
+                  "duration": {"type": "number", "minimum": 0, "description": "时长，秒；视频用"},
+                  "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀，长边不超过 64 像素；视频用封面帧"},
+                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID"},
+                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"}
                 },
                 "required": ["type", "name"],
+                "dependentRequired": {"path": ["service"]},
                 "additionalProperties": false
               },
               {
