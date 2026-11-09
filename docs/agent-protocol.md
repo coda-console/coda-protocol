@@ -1,7 +1,7 @@
 # Agent 接入协议
 
 Coda 用 [ACP](https://agentclientprotocol.com)（Agent Client Protocol）接 Agent，要求 Agent 接受[会话指令](#会话指令)（ACP 的 `systemPrompt`），
-可选支持[插话](#插话)（`_session/steering`），另收 Agent 活动报告（`_coda/wait`）、[执行失败事实](#执行失败)（ACP 错误数据里的 `_meta.coda.failure`）和[工具调用的审核](#工具调用的审核)（`_meta.coda.review`）。本文是这份协议的唯一正文，写给要让一个 Agent（比如 Cursor 的）接入 Coda 的人：照它实现，
+可选支持[插话](#插话)（`_session/steering`），另收 Agent 活动报告（`_coda/wait`）、入口[没适配的东西](#没适配的东西)（`_coda/unrecognized`）、[执行失败事实](#执行失败)（ACP 错误数据里的 `_meta.coda.failure`）和[工具调用的审核](#工具调用的审核)（`_meta.coda.review`）。本文是这份协议的唯一正文，写给要让一个 Agent（比如 Cursor 的）接入 Coda 的人：照它实现，
 Coda 就知道这个 Agent 在一轮之外还在做什么，如实显示、不回收它的进程，把它处理这些东西时的输出、审批和提问放进正确的一轮，
 并在这次调用结清时把结果只交回一次。产品上这些规则的来由见会话行为契约（Coda 的 docs/session-contracts.md）与完成唤醒契约（Coda 的 docs/subagent-design.md「完成唤醒契约」）。
 
@@ -18,6 +18,7 @@ ACP 的消息、内容块、会话指令和能力由 ACP SDK 校验，这里只�
 | --- | --- |
 | `_coda/wait` 通知参数 | [wait.json](../schemas/agent/wait.json) |
 | `_coda/wait/stop` 参数、答复 | [wait-stop.json](../schemas/agent/wait-stop.json) 的 `$defs/params`、`$defs/result` |
+| `_coda/unrecognized` 通知参数 | [unrecognized.json](../schemas/agent/unrecognized.json) |
 | `_coda/session/compact` 参数、答复 | [compact.json](../schemas/agent/compact.json) 的 `$defs/params`、`$defs/result` |
 | `_coda/remote/code` 参数、答复 | [remote-code.json](../schemas/agent/remote-code.json) 的 `$defs/params`、`$defs/result` |
 | `_coda/remote` 参数、答复 | [remote.json](../schemas/agent/remote.json) 的 `$defs/params`、`$defs/result` |
@@ -74,7 +75,7 @@ Coda 是 ACP 的客户端。每个会话的 Agent 进程由一个会话托管进
 
 | 方法 | 方向 | Coda 怎么用 |
 | --- | --- | --- |
-| `initialize` | Coda → Agent | 握手。`clientCapabilities` 带 `elicitation.form`、`elicitation.url`、`session.compaction`、`session.configOptions.boolean`、`_meta.coda.waits`（见[能力协商](#能力协商)）与 `_meta.coda.remote`（见[远端入口](#远端入口)） |
+| `initialize` | Coda → Agent | 握手。`clientCapabilities` 带 `elicitation.form`、`elicitation.url`、`session.compaction`、`session.configOptions.boolean`、`_meta.coda.waits`（见[能力协商](#能力协商)）、`_meta.coda.unrecognized`（见[没适配的东西](#没适配的东西)）与 `_meta.coda.remote`（见[远端入口](#远端入口)） |
 | `session/new`、`session/load` | Coda → Agent | 新建或恢复原生会话，会话 ID 由 Agent 给；Agent 声明 `loadSession` 才会被要求恢复。带 `systemPrompt`（[会话指令](#会话指令)）。结果里要报出当前模型（见下）。恢复期间重放的历史 Coda 不收（它有自己的），只收命令与标题 |
 | `session/prompt` | Coda → Agent | 一轮：Coda 送出用户的消息或它自己合成的输入（子会话结果等），Agent 回复 `stopReason` 即本轮结束 |
 | `_session/steering` | Coda → Agent | [插话](#插话)：把用户的消息加进正在进行的一轮；只对声明支持的 Agent 发 |
@@ -83,6 +84,7 @@ Coda 是 ACP 的客户端。每个会话的 Agent 进程由一个会话托管进
 | `session/set_config_option`、`session/set_mode`、`session/set_model` | Coda → Agent | 模型、推理强度与模式 |
 | `session/update` | Agent → Coda | 回复、思考、工具调用（可带它的[审核](#工具调用的审核)）、计划、用量（可带给流程的[数据](#用量里的数据)）、可用命令、会话信息；只收本会话与它的子会话的 |
 | `session/request_permission`、`elicitation/create`（`mode: form` 或 `mode: url`） | Agent → Coda | 审批与提问，作为卡片交给用户；只在一轮里受理（见[规则](#规则)第 3 条） |
+| `_coda/unrecognized` | Agent → Coda | [没适配的东西](#没适配的东西)：入口报上游发来、它没按登记处理的输出，以及模型能用、它没登记的原生工具；用户因此没看到的在会话里记一条说明，都计入遥测 |
 | `_coda/remote/code`、`_coda/remote` | Agent → Coda、Coda → Agent | [远端入口](#远端入口)：Agent 要绑定码；Coda 转交远端来的请求 |
 | `$/cancel_request` | Agent → Coda | 撤回它发出、还没得到回答的审批或提问：卡片失效，Coda 回 `cancelled`（表单回 `cancel`），之后用户的回答不再转交 |
 
@@ -301,6 +303,7 @@ Coda 存的就是这段文字，两端客户端显示时按看的那台设备的
 - Coda 在 `initialize` 的 `clientCapabilities` 里总是带 `_meta.coda.waits: {}`。没看到它的客户端不认识这条扩展，Agent 不应对它发 `_coda/wait`。
 - Agent 在 `initialize` 结果的 `agentCapabilities` 里带 `_meta.coda.waits: {}`，表示它会登记。这只是声明：Coda 把它记在托管握手里，
   健康检查（`GET /v1/health` 的会话项 `waits`）报出来；不声明的 Agent 发来的 `_coda/wait` 也照收。
+- Coda 还在 `clientCapabilities` 里带 `_meta.coda.unrecognized: {}`，表示收[没适配的东西](#没适配的东西)的上报；没看到它的客户端，Agent 不发 `_coda/unrecognized`。Agent 那边没有对应的声明。
 
 ```json
 {"jsonrpc":"2.0","id":0,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"_meta":{"coda":{"waits":{}}}}}}
@@ -392,6 +395,36 @@ Coda 发给 Agent 的请求，参数 `{ "sessionId": …, "waitId": … }`，Age
 7. **会话加载中**：`session/new`、`session/load` 期间发来的 `_coda/wait` 先存着，会话身份确定后按原顺序处理，只收本会话与这些登记里公告的子会话。
    所以 Agent 恢复会话时可以把还在等的东西重报一遍：同一个 `waitId` 再报 `waiting` 不会多登记一项。
 
+## 没适配的东西
+
+通知参数及字段上限见 [unrecognized.json](../schemas/agent/unrecognized.json)。
+
+Coda 封装的 Agent 会自己长出新能力：上游 Agent 升级、服务端换了模型能用的工具，入口就会收到没见过的类型、字段取值或工具。
+入口不认识时悄悄丢掉，用户就看不到本该看到的东西，Agent 却以为送到了（比如 Codex 以为发了提问卡片，用户什么都没看到）。
+`_coda/unrecognized` 让入口把这些报给 Coda：会话里说明丢了什么，遥测按 Agent 版本计数，知道哪里该适配。
+
+- **能力**：Coda 在 `initialize` 的 `clientCapabilities` 里带 `_meta.coda.unrecognized: {}`；没看到它的客户端，Agent 不发。
+- **通知**：Agent 发给 Coda（没有 `id`，不回复），和 `session/update`、`_coda/wait` 走同一个顺序。
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `sessionId` | 是 | 本会话，或 Coda 已经认得的子会话，归属规则同 [`_coda/wait`](#_codawait)；别的会话的丢弃。至多 200 字 |
+| `kind` | 是 | `output`：上游 Agent 发来、入口没有按登记处理的东西：没登记的 item、消息或内容块类型，没登记的字段取值，没处理的通知或服务端请求，用户可见的文字没送到 Coda。`tool`：模型能用、入口没登记的原生工具 |
+| `name` | 是 | 稳定标识，至多 200 字：只含类型名、字段名与取值，不含用户内容。例：`item:agentMessage.delivery=async`、`notification:thread/fooChanged`、`request:item/tool/bar`、`sdk:system/new_subtype`、`tool:functions.request_user_input_async` |
+| `lost` | 是 | 用户本该看到的内容没有显示出来。入口已经用后备方式把文字显示了的报 `false`；`tool` 一律 `false` |
+| `detail` | 否 | 给人看的说明，至多 2000 字；只用于会话里的说明，不进遥测 |
+
+- **Coda 的处理**：`lost: true` 时在会话里记一条说明，同一会话同一 `name` 只记一次。所有上报按（Agent ID、Agent 版本、`kind`、`name`、`lost`）计数，
+  随后端遥测上报（Agent 版本即握手报的 `agentInfo`，见 [ACP 部分](#acp-部分)的「Agent 版本」），不带 `detail`、不带内容。
+  缺必填字段、字段过长或 `kind` 不是 `output`、`tool` 的，整条丢弃，不报错。
+- **Agent 侧**：同一会话同一 `name` 报一次即可。
+
+```json
+{"jsonrpc":"2.0","method":"_coda/unrecognized","params":{"sessionId":"s1","kind":"output","name":"item:agentMessage.delivery=async","lost":true,"detail":"Codex 发来一条异步送达的消息，入口没有转给 Coda"}}
+{"jsonrpc":"2.0","method":"_coda/unrecognized","params":{"sessionId":"s1","kind":"output","name":"notification:thread/fooChanged","lost":false}}
+{"jsonrpc":"2.0","method":"_coda/unrecognized","params":{"sessionId":"s1","kind":"tool","name":"tool:functions.request_user_input_async","lost":false}}
+```
+
 ## 远端入口
 
 绑定码与转交请求的形状分别见 [remote-code.json](../schemas/agent/remote-code.json)、[remote.json](../schemas/agent/remote.json)。
@@ -465,8 +498,8 @@ coda-console/coda-plugins 的 `plugins/<插件>/`、`test/plugins/<插件>/`，�
 
 | Agent | 入口 | 它在协议之外替 Agent 做的 |
 | --- | --- | --- |
-| Codex（插件 `codex`） | `agent/entry.mjs`：在同一进程里运行锁定版本的 codex-acp，加载 Coda 的源码补丁（适配器一变就启动失败） | 向 codex-acp 声明 JetBrains AIR 的 `nativeSubagentSessions` 与 `asyncTasks`，把 AIR 报的子 Agent 与转入后台的命令翻成 `_coda/wait`：命令带 `toolCallId`，codex-acp 说能停的经 AIR 的停止（发给根会话）停；子 Agent 在 codex-acp 说能取消时经取消它的会话停。codex-acp 把继续的子 Agent 叫 `X:generation:N`，对 Coda 一律是 `X`，每次运行一个新的 `waitId`。会话默认以只读模式开始（`INITIAL_AGENT_MODE`，运行机设了就用它的）；Coda 选的账号经账号桥接上。原生 `clock.sleep` 通过同一会话的 `_coda/wait` 报为 `task`（标题带等待时长），开始报 `waiting`，结束报 `done`；它仍在当前轮内，取消或失败的轮次及子 Agent 会了结尚未结束的 sleep。等待项不能单独停止，立即插话或停止会话沿用原生行为。Codex 没有自主轮次，不报 `handling`。会话指令经 codex-acp 的 `thread/start`、`thread/resume` 作为 `developerInstructions` 交给 Codex，接在运行机配置自己的 `developer_instructions` 后面；声明插话，一轮已经结束时收到的插话回 `promptRequired`（Coda 的补丁，codex-acp 原本会自己另开一轮） |
-| Claude（插件 `claude`，Agent `claude-sdk`） | `agent/entry.mjs`：Coda 基于 Claude Agent SDK 写的 ACP Agent，一个进程一个 SDK 会话；SDK 是插件依赖的 `@anthropic-ai/claude-agent-sdk` | 会话 ID 由入口生成；模型一律是具体 ID（SDK 列出的 `resolvedModel` 加上下文变体，不接受别名）。后台任务、子 Agent 与 Stop hook 列出的定时唤醒报成 `_coda/wait`（定时的计划不是五段 cron、算不出下次时间时不带 `at`）：子 Agent 的会话是启动它的工具调用 ID，SendMessage 续聊是同一会话的新一次运行；子 Agent 起的后台任务与子 Agent 在它自己的会话里报；没有轮次时结束的任务，等一轮接手或会话空闲才了结。Claude 自己开始的一轮，先看开场消息指名的：到点的定时、结束通知所属的任务、交回报告的子 Agent（它已结束时才算；还在跑的子 Agent 发来进展不算）。指名的已处理过（Claude Code 为子 Agent 的结束通知另开的、不调模型的一轮）或还在跑，这一轮不处理任何一项；开场什么都没指名，才依次找已结束的任务、唯一到点的定时。认定的项在任何输出与请求之前报 `handling`；什么都没认定的，等这一轮第一次说话、调用工具、审批或提问时才报自造的「Claude 自主继续」，什么都不说的一轮不报。审批的选项是仅允许本次、每条建议规则一个 `allow_always`、拒绝；SDK 不再等回答时发 `$/cancel_request`。MCP 服务器的表单原样转来，链接用 `mode: url`。额度写进插件状态目录的 `limits.json`（内置插件：Claude（Coda 的 docs/plugins.md「内置插件claude」）），标题经 `session_info_update` 报。会话指令追加在 `claude_code` 预设的系统提示词后面 |
+| Codex（插件 `codex`） | `agent/entry.mjs`：在同一进程里运行锁定版本的 codex-acp，加载 Coda 的源码补丁（适配器一变就启动失败） | 向 codex-acp 声明 JetBrains AIR 的 `nativeSubagentSessions` 与 `asyncTasks`，把 AIR 报的子 Agent 与转入后台的命令翻成 `_coda/wait`：命令带 `toolCallId`，codex-acp 说能停的经 AIR 的停止（发给根会话）停；子 Agent 在 codex-acp 说能取消时经取消它的会话停。codex-acp 把继续的子 Agent 叫 `X:generation:N`，对 Coda 一律是 `X`，每次运行一个新的 `waitId`。会话默认以只读模式开始（`INITIAL_AGENT_MODE`，运行机设了就用它的）；Coda 选的账号经账号桥接上。原生 `clock.sleep` 通过同一会话的 `_coda/wait` 报为 `task`（标题带等待时长），开始报 `waiting`，结束报 `done`；它仍在当前轮内，取消或失败的轮次及子 Agent 会了结尚未结束的 sleep。等待项不能单独停止，立即插话或停止会话沿用原生行为。Codex 没有自主轮次，不报 `handling`。会话指令经 codex-acp 的 `thread/start`、`thread/resume` 作为 `developerInstructions` 交给 Codex，接在运行机配置自己的 `developer_instructions` 后面；声明插话，一轮已经结束时收到的插话回 `promptRequired`（Coda 的补丁，codex-acp 原本会自己另开一轮）。`delivery: "async"` 的消息照常显示；异步提问（`request_user_input_async`）转成这一轮里的表单卡片，字段写法同下面 Claude 的提问，这一轮挂着等答复，答复作为新的用户消息交给 Codex（Codex 那一轮还在就插话，已结束就由入口接着开一轮，都算同一轮）。入口登记上游的每种输出，没登记的、没送到的经 [`_coda/unrecognized`](#没适配的东西) 报；会话开始时把实际给模型的原生工具清单对照已知清单，新工具报 `kind: tool` |
+| Claude（插件 `claude`，Agent `claude-sdk`） | `agent/entry.mjs`：Coda 基于 Claude Agent SDK 写的 ACP Agent，一个进程一个 SDK 会话；SDK 是插件依赖的 `@anthropic-ai/claude-agent-sdk` | 会话 ID 由入口生成；模型一律是具体 ID（SDK 列出的 `resolvedModel` 加上下文变体，不接受别名）。后台任务、子 Agent 与 Stop hook 列出的定时唤醒报成 `_coda/wait`（定时的计划不是五段 cron、算不出下次时间时不带 `at`）：子 Agent 的会话是启动它的工具调用 ID，SendMessage 续聊是同一会话的新一次运行；子 Agent 起的后台任务与子 Agent 在它自己的会话里报；没有轮次时结束的任务，等一轮接手或会话空闲才了结。Claude 自己开始的一轮，先看开场消息指名的：到点的定时、结束通知所属的任务、交回报告的子 Agent（它已结束时才算；还在跑的子 Agent 发来进展不算）。指名的已处理过（Claude Code 为子 Agent 的结束通知另开的、不调模型的一轮）或还在跑，这一轮不处理任何一项；开场什么都没指名，才依次找已结束的任务、唯一到点的定时。认定的项在任何输出与请求之前报 `handling`；什么都没认定的，等这一轮第一次说话、调用工具、审批或提问时才报自造的「Claude 自主继续」，什么都不说的一轮不报。审批的选项是仅允许本次、每条建议规则一个 `allow_always`、拒绝；SDK 不再等回答时发 `$/cancel_request`。MCP 服务器的表单原样转来，链接用 `mode: url`。额度写进插件状态目录的 `limits.json`（内置插件：Claude（Coda 的 docs/plugins.md「内置插件claude」）），标题经 `session_info_update` 报。会话指令追加在 `claude_code` 预设的系统提示词后面。入口登记上游的每种输出，没登记的、没送到的经 [`_coda/unrecognized`](#没适配的东西) 报；会话开始时把实际给模型的原生工具清单对照已知清单，新工具报 `kind: tool` |
 | Kimi（插件 `kimi`） | `agent/entry.mjs`：把 `kimi acp` 作为子进程，在两者之间逐条转发 | 读 Kimi 的会话文件，把入口启动之后开始的后台命令与子 Agent 报成 `_coda/wait`（子 Agent 的会话是它的 agentId，过程报成那个会话的 `session/update`；按运行先后交付登记、过程与了结，同一子 Agent 的下一次运行等上一次了结才报，从而接着用同一张卡片）；在 Coda 发起的一轮里结束的任务直接了结，因为主 Agent 已在该轮处理结果；轮外结束且结果要交给主 Agent 的才从结束起报 `handling`，主 Agent 在那之后结束一轮时了结。不能停，不带 `toolCallId`。只认 Kimi CLI 2.1.1 的文件布局，见会话行为契约（Coda 的 docs/session-contracts.md「停止恢复与进程回收」）。会话指令放在原生会话第一轮的输入前面 |
 | Grok、OpenCode（插件 `grok`、`opencode`） | `agent/entry.mjs`：把运行机上的 `grok agent --no-leader stdio`（先找 `~/.grok/bin/grok`）、`opencode acp` 作为子进程逐条转发 | 只做会话指令：声明它，并放在原生会话第一轮的输入前面；不报告活动 |
 

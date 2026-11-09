@@ -38,6 +38,25 @@ test('every wait constraint reports the field and the original checker descripti
   for (const kind of ['task', 'subagent', 'timer', 'observation', 'future', 'constructor', '__proto__']) assert.equal(checkWait({ ...wait, kind }), null);
 });
 
+test('unrecognized reports need session, kind, name and lost; malformed ones are rejected whole', () => {
+  const report = { sessionId: 's1', kind: 'output', name: 'item:agentMessage.delivery=async', lost: true };
+  const check = value => agentMessageProblem('_coda/unrecognized', value, '上报');
+  for (const value of [undefined, null, false, 1, 'x', []]) assert.equal(check(value), '上报：params 须为对象');
+  for (const key of ['sessionId', 'name']) for (const value of [undefined, '', null, 2, false, [], {}])
+    assert.equal(check(value === undefined ? without(report, key) : { ...report, [key]: value }), `上报.${key}：缺 ${key}`);
+  for (const kind of [undefined, 'input', 'future', '__proto__', 'constructor', null, {}, []])
+    assert.equal(check(kind === undefined ? without(report, 'kind') : { ...report, kind }), '上报.kind：kind 只能是 output 或 tool');
+  for (const lost of [undefined, null, 0, 'true', {}, []])
+    assert.equal(check(lost === undefined ? without(report, 'lost') : { ...report, lost }), '上报.lost：lost 须为 true 或 false');
+  for (const [key, max] of Object.entries({ sessionId: 200, name: 200, detail: 2000 })) {
+    for (const value of ['x'.repeat(max + 1), '😀'.repeat(Math.floor(max / 2)) + 'x'])
+      assert.equal(check({ ...report, [key]: value }), `上报.${key}：${key} 须为不超过 ${max} 字的文本`);
+    for (const value of ['x'.repeat(max), '😀'.repeat(Math.floor(max / 2))]) assert.equal(check({ ...report, [key]: value }), null);
+  }
+  for (const detail of [null, 1, false, [], {}]) assert.equal(check({ ...report, detail }), '上报.detail：detail 须为不超过 2000 字的文本');
+  for (const kind of ['output', 'tool']) for (const lost of [true, false]) assert.equal(check({ ...report, kind, lost, detail: '', future: 1 }), null);
+});
+
 const messages = [
   ['_coda/wait/stop', { sessionId: 's1', waitId: 'w' }, {}],
   ['_coda/session/compact', { sessionId: 's1' }, { compacted: true, before: 100000, after: 20000 }],
@@ -46,7 +65,7 @@ const messages = [
   ['_session/steering', { sessionId: 's1', prompt: [{ type: 'text', text: '先别改测试，只看实现' }], _meta: { steering: { idleBehavior: 'promptRequired' } } }, { outcome: 'injected' }],
 ];
 test('the registry covers every request and notification; both sides validate without mutation', () => {
-  assert.deepEqual(Object.keys(AGENT_METHODS).sort(), ['_coda/wait', ...messages.map(([method]) => method)].sort());
+  assert.deepEqual(Object.keys(AGENT_METHODS).sort(), ['_coda/wait', '_coda/unrecognized', ...messages.map(([method]) => method)].sort());
   for (const [method, params, result] of messages) {
     const before = structuredClone({ params, result });
     assert.equal(agentMessageProblem(method, params), null);
@@ -57,6 +76,7 @@ test('the registry covers every request and notification; both sides validate wi
     assert.ok(agentMessageProblem(method, { ...params, sessionId: '' }));
   }
   assert.equal(agentResultProblem('_coda/wait', {}), '_coda/wait result：通知没有答复');
+  assert.equal(agentResultProblem('_coda/unrecognized', {}), '_coda/unrecognized result：通知没有答复');
   for (const method of ['session/prompt', '_coda/future', '__proto__', 'constructor', 'toString']) {
     assert.equal(agentMessageProblem(method, {}), `${method} params：没有这个 Coda 扩展方法`);
     assert.equal(agentResultProblem(method, {}), `${method} result：没有这个 Coda 扩展方法`);
@@ -105,7 +125,7 @@ test('capabilities are optional, extensible declarations; each known declaration
     for (const value of [undefined, {}, { future: true }, { coda: {} }]) assert.equal(agentCapabilitiesProblem(value, side), null);
     for (const value of [null, 0, [], 'x']) assert.equal(agentCapabilitiesProblem(value, side, '能力'), '能力：_meta 须为对象');
     for (const coda of [null, 0, [], 'x']) assert.equal(agentCapabilitiesProblem({ coda }, side, '能力'), '能力.coda：_meta.coda 须为对象');
-    for (const key of side === 'agent' ? ['waits', 'remote', 'compact'] : ['waits', 'remote']) {
+    for (const key of side === 'agent' ? ['waits', 'remote', 'compact'] : ['waits', 'remote', 'unrecognized']) {
       assert.equal(agentCapabilitiesProblem({ coda: { [key]: { future: true } } }, side), null);
       for (const value of [null, 1, true, [], 'yes']) assert.equal(agentCapabilitiesProblem({ coda: { [key]: value } }, side, '能力'), `能力.coda.${key}：${key} 能力用对象声明（通常为 {}）`);
     }

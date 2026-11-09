@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/unrecognized.json",
+  "type": "object",
+  "description": "params 须为对象",
+  "properties": {
+    "sessionId": {
+      "allOf": [
+        {
+          "type": "string",
+          "description": "缺 sessionId",
+          "minLength": 1
+        },
+        {
+          "type": "string",
+          "description": "sessionId 须为不超过 200 字的文本",
+          "x-length": 200
+        }
+      ]
+    },
+    "kind": {
+      "enum": [
+        "output",
+        "tool"
+      ],
+      "description": "kind 只能是 output 或 tool"
+    },
+    "name": {
+      "allOf": [
+        {
+          "type": "string",
+          "description": "缺 name",
+          "minLength": 1
+        },
+        {
+          "type": "string",
+          "description": "name 须为不超过 200 字的文本",
+          "x-length": 200
+        }
+      ]
+    },
+    "lost": {
+      "type": "boolean",
+      "description": "lost 须为 true 或 false"
+    },
+    "detail": {
+      "type": "string",
+      "description": "detail 须为不超过 2000 字的文本",
+      "x-length": 2000
+    }
+  },
+  "required": [
+    "sessionId",
+    "kind",
+    "name",
+    "lost"
+  ]
+}

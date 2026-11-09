@@ -3,7 +3,7 @@
     "coda": "ce11c5486735d0ed7ef97940733ff459b41148f9",
     "coda-plugins": "6028fae5788dbbdb5ec24d26d2b542c481e29a86"
   },
-  "note": "从 origin/main 测试收集；动态根 sessionId 固定为 s1。首次终态、陌生会话与终态后的更新形状仍合法，丢弃由状态规则决定。",
+  "note": "从 origin/main 测试收集；动态根 sessionId 固定为 s1。首次终态、陌生会话与终态后的更新形状仍合法，丢弃由状态规则决定。`_coda/unrecognized` 的用例照本仓库的约定写，供 Coda 与内置入口对照。",
   "cases": [
     {
       "source": "coda:backend/test/agent-waits.test.mjs",
@@ -303,6 +303,113 @@
         "retryAfterMs": 60001
       },
       "problem": null
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "sessionId": "s1",
+        "kind": "output",
+        "name": "item:agentMessage.delivery=async",
+        "lost": true,
+        "detail": "Codex 发来一条异步送达的消息，入口没有转给 Coda"
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "sessionId": "fixture-child",
+        "kind": "output",
+        "name": "sdk:system/new_subtype",
+        "lost": false
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "sessionId": "s1",
+        "kind": "tool",
+        "name": "tool:functions.request_user_input_async",
+        "lost": false
+      },
+      "problem": null
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "sessionId": "s1",
+        "kind": "output",
+        "name": "request:item/tool/bar"
+      },
+      "problem": "值.lost：lost 须为 true 或 false"
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "sessionId": "s1",
+        "kind": "output",
+        "lost": true
+      },
+      "problem": "值.name：缺 name"
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "kind": "output",
+        "name": "notification:thread/fooChanged",
+        "lost": true
+      },
+      "problem": "值.sessionId：缺 sessionId"
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "sessionId": "s1",
+        "kind": "input",
+        "name": "notification:thread/fooChanged",
+        "lost": true
+      },
+      "problem": "值.kind：kind 只能是 output 或 tool"
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "sessionId": "s1",
+        "kind": "output",
+        "name": "item:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "lost": true
+      },
+      "problem": "值.name：name 须为不超过 200 字的文本"
+    },
+    {
+      "source": "coda-protocol:docs/agent-protocol.md",
+      "part": "params",
+      "ref": "_coda/unrecognized",
+      "value": {
+        "sessionId": "s1",
+        "kind": "output",
+        "name": "item:agentMessage.delivery=async",
+        "lost": true,
+        "detail": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "problem": "值.detail：detail 须为不超过 2000 字的文本"
     }
   ]
 }
