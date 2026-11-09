@@ -125,6 +125,11 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     ...['1e999', '-1e999', '9'.repeat(400)].map(huge =>
       [workflow(`<extensionElements><coda:input name="n" type="number" default="${huge}" /></extensionElements>`), /^p 的 coda:input n：default 须为数字/]),
     [workflow('<extensionElements><coda:input name="b" type="boolean" defaultFrom="session.branch" /></extensionElements>'), /^p 的 coda:input b：defaultFrom="session\.branch" 只用于 type 为 branch、string 的参数$/],
+    // An Agent choice is the session's or what the form chooses: no text writes one.
+    [workflow('<extensionElements><coda:input name="a" type="string" defaultFrom="session.agent" /></extensionElements>'), /^p 的 coda:input a：defaultFrom="session\.agent" 只用于 type 为 agent 的参数$/],
+    [workflow('<extensionElements><coda:input name="a" defaultFrom="session.agent" /></extensionElements>'), /^p 的 coda:input a 需要 type：defaultFrom="session\.agent" 只用于 type 为 agent 的参数$/],
+    [workflow('<extensionElements><coda:input name="a" type="agent" defaultFrom="session.branch" /></extensionElements>'), /^p 的 coda:input a：defaultFrom="session\.branch" 只用于 type 为 branch、string 的参数$/],
+    [workflow('<extensionElements><coda:input name="a" type="agent" default="codex" /></extensionElements>'), /^p 的 coda:input a：type 为 agent 的参数不写 default/],
     [task('<coda:choice id="a" name="甲" primary="true" /><coda:choice id="b" name="乙" primary="true" />'), /^ask：最多 6 个 coda:choice，最多一个主按钮；/],
     [task('<coda:choice id="a" name="甲"><coda:choice id="b" name="乙" primary="true" /></coda:choice>'), /^ask 的 coda:choice b：只有最外层的选项能是主按钮$/],
     // Answers are told apart by id across the task: one inside another, or inside two others, is not to have one twice.
@@ -165,6 +170,7 @@ test('FEEL and durations are read as Coda reads them, and the schemas say the na
   assert.deepEqual(defs.Input.properties.type.enum, INPUT_TYPES);
   assert.deepEqual(defs.Input.properties.defaultFrom.enum, Object.keys(INPUT_SOURCES));
   assert.deepEqual(defs.Input.allOf[0].then.properties.type.enum, INPUT_SOURCES['session.branch'].types);
+  assert.deepEqual(defs.Input.allOf[1].then.properties.type.enum, INPUT_SOURCES['session.agent'].types);
   assert.deepEqual(defs.Input.properties.name.not.enum, Object.getOwnPropertyNames(Object.prototype).filter(name => /^[A-Za-z_][A-Za-z0-9_]*$/.test(name)).sort());
   for (const name of Object.keys(defs).filter(name => !name.endsWith('.children') && name !== 'NestedChoice'))
     assert.ok(CODA_MODDLE.types.some(type => type.name === name), `values.json 的 ${name} 是 moddle.json 的一个类型`);

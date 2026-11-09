@@ -20,7 +20,7 @@
   "stepFailed": "STEP_FAILED",
   "variables": ["inputs", "run", "github", "vars"],
   "inputs": {
-    "types": ["string", "boolean", "number", "branch"],
-    "sources": {"session.branch": ["branch", "string"]}
+    "types": ["string", "boolean", "number", "branch", "agent"],
+    "sources": {"session.branch": ["branch", "string"], "session.agent": ["agent"]}
   }
 }
