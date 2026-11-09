@@ -259,10 +259,10 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   for (const value of [{}, { head: '', participants }, { participants: [{ id: 'u1', name: '小王', kind: 'robot' }] },
     { participants: [{ id: 'bot', name: 'Coda', kind: 'bot', self: false }] }, { participants, state: 'gone' }])
     assert.equal(status(value), false, JSON.stringify(value));
-  for (const accepts of [{}, { audio: {} }, { audio: { maxDuration: 60 } }, { audio: { maxDuration: 0.5 }, image: {}, video: {}, file: {} }])
+  for (const accepts of [{}, { audio: {} }, { audio: { maxDuration: 60 } }, { audio: { maxDuration: 0.5 } }])
     assert.equal(status({ participants, accepts }), true, JSON.stringify(accepts));
   for (const accepts of [['audio'], { audio: true }, { audio: { maxDuration: 0 } }, { audio: { maxDuration: '60' } },
-    { audio: { maxSize: 1 } }, { image: { maxDuration: 1 } }, { text: {} }, { thinking: {} }])
+    { audio: { maxSize: 1 } }, { image: {} }, { video: {} }, { file: {} }, { text: {} }, { thinking: {} }])
     assert.equal(status({ participants, accepts }), false, JSON.stringify(accepts));
 
   for (const input of [{}, { limit: 20 }, { after: 'c1', limit: 1 }, { before: 'c9' }, { before: 'c9', limit: 100 }])
@@ -308,7 +308,7 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   assert.equal(post.input({ text: '[语音] 5″', parts: [voice, uploaded, { ...uploaded, upload: 'x'.repeat(200) }] }), true);
   const badUploads = [{ ...uploaded, upload: '' }, { ...uploaded, upload: 'x'.repeat(201) }, { ...uploaded, upload: 1 },
     { ...uploaded, service: 'media' }, { ...uploaded, service: 'media', path: 'a.m4a' }, { ...uploaded, service: 'media', preview: 'a.jpg' }];
-  for (const input of [...badUploads.map(part => ({ text: 'x', parts: [part] })), {}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] },{}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] },
+  for (const input of [...badUploads.map(part => ({ text: 'x', parts: [part] })), {}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] },
     ...badMedia.map(part => ({ text: 'x', parts: [part] }))])
     assert.equal(post.input(input), false, JSON.stringify(input));
 

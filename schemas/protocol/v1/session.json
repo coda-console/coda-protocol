@@ -56,9 +56,6 @@
         "type": "object",
         "description": "post 除文字以外还收哪些媒体 part，键是 part 的 type，值是这一类型的限制；不写就是只收文字。能力可能随状态变化，所以放在 status",
         "properties": {
-          "image": {"type": "object", "additionalProperties": false},
-          "video": {"type": "object", "additionalProperties": false},
-          "file": {"type": "object", "additionalProperties": false},
           "audio": {
             "type": "object",
             "description": "收 upload 引用的语音",

@@ -6,7 +6,7 @@
 
 - `coda/session@1` 的媒体 part（`read` 的消息与 `post` 的输入）加 `type: "audio"`：一段语音消息（对方平台的「语音条」），不是任意音频文件；用 `name`、`size`、`mime`、`duration`、`service`、`path`，`width`、`height`、`thumb`、`preview` 不用。`path` 给的文件应是常见播放器能直接播放的格式（如 AAC/M4A、MP3、WAV），`mime` 写实际格式，原始编码不能直接播时由 Provider 转换；Provider 给语音消息写可读的 `text` 兜底（例如「[语音] 5″」）。`duration` 改为视频和语音用。
 - `post` 输入里的媒体 part 加 `upload`：持有这条记录的机器上 Coda 上传的 ID（`POST /v1/uploads` 返回的，1 到 200 字符），与 `service`、`path`、`preview` 互斥；`read` 的消息里没有。调用方先把文件传到持有方再引用，持有方的 Coda 把上传交给 Provider 读取，Provider 不经网络取；本版本只要求 Provider 对 `audio` 支持。
-- status 加可选的 `accepts`：`post` 除文字以外还收哪些媒体 part，形状是 `{ image?: {}, video?: {}, file?: {}, audio?: { maxDuration? } }`，`maxDuration` 是语音最长秒数（大于 0）；不写就是只收文字，客户端据此显示录音入口并到时自动停止。`post` 收到没声明的媒体 part 或超出限制时运行 `failed`，`code` 为 `unsupported`（Coda #2364）。
+- status 加可选的 `accepts`：`post` 除文字以外还收哪些媒体 part，形状是 `{ audio?: { maxDuration? } }`，本版本只有 `audio` 一个键，`maxDuration` 是语音最长秒数（大于 0）；不写就是只收文字，客户端据此显示录音入口并到时自动停止。`post` 收到没声明的媒体 part 或超出限制时运行 `failed`，`code` 为 `unsupported`（Coda #2364）。
 
 ## 5.2.0 — 2026-11-09
 

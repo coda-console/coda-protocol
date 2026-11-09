@@ -309,11 +309,10 @@ status：
 | `reason` | 可选，状态说明 |
 | `accepts` | 可选，`post` 除文字以外还收哪些媒体 part，见下 |
 
-`accepts` 是一个对象，键是媒体 part 的 `type`（`image`、`video`、`file`、`audio`），值是这一类型的限制，没有限制就写 `{}`：
+`accepts` 是一个对象，键是媒体 part 的 `type`，值是这一类型的限制，没有限制就写 `{}`。本版本只有 `audio` 一个键，以后要收别的类型再加键：
 
 | 键 | 值 |
 | --- | --- |
-| `image`、`video`、`file` | `{}` |
 | `audio` | `{ maxDuration? }`：收 `upload` 引用的语音；`maxDuration` 是一条语音最长多少秒，大于 0 |
 
 不写 `accepts` 就是只收文字。客户端据此决定显示不显示录音入口，录音时到 `maxDuration` 自动停止。放在 status 而不在 spec，是因为 Provider 的能力可能随状态变化，例如手机上的麦克风权限被收回。
