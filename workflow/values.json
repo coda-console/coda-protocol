@@ -12,7 +12,9 @@
         "title": {"type": "string", "pattern": "\\S", "maxLength": 200, "x-feel": true, "description": "coda:title 须为 1–200 个字符"},
         "kind": {"enum": ["deploy", "preview", "release", "check", "premerge", "prebuild"], "description": "coda:kind 只能是 deploy、preview、release、check、premerge、prebuild"},
         "agents": {"type": "string", "pattern": "^[\\s,]*[a-z][a-z0-9-]{0,39}(?:[\\s,]+[a-z][a-z0-9-]{0,39})*[\\s,]*$",
-          "description": "coda:agents 写 Agent 的 ID，用逗号或空格分隔（小写字母、数字和「-」，以字母开头，至多 40 个字符），不能为空"}
+          "description": "coda:agents 写 Agent 的 ID，用逗号或空格分隔（小写字母、数字和「-」，以字母开头，至多 40 个字符），不能为空"},
+        "autoRun": {"type": "string", "anyOf": [{"enum": ["true", "false"]}, {"pattern": "^\\s*=\\s*vars(\\.[A-Za-z_][A-Za-z0-9_-]*)+\\s*$"}], "x-feel": {"names": ["vars"]},
+          "description": "coda:autoRun 须为 true、false 或 =vars.<插件>.<设置>：事件来时还没有运行，能读的只有插件设置"}
       }
     },
     "ScriptTaskProperties": {

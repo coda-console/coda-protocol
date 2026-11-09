@@ -62,6 +62,9 @@ test('what the dialect does not have is said: not BPMN, an attribute or element 
   assert.match(await workflowProblem('<definitions', 'w'), /^w\.bpmn 不是有效的 BPMN 2\.0：/);
   assert.equal(await workflowProblem('x'.repeat(1_000_001), 'w'), 'w.bpmn 过大');
   assert.match(await workflowProblem(workflow('<startEvent id="s" />', ' coda:knd="deploy"'), 'w'), /^w\.bpmn 有无法识别的内容：unknown attribute <coda:knd>/);
+  // Whether an event starts it is known before any run: what it reads is the plugin's settings.
+  const asked = '<startEvent id="s" /><sequenceFlow id="f" sourceRef="s" targetRef="ask" /><userTask id="ask" />';
+  for (const value of ['true', 'false', '=vars.review.autoRun']) assert.equal(await workflowProblem(workflow(asked, ` coda:autoRun="${value}"`), 'w'), null, value);
   assert.match(await workflowProblem(workflow('<scriptTask id="s"><extensionElements><coda:envv name="A" /></extensionElements></scriptTask>'), 'w'),
     /^w\.bpmn 有无法识别的内容：unparsable content <coda:envv>[\s\S]*unknown type <coda:Envv>/);
   assert.match(await workflowProblem(workflow('<userTask id="ask" coda:handback="false" />'), 'w'), /^w\.bpmn 有无法识别的内容：unknown attribute <coda:handback>/);
@@ -108,6 +111,9 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
     [workflow('', ' coda:kind="deploys"'), /^p：coda:kind 只能是 deploy、preview、release、check、premerge、prebuild$/],
     [workflow('', ` coda:title="${'长'.repeat(201)}"`), /^p：coda:title 须为 1–200 个字符$/],
     [workflow('', ' coda:agents=",,"'), /^p：coda:agents 写 Agent 的 ID/],
+    // Whether an event starts it is decided before any run: a setting of the plugin's is all there is to read.
+    ...['sometimes', '=inputs.autoRun', '=session.autoRun', '=review.verdict', '=vars.review.autoRun and inputs.go', '=not(vars.review.autoRun)'].map(value =>
+      [workflow('', ` coda:autoRun="${value}"`), /^p：coda:autoRun 须为 true、false 或 =vars\.<插件>\.<设置>/]),
     [step(' coda:retry="9"'), /^say：coda:retry 是失败后最多再试几次，须为 1 到 5 的整数$/],
     [step(' coda:timeout="0"'), /^say：coda:timeout 须为 0–1440 之间的分钟数$/],
     [step(' coda:checkout="no"'), /^say：coda:checkout 只能是 true 或 false$/],
