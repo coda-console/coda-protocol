@@ -1,7 +1,7 @@
 {
   "name": "coda/session@1",
   "title": "会话",
-  "description": "插件提供的外部会话：参与者、消息与发消息。Provider 每追加一条消息就推进 status.head，观察方 watch 记录后用 read 读游标之后的消息；撤回、编辑、表情回应都是一条用 about 指向旧消息的新消息。",
+  "description": "插件提供的外部会话：参与者、消息、草稿与发消息。Provider 每追加一条消息就推进 status.head，观察方 watch 记录后用 read 读游标之后的消息；撤回、编辑、表情回应都是一条用 about 指向旧消息的新消息。",
   "spec": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -142,7 +142,7 @@
       }
     },
     "post": {
-      "description": "以 self 发一条消息；Provider 按 requestId 只发一次，立即结果。",
+      "description": "以 self 发一条消息，开运行；重发同一个 requestId 得到同一个运行，只发一次。completed 的 result 是 { message: { id, cursor } }，即以后 read 读到的那条；failed 的 result 是 { code, message }，不确定发没发出去时 code 为 unknown，调用方显示结果未知、不自动重发。还没开始发时取消得到 canceled，已开始的看 status。没先写草稿也照常发。",
       "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -186,22 +186,39 @@
         "required": ["text"],
         "additionalProperties": false
       },
-      "result": {
+      "run": true
+    },
+    "draft": {
+      "description": "设定 self 在这个会话里还没发出去的草稿，立即结果。text 是全文，空串为清空；version 只增，Provider 丢掉不大于已见最大版本的；steps 是从上一版到这一版的中间状态，可照 delayMs 回放，最后一步等于 text。用不上草稿的 Provider 直接答 {}。",
+      "idempotent": true,
+      "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
-          "message": {
-            "type": "object",
-            "properties": {
-              "id": {"type": "string", "minLength": 1, "maxLength": 2048},
-              "cursor": {"type": "string", "minLength": 1, "maxLength": 2048}
-            },
-            "required": ["id", "cursor"],
-            "additionalProperties": false
+          "text": {"type": "string", "maxLength": 65536, "description": "草稿全文；空串表示清空或放弃"},
+          "version": {"type": "integer", "minimum": 0, "maximum": 9007199254740991, "description": "调用方给的版本号，比大小，后写的为准；建议用毫秒时间"},
+          "steps": {
+            "type": "array",
+            "maxItems": 1000,
+            "description": "从上一版到这一版的中间状态，按先后排；最后一步等于 text",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {"type": "string", "maxLength": 65536, "description": "这一步的全文"},
+                "delayMs": {"type": "integer", "minimum": 0, "maximum": 600000, "description": "距上一步的间隔（毫秒）"}
+              },
+              "required": ["text", "delayMs"],
+              "additionalProperties": false
+            }
           }
         },
-        "required": ["message"],
+        "required": ["text", "version"],
         "additionalProperties": false
+      },
+      "result": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "maxProperties": 0
       }
     }
   }

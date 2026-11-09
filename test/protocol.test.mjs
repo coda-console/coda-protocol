@@ -74,6 +74,9 @@ test('core definitions validate, and definitions reject malformed names, operati
   const safe = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
     Object.entries(protocol.operations).filter(([, operation]) => operation.safe).map(([name]) => `${protocol.name} ${name}`));
   assert.deepEqual(safe, ['coda/session@1 read', 'coda/environment@1 list', 'coda/environment@1 read']);
+  const idempotent = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
+    Object.entries(protocol.operations).filter(([, operation]) => operation.idempotent).map(([name]) => `${protocol.name} ${name}`));
+  assert.deepEqual(idempotent, ['coda/session@1 draft']);
 
   const without = (value, key) => Object.fromEntries(Object.entries(value).filter(([name]) => name !== key));
   for (const definition of [null, [], {}, without(own, 'spec'), without(own, 'status'), without(own, 'operations'),
@@ -88,11 +91,15 @@ test('core definitions validate, and definitions reject malformed names, operati
     { ...own, operations: { do: { input: {}, run: false } } },
     { ...own, operations: { do: { input: {}, run: true, safe: true } } },
     { ...own, operations: { do: { input: {}, result: {}, safe: false } } },
+    { ...own, operations: { do: { input: {}, run: true, idempotent: true } } },
+    { ...own, operations: { do: { input: {}, result: {}, idempotent: false } } },
+    { ...own, operations: { do: { input: {}, result: {}, safe: true, idempotent: true } } },
     { ...own, operations: { do: { input: { type: 'not-a-type' }, result: {} } } },
     { ...own, operations: { do: { input: { $ref: '#/$defs/missing' }, result: {} } } },
   ]) assert.equal(typeof definitionProblem(definition), 'string', JSON.stringify(definition));
   assert.equal(definitionProblem({ ...own, operations: { start: { input: {}, run: true } } }), null);
   assert.equal(definitionProblem({ ...own, operations: { peek: { input: {}, result: {}, safe: true } } }), null);
+  assert.equal(definitionProblem({ ...own, operations: { set: { input: {}, result: {}, idempotent: true } } }), null);
 
   for (const plural of ['agents', 'a', 'my-things2', `a${'b'.repeat(62)}`]) assert.equal(definitionProblem({ ...own, plural }), null, plural);
   for (const plural of ['', 'Agents', '1agents', '-agents', 'my_things', 'a.b', `a${'b'.repeat(63)}`, 1, null])
@@ -229,10 +236,13 @@ test('agent records name the plugin of their program, and spawn takes a child\'s
     assert.equal(spawn.input(value), false, JSON.stringify(value));
 });
 
-test('session records, messages and posts follow coda/session@1', () => {
-  const { spec, status, operations: { read, post } } = checks(SESSION_PROTOCOL);
-  assert.deepEqual(Object.keys(SESSION_PROTOCOL.operations), ['read', 'post']);
-  assert.ok(Object.values(SESSION_PROTOCOL.operations).every(operation => operation.run === undefined));
+test('session records, messages, posts and drafts follow coda/session@1', () => {
+  const { spec, status, operations: { read, post, draft } } = checks(SESSION_PROTOCOL);
+  assert.deepEqual(Object.keys(SESSION_PROTOCOL.operations), ['read', 'post', 'draft']);
+  assert.equal(SESSION_PROTOCOL.operations.post.run, true);
+  assert.equal(SESSION_PROTOCOL.operations.post.result, undefined);
+  assert.equal(SESSION_PROTOCOL.operations.read.run, undefined);
+  assert.equal(SESSION_PROTOCOL.operations.draft.run, undefined);
 
   const record = { title: '项目群', container: { id: 'wx-1', title: '我的微信' } };
   assert.equal(spec(record), true);
@@ -274,9 +284,18 @@ test('session records, messages and posts follow coda/session@1', () => {
   assert.equal(post.input({ text: '看图', parts: [{ type: 'file', name: 'a.zip' }], replyTo: 'm1', mentions: ['u1'] }), true);
   for (const input of [{}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] }])
     assert.equal(post.input(input), false, JSON.stringify(input));
-  assert.equal(post.result({ message: { id: 'm5', cursor: 'c5' } }), true);
-  for (const value of [{}, { message: { id: 'm5' } }, { id: 'm5', cursor: 'c5' }])
-    assert.equal(post.result(value), false, JSON.stringify(value));
+
+  for (const input of [{ text: '', version: 0 }, { text: '收到', version: 1762675200000 },
+    { text: '收到', version: 2, steps: [{ text: '收', delayMs: 0 }, { text: '收到', delayMs: 180 }] }, { text: '', version: 3, steps: [] }])
+    assert.equal(draft.input(input), true, JSON.stringify(input));
+  for (const input of [{}, { text: '收到' }, { version: 1 }, { text: '收到', version: -1 }, { text: '收到', version: 1.5 },
+    { text: '收到', version: '1' }, { text: 1, version: 1 }, { text: 'x'.repeat(65537), version: 1 }, { text: 'x', version: 1, parts: [] },
+    { text: 'x', version: 1, steps: [{ text: 'x' }] }, { text: 'x', version: 1, steps: [{ text: 'x', delayMs: -1 }] },
+    { text: 'x', version: 1, steps: [{ text: 'x', delayMs: 600001 }] }, { text: 'x', version: 1, steps: [{ text: 'x', delayMs: 1, at: 0 }] },
+    { text: 'x', version: 1, steps: Array.from({ length: 1001 }, () => ({ text: 'x', delayMs: 0 })) }])
+    assert.equal(draft.input(input), false, JSON.stringify(input));
+  assert.equal(draft.result({}), true);
+  assert.equal(draft.result({ accepted: true }), false);
 });
 
 test('environment records, listings and reads follow the read-only coda/environment@1', () => {
