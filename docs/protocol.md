@@ -335,7 +335,7 @@ status：
 `parts` 的每一项是下面之一：
 
 - `{ type: "text", text }`；
-- `{ type: "image"|"video"|"file", name, size?, mime?, width?, height?, duration?, thumb?, service?, path? }`：媒体，大文件只给引用，字段见下；
+- `{ type: "image"|"video"|"file", name, size?, mime?, width?, height?, duration?, thumb?, service?, path?, preview? }`：媒体，大文件只给引用，字段见下；
 - `{ type: "thinking"|"tool", text }`。
 
 媒体 part 在 `read` 的消息和 `post` 的输入里是同一种形状，`type`、`name` 以外都可选：
@@ -345,25 +345,40 @@ status：
 | `name`、`size`、`mime` | 文件名、字节数、MIME 类型 |
 | `width`、`height` | 像素，整数，至少 1，已按拍摄方向转正；图片和视频用 |
 | `duration` | 时长，秒，不为负；视频用 |
-| `thumb` | 内嵌 JPEG 的 base64（不带 `data:` 前缀），长边不超过 64 像素，至多 8192 个字符；视频用封面帧 |
+| `thumb` | 内嵌 JPEG 的 base64（不带 `data:` 前缀），至多 8192 个字符；视频用封面帧 |
 | `service` | provider 插件登记的本机流式服务 ID |
-| `path` | 服务内路径，1 到 2048 个字符；有 `path` 就必须有 `service` |
+| `path` | 原文件的服务内路径，1 到 2048 个字符 |
+| `preview` | 预览图的服务内路径，在同一个 `service` 里，1 到 2048 个字符 |
 
-尺寸和缩略图让框在原图到达前就是最终大小：先显示放大、模糊的 `thumb`，原图到了在原地换上。
-原文件：观察方读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`（别的机器经空间到达持有方）；`path` 原样接在后面，Provider 写它时就按 URL 路径编码好，不以 `/` 开头。
+有 `path` 或 `preview` 就必须有 `service`。
+
+一个媒体分三档，从小到大：
+
+- **`thumb`**：内嵌在消息里，框一出现就能画。约束只是至多 8192 个字符：自己生成时长边取 64 像素左右；Provider 手上已有的小缩略图，只要在上限以内，可以原样放进来。
+- **`preview`**：持有方本地就有的较小版本。图片是一张静图，长边一般不超过约 1280 像素；视频是封面帧。观察方在会话里画它，原图只在打开时取。
+- **`path`**：原文件。
+
+尺寸和 `thumb` 让框在图到达前就是最终大小：先显示放大、模糊的 `thumb`，`preview` 到了在原地换上；没有 `preview` 的，照旧换上原图。
+观察方读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<preview 或 path>`（别的机器经空间到达持有方）；路径原样接在后面，Provider 写它时就按 URL 路径编码好，不以 `/` 开头。
 字节、Range 和流中断语义沿用 Coda 的本机流式服务。
+
+取不到时这样降级：
+
+- 取 `path` 回 404 而有 `preview`：显示预览图，并注明原图不在持有方（比如微信还没下载），不当成「文件已清理」；
+- 没有 `preview` 或 `preview` 也取不到：退回 `thumb`；
+- 三档都没有或都取不到：显示文件卡。
 
 缺字段时这样降级，旧消息不补算：
 
 - 缺 `width`、`height`：按默认比例占位；
-- 缺 `thumb`：空框；
-- 缺 `service`（或有 `service` 没有 `path`）：只显示文件卡，不能打开原文件。
+- 缺 `thumb`：图到之前是空框；
+- 缺 `service`（或有 `service`，`path` 和 `preview` 都没有）：只显示文件卡，不能打开原文件。
 
 一个图片 part：
 
 ```json
 {"type": "image", "name": "IMG_0412.jpg", "size": 2310144, "mime": "image/jpeg", "width": 3024, "height": 4032,
- "thumb": "/9j/4AAQSkZJRgABAQ…", "service": "media", "path": "msg/m7/IMG_0412.jpg"}
+ "thumb": "/9j/4AAQSkZJRgABAQ…", "service": "media", "path": "msg/m7/IMG_0412.jpg", "preview": "msg/m7/IMG_0412.preview.jpg"}
 ```
 
 一条记录：

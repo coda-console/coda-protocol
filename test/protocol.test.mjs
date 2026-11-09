@@ -276,10 +276,13 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   const photo = { type: 'image', name: 'IMG_0412.jpg', size: 2310144, mime: 'image/jpeg', width: 3024, height: 4032,
     thumb: '/9j/'.repeat(2048), service: 'media', path: 'msg/m7/IMG_0412.jpg' };
   const clip = { type: 'video', name: 'a.mov', width: 1, height: 1, duration: 0, thumb: '/9j/', service: 'media', path: 'a.mov' };
-  const media = { ...message, id: 'm5', cursor: 'c5', parts: [photo, clip, { type: 'video', name: 'b.mp4', duration: 12.5 }] };
+  const previewed = { ...photo, preview: 'msg/m7/IMG_0412.preview.jpg' };
+  const media = { ...message, id: 'm5', cursor: 'c5', parts: [photo, clip, { type: 'video', name: 'b.mp4', duration: 12.5 }, previewed,
+    { type: 'video', name: 'c.mp4', service: 'media', preview: 'c.jpg' }] };
   assert.equal(read.result({ messages: [media], cursor: 'c5', more: false }), true);
   const badMedia = [{ ...photo, service: undefined }, { ...photo, thumb: 'x'.repeat(8193) }, { ...photo, width: 0 },
-    { ...photo, height: 1.5 }, { ...clip, duration: -1 }, { ...photo, path: '' }, { ...photo, path: 'x'.repeat(2049) }];
+    { ...photo, height: 1.5 }, { ...clip, duration: -1 }, { ...photo, path: '' }, { ...photo, path: 'x'.repeat(2049) },
+    { type: 'image', name: 'a.jpg', preview: 'a.jpg' }, { ...previewed, preview: '' }, { ...previewed, preview: 'x'.repeat(2049) }];
   for (const part of badMedia)
     assert.equal(read.result({ messages: [{ ...message, parts: [part] }], cursor: 'c1', more: false }), false, JSON.stringify(part));
   for (const bad of [{ ...message, sender: undefined }, { ...message, senderName: 1 }, { ...message, senderName: 'x'.repeat(201) }, { ...message, parts: [{ type: 'image' }] },
@@ -291,7 +294,7 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
 
   assert.equal(post.input({ text: '收到' }), true);
   assert.equal(post.input({ text: '看图', parts: [{ type: 'file', name: 'a.zip' }], replyTo: 'm1', mentions: ['u1'] }), true);
-  assert.equal(post.input({ text: '看图', parts: [photo, clip] }), true);
+  assert.equal(post.input({ text: '看图', parts: [photo, clip, previewed] }), true);
   for (const input of [{}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] },
     ...badMedia.map(part => ({ text: 'x', parts: [part] }))])
     assert.equal(post.input(input), false, JSON.stringify(input));
