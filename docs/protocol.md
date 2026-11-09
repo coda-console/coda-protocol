@@ -307,6 +307,20 @@ status：
 | `participants` | `[{ id, name, kind: "person"\|"agent"\|"bot", self? }]`；`self: true` 是这个 Provider 登录的账号，即 Coda 的 Bot |
 | `state` | 可选，`active` 或 `unreachable` |
 | `reason` | 可选，状态说明 |
+| `accepts` | 可选，`post` 除文字以外还收哪些媒体 part，见下 |
+
+`accepts` 是一个对象，键是媒体 part 的 `type`（`image`、`video`、`file`、`audio`），值是这一类型的限制，没有限制就写 `{}`：
+
+| 键 | 值 |
+| --- | --- |
+| `image`、`video`、`file` | `{}` |
+| `audio` | `{ maxDuration? }`：收 `upload` 引用的语音；`maxDuration` 是一条语音最长多少秒，大于 0 |
+
+不写 `accepts` 就是只收文字。客户端据此决定显示不显示录音入口，录音时到 `maxDuration` 自动停止。放在 status 而不在 spec，是因为 Provider 的能力可能随状态变化，例如手机上的麦克风权限被收回。
+
+```json
+{"participants": [], "accepts": {"audio": {"maxDuration": 60}}}
+```
 
 观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。`read` 与 `draft` 是立即结果，`read` 是 `safe` 的，`draft` 是 `idempotent` 的；`post` 开运行：
 
@@ -319,6 +333,8 @@ status：
   - 发送者固定是 `self`；重发同一个 `requestId`，得到的是同一个运行，只发一次；
   - 运行 `completed` 时，`result` 是 `{ message: { id, cursor } }`，就是以后 `read` 会读到的那条消息；
   - 发送失败时运行为 `failed`，`result` 是 `{ code, message }`；不确定发没发出去时（例如输入到一半进程没了）`code` 为 `unknown`，调用方显示「结果未知」，不自动重发；
+  - 输入里有 `status.accepts` 没声明的媒体 part，或超出它声明的限制（比如语音长过 `maxDuration`）时，运行 `failed`，`code` 为 `unsupported`；
+  - 输入里的媒体 part 可以用 `upload` 引用记录持有方的上传，见下；
   - 取消沿用 `coda/run@1` 的 `cancel`：还没开始发的停下，得到 `canceled`；已经开始发的，Provider 可以不停，是否停下看 status；
   - 全文总在 `post` 的输入里；没有先写过草稿的 `post` 也照常发出去。
 - `draft`（`idempotent`）：设定 `self` 在这个会话里还没发出去的文字，结果 `{}`。输入 `{ text, version, steps? }`：
@@ -339,22 +355,31 @@ status：
 `parts` 的每一项是下面之一：
 
 - `{ type: "text", text }`；
-- `{ type: "image"|"video"|"file", name, size?, mime?, width?, height?, duration?, thumb?, service?, path?, preview? }`：媒体，大文件只给引用，字段见下；
+- `{ type: "image"|"video"|"file"|"audio", name, size?, mime?, width?, height?, duration?, thumb?, service?, path?, preview?, upload? }`：媒体，大文件只给引用，字段见下；
 - `{ type: "thinking"|"tool", text }`。
 
-媒体 part 在 `read` 的消息和 `post` 的输入里是同一种形状，`type`、`name` 以外都可选：
+媒体 part 在 `read` 的消息和 `post` 的输入里是同一种形状，只有 `upload` 只在 `post` 的输入里有；`type`、`name` 以外都可选：
 
 | 字段 | 含义 |
 | --- | --- |
 | `name`、`size`、`mime` | 文件名、字节数、MIME 类型 |
 | `width`、`height` | 像素，整数，至少 1，已按拍摄方向转正；图片和视频用 |
-| `duration` | 时长，秒，不为负；视频用 |
+| `duration` | 时长，秒，不为负；视频和语音用 |
 | `thumb` | 内嵌 JPEG 的 base64（不带 `data:` 前缀），至多 8192 个字符；视频用封面帧 |
 | `service` | provider 插件登记的本机流式服务 ID |
 | `path` | 原文件的服务内路径，1 到 2048 个字符 |
 | `preview` | 预览图的服务内路径，在同一个 `service` 里，1 到 2048 个字符 |
+| `upload` | 只在 `post` 的输入里：持有这条记录的机器上 Coda 上传的 ID（那台机器 `POST /v1/uploads` 返回、`GET /v1/uploads/<id>` 能读回的），1 到 200 个字符 |
 
-有 `path` 或 `preview` 就必须有 `service`。
+有 `path` 或 `preview` 就必须有 `service`。`upload` 与 `service`、`path`、`preview` 互斥：一个媒体 part 要么引用 Provider 自己的服务，要么引用持有方的上传。
+
+`audio` 是一段语音消息，即对方平台的「语音条」，不是任意音频文件：
+
+- 用 `name`、`size`、`mime`、`duration`、`service`、`path`（`post` 里也可以是 `upload`）；`width`、`height`、`thumb`、`preview` 对它没有意义，不用；
+- `path` 给出的文件应当是常见播放器能直接播放的格式（如 AAC/M4A、MP3、WAV），`mime` 写实际给出的格式；对方平台的原始编码不能直接播时，由 Provider 转换；
+- 观察方看不懂 `audio` 时照常退回 `text`：Provider 给语音消息写一个可读的 `text` 兜底，例如「[语音] 5″」，具体写法由 Provider 定。
+
+发语音时，调用方先把录好的文件传到记录的持有方（`POST /v1/uploads`），再在 `post` 里用 `upload` 引用；持有方的 Coda 负责把上传交给 Provider 读取，Provider 不经网络取。本版本 `upload` 只要求 Provider 对 `audio` 支持，其他类型以后再说。
 
 一个媒体分三档，从小到大：
 
@@ -383,6 +408,12 @@ status：
 ```json
 {"type": "image", "name": "IMG_0412.jpg", "size": 2310144, "mime": "image/jpeg", "width": 3024, "height": 4032,
  "thumb": "/9j/4AAQSkZJRgABAQ…", "service": "media", "path": "msg/m7/IMG_0412.jpg", "preview": "msg/m7/IMG_0412.preview.jpg"}
+```
+
+`post` 发一条语音：
+
+```json
+{"text": "[语音] 5″", "parts": [{"type": "audio", "name": "voice.m4a", "mime": "audio/mp4", "duration": 5, "upload": "up_1"}]}
 ```
 
 一条记录：

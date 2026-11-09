@@ -259,6 +259,11 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   for (const value of [{}, { head: '', participants }, { participants: [{ id: 'u1', name: '小王', kind: 'robot' }] },
     { participants: [{ id: 'bot', name: 'Coda', kind: 'bot', self: false }] }, { participants, state: 'gone' }])
     assert.equal(status(value), false, JSON.stringify(value));
+  for (const accepts of [{}, { audio: {} }, { audio: { maxDuration: 60 } }, { audio: { maxDuration: 0.5 }, image: {}, video: {}, file: {} }])
+    assert.equal(status({ participants, accepts }), true, JSON.stringify(accepts));
+  for (const accepts of [['audio'], { audio: true }, { audio: { maxDuration: 0 } }, { audio: { maxDuration: '60' } },
+    { audio: { maxSize: 1 } }, { image: { maxDuration: 1 } }, { text: {} }, { thinking: {} }])
+    assert.equal(status({ participants, accepts }), false, JSON.stringify(accepts));
 
   for (const input of [{}, { limit: 20 }, { after: 'c1', limit: 1 }, { before: 'c9' }, { before: 'c9', limit: 100 }])
     assert.equal(read.input(input), true, JSON.stringify(input));
@@ -279,16 +284,19 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
     thumb: '/9j/'.repeat(2048), service: 'media', path: 'msg/m7/IMG_0412.jpg' };
   const clip = { type: 'video', name: 'a.mov', width: 1, height: 1, duration: 0, thumb: '/9j/', service: 'media', path: 'a.mov' };
   const previewed = { ...photo, preview: 'msg/m7/IMG_0412.preview.jpg' };
+  const voice = { type: 'audio', name: 'voice.m4a', size: 8123, mime: 'audio/mp4', duration: 5, service: 'media', path: 'msg/m8/voice.m4a' };
   const media = { ...message, id: 'm5', cursor: 'c5', parts: [photo, clip, { type: 'video', name: 'b.mp4', duration: 12.5 }, previewed,
-    { type: 'video', name: 'c.mp4', service: 'media', preview: 'c.jpg' }] };
+    { type: 'video', name: 'c.mp4', service: 'media', preview: 'c.jpg' }, voice] };
   assert.equal(read.result({ messages: [media], cursor: 'c5', more: false }), true);
   const badMedia = [{ ...photo, service: undefined }, { ...photo, thumb: 'x'.repeat(8193) }, { ...photo, width: 0 },
     { ...photo, height: 1.5 }, { ...clip, duration: -1 }, { ...photo, path: '' }, { ...photo, path: 'x'.repeat(2049) },
-    { type: 'image', name: 'a.jpg', preview: 'a.jpg' }, { ...previewed, preview: '' }, { ...previewed, preview: 'x'.repeat(2049) }];
-  for (const part of badMedia)
+    { type: 'image', name: 'a.jpg', preview: 'a.jpg' }, { ...previewed, preview: '' }, { ...previewed, preview: 'x'.repeat(2049) },
+    { ...voice, duration: -1 }, { type: 'voice', name: 'a.m4a' }];
+  const uploaded = { type: 'audio', name: 'voice.m4a', mime: 'audio/mp4', duration: 5, upload: 'up_1' };
+  for (const part of [...badMedia, uploaded])
     assert.equal(read.result({ messages: [{ ...message, parts: [part] }], cursor: 'c1', more: false }), false, JSON.stringify(part));
   for (const bad of [{ ...message, sender: undefined }, { ...message, senderName: 1 }, { ...message, senderName: 'x'.repeat(201) }, { ...message, parts: [{ type: 'image' }] },
-    { ...message, parts: [{ type: 'text', text: 'x', name: 'a' }] }, { ...message, parts: [{ type: 'audio', name: 'a' }] },
+    { ...message, parts: [{ type: 'text', text: 'x', name: 'a' }] }, { ...message, parts: [{ type: 'audio' }] },
     { ...message, about: { message: 'm0', change: 'delete' } }, { ...message, about: { change: 'edit' } }])
     assert.equal(read.result({ messages: [bad], cursor: 'c1', more: false }), false, JSON.stringify(bad));
   for (const value of [{ messages: [], more: false }, { messages: [], cursor: '', more: false }, { messages: [], cursor: null }])
@@ -297,7 +305,10 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   assert.equal(post.input({ text: '收到' }), true);
   assert.equal(post.input({ text: '看图', parts: [{ type: 'file', name: 'a.zip' }], replyTo: 'm1', mentions: ['u1'] }), true);
   assert.equal(post.input({ text: '看图', parts: [photo, clip, previewed] }), true);
-  for (const input of [{}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] },
+  assert.equal(post.input({ text: '[语音] 5″', parts: [voice, uploaded, { ...uploaded, upload: 'x'.repeat(200) }] }), true);
+  const badUploads = [{ ...uploaded, upload: '' }, { ...uploaded, upload: 'x'.repeat(201) }, { ...uploaded, upload: 1 },
+    { ...uploaded, service: 'media' }, { ...uploaded, service: 'media', path: 'a.m4a' }, { ...uploaded, service: 'media', preview: 'a.jpg' }];
+  for (const input of [...badUploads.map(part => ({ text: 'x', parts: [part] })), {}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] },{}, { text: 1 }, { text: 'x', sender: 'u1' }, { text: 'x', parts: [{ type: 'file' }] }, { text: 'x', mentions: [''] },
     ...badMedia.map(part => ({ text: 'x', parts: [part] }))])
     assert.equal(post.input(input), false, JSON.stringify(input));
 
