@@ -11,8 +11,8 @@
       "id": {"$ref": "common.json#/$defs/id"},
       "title": {"$ref": "common.json#/$defs/line40"},
       "api": {
-        "description": "接口：openai-completions、openai-responses、anthropic-messages",
-        "enum": ["openai-completions", "openai-responses", "anthropic-messages"]
+        "description": "接口：openai-completions、openai-responses、anthropic-messages、openai-speech",
+        "enum": ["openai-completions", "openai-responses", "anthropic-messages", "openai-speech"]
       },
       "url": {
         "description": "一行地址，只能引用本插件的单值设置（${config:<设置名>}，不能是密文）",

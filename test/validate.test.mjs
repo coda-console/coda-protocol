@@ -30,6 +30,10 @@ test('a view may say how it is framed: document or canvas, or nothing to keep th
     assert.match(checked({ contributes: { views: [{ ...view, frame }] } }), /^contributes\.views\[0\]\.frame：/);
 });
 
+test('a model service may speak the OpenAI speech API', () => {
+  assert.equal(checked({ contributes: { modelProviders: [{ id: 'p', title: 'P', api: 'openai-speech', url: 'https://p' }] } }), null);
+});
+
 after(() => { for (const dir of dirs) rmSync(dir, { recursive: true, force: true }); });
 // A plugin's directory holding `files`.
 function directory(files = {}) {
