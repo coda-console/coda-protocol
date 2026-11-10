@@ -304,7 +304,7 @@ status：
 | 字段 | 含义 |
 | --- | --- |
 | `head` | 最新一条消息的游标，不透明；Provider 每追加一条就写，还没有消息时不写 |
-| `participants` | `[{ id, name, kind: "person"\|"agent"\|"bot", self? }]`；`self: true` 是这个 Provider 登录的账号，即 Coda 的 Bot |
+| `participants` | `[{ id, name, kind: "person"\|"agent"\|"bot", self?, avatar? }]`；`self: true` 是这个 Provider 登录的账号，即 Coda 的 Bot；`avatar` 见下 |
 | `state` | 可选，`active` 或 `unreachable` |
 | `reason` | 可选，状态说明 |
 | `accepts` | 可选，`post` 除文字以外还收哪些媒体 part，见下 |
@@ -314,6 +314,10 @@ status：
 | 键 | 值 |
 | --- | --- |
 | `audio` | `{ maxDuration? }`：收 `upload` 引用的语音；`maxDuration` 是一条语音最长多少秒，大于 0 |
+
+参与者的 `avatar` 是 `{ service, path }`：头像图片在 provider 插件登记的本机流式服务里的路径，`service` 1 到 200 个字符，`path` 1 到 2048 个字符，两个都要有。
+观察方和取媒体 part 的 `path` 一样，读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`；图片长边一般取 100 到 200 像素就够。
+不写、或读不到（404、持有方连不上）时，观察方用名字代替（如名字的第一个字），不当成错误。头像换了，Provider 就换一个 `path`，观察方按路径缓存。
 
 不写 `accepts` 就是只收文字。客户端据此决定显示不显示录音入口，录音时到 `maxDuration` 自动停止。放在 status 而不在 spec，是因为 Provider 的能力可能随状态变化，例如手机上的麦克风权限被收回。
 
