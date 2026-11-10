@@ -2,6 +2,10 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.10.0 — 2026-11-10
+
+- 视图（`contributes.views` 的每项）加可选的 `provides`：作为附件来源时能交回的 part 类型，与 `coda/session@1` status 的 `accepts` 的键同一套，现在只有 `audio`。写了的视图出现在外部会话输入框的「+」里，只列会话 accepts 里有的类型；交回的方式由 Coda 客户端的视图桥定（Coda #2398）。
+
 ## 5.9.0 — 2026-11-10
 
 - 流程方言的脚本步骤加 `coda:source`：这一步在哪个工作副本目录里跑（本机绝对路径，可写 FEEL 表达式），只用于 `coda:checkout="false"` 的步骤，须与它同时写。本机就地跑、不检出；交给别的执行环境时，调用方给这个目录所在的工作副本拍快照（含未提交、未跟踪的改动，不含忽略的文件），对方检出快照并在对应的子目录里跑，用的是 `coda/executor@1` 的 `execute` 输入里已有的 `source.snapshot` 与 `workingDirectory`，执行器协议不改（Coda #2078 B2 前置）。
