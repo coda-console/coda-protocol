@@ -263,7 +263,7 @@
       ]
     },
     {
-      "description": "coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:checkout、coda:retry 等（要为一段占组用 hold-group）",
+      "description": "coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:source、coda:checkout、coda:retry 等（要为一段占组用 hold-group）",
       "schema": {
         "allOf": [
           {
@@ -303,6 +303,11 @@
                 },
                 {
                   "required": [
+                    "source"
+                  ]
+                },
+                {
+                  "required": [
                     "checkout"
                   ]
                 },
@@ -329,6 +334,27 @@
       "on": [
         "bpmn:ServiceTask"
       ]
+    },
+    {
+      "description": "写了 coda:source 的步骤在它给的工作副本目录里就地跑，不检出提交，须同时写 coda:checkout=\"false\"",
+      "schema": {
+        "required": [
+          "checkout"
+        ],
+        "properties": {
+          "checkout": {
+            "const": "false"
+          }
+        }
+      },
+      "on": [
+        "bpmn:ScriptTask"
+      ],
+      "when": {
+        "required": [
+          "source"
+        ]
+      }
     },
     {
       "description": "callActivity 的 calledElement 写要调用的能力或流程名（小写字母、数字和「-」，以字母开头）",
