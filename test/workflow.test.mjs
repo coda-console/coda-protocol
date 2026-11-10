@@ -97,7 +97,7 @@ test('expire-tool-details accepts olderThan and rejects other parameter names; c
 });
 
 test('the names workflows share are the dialect\'s: the kinds, those that deploy among them, and the events Coda sends', () => {
-  assert.deepEqual(WORKFLOW_KINDS, ['deploy', 'preview', 'release', 'check', 'premerge', 'prebuild']);
+  assert.deepEqual(WORKFLOW_KINDS, ['deploy', 'preview', 'release', 'check', 'premerge', 'prebuild', 'develop']);
   assert.ok(DEPLOYING_KINDS.every(kind => WORKFLOW_KINDS.includes(kind)));
   assert.deepEqual(CODA_EVENTS, [SESSION_OPENED, SESSION_FACTS, DISPATCH_EVENT, CANCEL_EVENT]);
   assert.deepEqual(CODA_ACTIONS['hold-group'], ['group', 'capacity', 'borrow', 'exclusive']);
@@ -108,7 +108,7 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
   const step = (attrs, inside = '') => workflow(`<scriptTask id="say" scriptFormat="bash"${attrs}>${inside ? `<extensionElements>${inside}</extensionElements>` : ''}<script>echo</script></scriptTask>`);
   const task = inside => workflow(`<userTask id="ask"><extensionElements>${inside}</extensionElements></userTask>`);
   const cases = [
-    [workflow('', ' coda:kind="deploys"'), /^p：coda:kind 只能是 deploy、preview、release、check、premerge、prebuild$/],
+    [workflow('', ' coda:kind="deploys"'), /^p：coda:kind 只能是 deploy、preview、release、check、premerge、prebuild、develop$/],
     [workflow('', ` coda:title="${'长'.repeat(201)}"`), /^p：coda:title 须为 1–200 个字符$/],
     [workflow('', ' coda:agents=",,"'), /^p：coda:agents 写 Agent 的 ID/],
     // Whether an event starts it is decided before any run: a setting of the plugin's is all there is to read.
