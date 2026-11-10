@@ -83,7 +83,7 @@ fieldsProblem(JSON.parse(fieldsJSON), 'ask');
 
 ## 项目中的多选选项
 
-设置的 `items.anyOf` 选项可附带 `workflowKind`（`check`、`premerge`、`prebuild`、`deploy`、`preview`、`release`）。全局设置显示全部选项；项目设置只显示该项目有的流程类别，未写此字段的选项始终显示。宿主负责按项目提供可选项，流程执行时仍需按运行的提交判断可用操作。
+设置的 `items.anyOf` 选项可附带 `workflowKind`（`check`、`premerge`、`prebuild`、`develop`、`deploy`、`preview`、`release`）。全局设置显示全部选项；项目设置只显示该项目有的流程类别，未写此字段的选项始终显示。宿主负责按项目提供可选项，流程执行时仍需按运行的提交判断可用操作。
 
 ## 输入框模式
 
