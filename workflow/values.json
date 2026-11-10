@@ -24,6 +24,8 @@
         "group": {"type": "string", "pattern": "^\\S{1,100}$", "description": "coda:group 须为 1–100 个非空白字符的组名"},
         "timeout": {"type": "number", "exclusiveMinimum": 0, "maximum": 1440, "description": "coda:timeout 须为 0–1440 之间的分钟数"},
         "cancelTimeout": {"type": "number", "exclusiveMinimum": 0, "maximum": 1440, "description": "coda:cancelTimeout 须为 0–1440 之间的分钟数"},
+        "source": {"type": "string", "pattern": "\\S", "x-feel": true,
+          "description": "coda:source 算出来须为这台机器上的绝对目录（可写表达式）"},
         "checkout": {"enum": ["true", "false"], "description": "coda:checkout 只能是 true 或 false"},
         "retry": {"type": "string", "pattern": "^[1-5]$", "description": "coda:retry 是失败后最多再试几次，须为 1 到 5 的整数"}
       }

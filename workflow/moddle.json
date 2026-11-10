@@ -28,13 +28,14 @@
       "name": "ScriptTaskProperties",
       "isAbstract": true,
       "extends": ["bpmn:ScriptTask", "bpmn:ServiceTask"],
-      "description": "脚本步骤（scriptTask）的：audience、group 运行时占的并发组、timeout 与 cancelTimeout（分钟）、workingDirectory、checkout、retry 网络失败时再跑几次（1 到 5）。写在 serviceTask 上只为提示脚本步骤要写成 scriptTask",
+      "description": "脚本步骤（scriptTask）的：audience、group 运行时占的并发组、timeout 与 cancelTimeout（分钟）、workingDirectory、source 在哪个工作副本目录里跑（本机绝对路径，可写表达式；只用于 checkout=\"false\"）、checkout、retry 网络失败时再跑几次（1 到 5）。写在 serviceTask 上只为提示脚本步骤要写成 scriptTask",
       "properties": [
         {"name": "audience", "isAttr": true, "type": "String"},
         {"name": "group", "isAttr": true, "type": "String"},
         {"name": "timeout", "isAttr": true, "type": "Real"},
         {"name": "cancelTimeout", "isAttr": true, "type": "Real"},
         {"name": "workingDirectory", "isAttr": true, "type": "String"},
+        {"name": "source", "isAttr": true, "type": "String"},
         {"name": "checkout", "isAttr": true, "type": "String"},
         {"name": "retry", "isAttr": true, "type": "String"}
       ]

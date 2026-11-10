@@ -163,6 +163,15 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
   assert.equal(await workflowProblem(step(' coda:status="还在：{{in-queue.count}}"').replace('<scriptTask id="say"', '<startEvent id="start"/><sequenceFlow id="f" sourceRef="start" targetRef="say"/><task id="in-queue" /><scriptTask id="say"'), 'w'), null);
 });
 
+test('coda:source names the working copy directory a script step runs in, on script steps only', async () => {
+  const step = attrs => workflow(`<startEvent id="start" /><sequenceFlow id="f" sourceRef="start" targetRef="say" />
+    <scriptTask id="say" scriptFormat="bash"${attrs}><script>echo</script></scriptTask>`);
+  for (const source of ['/Users/me/src/coda', '=inputs.worktree'])
+    assert.equal(await workflowProblem(step(` coda:checkout="false" coda:source="${source}"`), 'w'), null, source);
+  assert.match(await workflowProblem(workflow('<startEvent id="start" /><sequenceFlow id="f" sourceRef="start" targetRef="ask" /><userTask id="ask" coda:source="/tmp/x" />'), 'w'),
+    /^w\.bpmn 有无法识别的内容：unknown attribute <coda:source>/);
+});
+
 test('FEEL and durations are read as Coda reads them, and the schemas say the names the dialect has', () => {
   assert.equal(feelProblem('=review.verdict = "APPROVE"'), null);
   assert.equal(feelProblem('还在验证：{{verifying.what}}'), null);

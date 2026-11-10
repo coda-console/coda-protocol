@@ -26,7 +26,10 @@ const wrong = [
   [one().replace('<startEvent id="s"/>','<startEvent id="s" coda:scope="project"/>'), 's：coda:reportTo、coda:reportOn、coda:scope 只写在定时开始事件上（由会话发起的运行交给发起它的会话）'],
   [one(`<serviceTask id="n">${ext('<coda:script>echo</coda:script>')}</serviceTask>`), 'n：脚本步骤写成 <scriptTask scriptFormat="bash">，脚本放在 <script> 里；serviceTask 只用于 coda:action'],
   [one('<serviceTask id="n"/>'), 'n：serviceTask 是 Coda 自己做的一步，须写 coda:action；脚本步骤写成 scriptTask'],
-  [one('<serviceTask id="n" coda:action="workflow-kinds" coda:timeout="1"/>'), 'n：coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:checkout、coda:retry 等（要为一段占组用 hold-group）'],
+  [one('<serviceTask id="n" coda:action="workflow-kinds" coda:timeout="1"/>'), 'n：coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:source、coda:checkout、coda:retry 等（要为一段占组用 hold-group）'],
+  [one('<serviceTask id="n" coda:action="workflow-kinds" coda:source="/tmp/x"/>'), 'n：coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:source、coda:checkout、coda:retry 等（要为一段占组用 hold-group）'],
+  [one(job('n','','coda:source="=inputs.worktree"')), 'n：写了 coda:source 的步骤在它给的工作副本目录里就地跑，不检出提交，须同时写 coda:checkout="false"'],
+  [one(job('n','','coda:source="=inputs.worktree" coda:checkout="true"')), 'n：写了 coda:source 的步骤在它给的工作副本目录里就地跑，不检出提交，须同时写 coda:checkout="false"'],
   [one('<callActivity id="n" calledElement="UPPER"/>'), 'n：callActivity 的 calledElement 写要调用的能力或流程名（小写字母、数字和「-」，以字母开头）'],
   [one('<scriptTask id="n" scriptFormat="js"><script>echo</script></scriptTask>'), 'n：scriptTask 写 scriptFormat="bash"（脚本由 bash -e 执行）'],
   [one(job('n', ext('<coda:script>echo</coda:script>'))), 'n：脚本放在 scriptTask 的 <script> 里，不写 coda:script'],
@@ -164,6 +167,7 @@ test('graph traversal accepts cycles, object-owned ids, nested scopes, links, co
   assert.equal(await workflowProblem(one('<adHocSubProcess id="n">'+job('inner')+'</adHocSubProcess>')),null);
   assert.equal(await workflowProblem(one('<subProcess id="n" coda:optional="true" coda:expect="PT1H"><startEvent id="ss"/>'+flow('ss','inner')+job('inner')+flow('inner','end')+'<endEvent id="end"/></subProcess>')),null);
   assert.equal(await workflowProblem(one(job('n','<multiInstanceLoopCharacteristics coda:inputCollection="=inputs.items" coda:inputElement="item"><completionCondition>=item.done</completionCondition></multiInstanceLoopCharacteristics>'))),null);
+  assert.equal(await workflowProblem(one(job('n','','coda:checkout="false" coda:source="=inputs.worktree"'))),null);
   for (const cycle of ['R/PT5M','R/P1M','R/2026-01-01T00:00:00Z/P1D','=vars.plugin.every']) assert.equal(await workflowProblem(timed(cycle)),null);
   let nested = '<callActivity id="work" calledElement="work"/>';
   for (let i=5000;i>0;i--) nested=`<subProcess id="b${i}">${nested}</subProcess>`;
