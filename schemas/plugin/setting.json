@@ -23,7 +23,8 @@
         "format": {
           "description": "format 只认 coda-agent、coda-agent-match、duration、coda-repo、coda-directory、coda-model-provider、coda-model-url",
           "enum": ["coda-agent", "coda-agent-match", "duration", "coda-repo", "coda-directory", "coda-model-provider", "coda-model-url"]
-        }
+        },
+        "modelApis": {"$ref": "#/$defs/modelApis"}
       },
       "required": ["type"],
       "allOf": [
@@ -47,6 +48,14 @@
             "properties": {"format": {"const": "coda-model-url"}},
             "required": ["format"]
           }
+        },
+        {
+          "if": {"required": ["modelApis"]},
+          "then": {
+            "description": "modelApis 只写在 coda-model-provider 上",
+            "properties": {"format": {"const": "coda-model-provider"}},
+            "required": ["format"]
+          }
         }
       ]
     },
@@ -60,6 +69,13 @@
       "description": "modelApi 是同组的一个文本（不是密文）的名字",
       "type": "string",
       "x-ref": {"pointer": "2", "match": {"properties": {"type": {"const": "string"}, "writeOnly": {"const": false}}, "required": ["type"]}}
+    },
+    "modelApis": {
+      "description": "modelApis 是 1–10 个接口名，取 openai-completions、openai-responses、anthropic-messages、openai-speech；不写时使用方只列对话类接口（openai-completions、openai-responses、anthropic-messages），要语音合成服务须写 [\"openai-speech\"]",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {"enum": ["openai-completions", "openai-responses", "anthropic-messages", "openai-speech"]}
     },
     "setting": {
       "description": "插件的一项设置",
@@ -131,13 +147,7 @@
       "properties": {
         "type": {"const": "string"},
         "format": {"const": "coda-model-provider"},
-        "modelApis": {
-          "description": "modelApis 是 1–10 个接口名，取 openai-completions、openai-responses、anthropic-messages",
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 10,
-          "items": {"enum": ["openai-completions", "openai-responses", "anthropic-messages"]}
-        }
+        "modelApis": {"$ref": "#/$defs/modelApis"}
       },
       "required": ["type", "format"],
       "additionalProperties": false

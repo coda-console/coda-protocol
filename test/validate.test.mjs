@@ -175,6 +175,30 @@ test('x-ref: a name of something elsewhere in the manifest, of the kind asked, b
   assert.match(checked({ contributes: { extensions: { 'codex/accounts': { command: 'x' } } } }), /extensionDependencies 里的一个/);
 });
 
+test('a model provider may speak the speech interface', () => {
+  const provider = api => ({ contributes: { modelProviders: [{ id: 'p', title: 'P', api, url: 'https://p' }] } });
+  assert.equal(checked(provider('openai-speech')), null);
+  assert.match(checked(provider('openai-chat')), /^contributes\.modelProviders\[0\]\.api：/);
+});
+
+test('a single coda-model-provider value may name the interfaces it takes', () => {
+  const setting = modelApis => ({ contributes: { configuration: { properties: { 'kit.speech': { type: 'string', format: 'coda-model-provider', modelApis } } } } });
+  assert.equal(checked(setting(['openai-speech'])), null);
+  assert.equal(checked(setting(['openai-completions', 'openai-speech'])), null);
+  assert.match(checked(setting([])), /^contributes\.configuration\.properties「kit\.speech」\.modelApis：/);
+  const table = { type: 'object', additionalProperties: { type: 'string', format: 'coda-model-provider', modelApis: ['openai-speech'] } };
+  const row = { type: 'object', additionalProperties: { type: 'object', properties: { service: { type: 'string', format: 'coda-model-provider', modelApis: ['openai-speech'] } }, required: ['service'] } };
+  for (const value of [table, row]) assert.equal(checked({ contributes: { configuration: { properties: { 'kit.table': value } } } }), null);
+});
+
+test('modelApis is only for coda-model-provider values', () => {
+  const setting = property => ({ contributes: { configuration: { properties: { 'kit.speech': property } } } });
+  for (const property of [
+    { type: 'string', modelApis: ['openai-speech'] },
+    { type: 'string', format: 'coda-model-url', modelApis: ['openai-speech'] },
+  ]) assert.match(checked(setting(property)), /modelApis 只写在 coda-model-provider 上/);
+});
+
 test('x-placeholders: what a text may name, its own settings among them as asked', () => {
   const env = value => ({ contributes: { configuration: settings, environment: { KIT: value } } });
   for (const value of ['${config:kit.size}', '${CODA_PLUGIN_PATH}/bin', 'plain $HOME']) assert.equal(checked(env(value)), null, value);
