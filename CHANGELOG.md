@@ -2,6 +2,10 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.7.0 — 2026-11-10
+
+- 插件提供的模型服务的接口（`contributes.modelProviders` 的 `api`，以及设置的 `modelApis` 可列的接口名）加 `openai-speech`：OpenAI 语音合成接口（`POST /v1/audio/speech`）。只加接口名，字段与语义不变。
+
 ## 5.6.0 — 2026-11-10
 
 - 流程种类 `develop`（开发流程）：把一项改动从开工做到合进默认分支，结果交回发起它的会话；任何提交都能跑，不算部署类。设置选项的 `workflowKind` 也接受它。
