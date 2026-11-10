@@ -1,7 +1,7 @@
 // The checker against manifests of every kind of mistake, one at a time: each is said where it is, in what the schema says
 // there; its five keywords, each as it means the same thing wherever it is written; and an extension point's own schema.
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
@@ -28,6 +28,16 @@ test('a view may say how it is framed: document or canvas, or nothing to keep th
     assert.equal(checked({ contributes: { views: [frame === undefined ? view : { ...view, frame }] } }), null);
   for (const frame of ['page', 'side', 'Document', '', null, true])
     assert.match(checked({ contributes: { views: [{ ...view, frame }] } }), /^contributes\.views\[0\]\.frame：/);
+});
+
+test('a view may provide the part types a session accepts, the same words as status.accepts', () => {
+  const view = { id: 'say', title: '合成语音', entry: 'say.html' };
+  assert.equal(checked({ contributes: { views: [{ ...view, provides: ['audio'] }] } }), null);
+  for (const provides of [[], ['audio', 'audio'], ['image'], 'audio', null])
+    assert.match(checked({ contributes: { views: [{ ...view, provides }] } }), /^contributes\.views\[0\]\.provides/);
+  const schema = file => JSON.parse(readFileSync(new URL(`../schemas/${file}`, import.meta.url), 'utf8'));
+  assert.deepEqual(schema('plugin/views.json').items.properties.provides.items.enum,
+    Object.keys(schema('protocol/v1/session.json').status.properties.accepts.properties));
 });
 
 test('a model service may speak the OpenAI speech API', () => {
