@@ -259,6 +259,12 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   for (const value of [{}, { head: '', participants }, { participants: [{ id: 'u1', name: '小王', kind: 'robot' }] },
     { participants: [{ id: 'bot', name: 'Coda', kind: 'bot', self: false }] }, { participants, state: 'gone' }])
     assert.equal(status(value), false, JSON.stringify(value));
+  assert.equal(status({ participants, activity: { participant: 'u1', text: '正在搜索代码' } }), true);
+  assert.equal(status({ participants, activity: { participant: 'u1', text: '字'.repeat(200) } }), true);
+  for (const activity of [null, [], {}, { participant: 'u1' }, { participant: '', text: '搜索' },
+    { participant: 'u1', text: '' }, { participant: 'u1', text: '字'.repeat(201) },
+    ...['\n', '\r', '\u2028', '\u2029'].flatMap(line => ['搜索'+line, `搜索${line}代码`].map(text => ({ participant: 'u1', text })))])
+    assert.equal(status({ participants, activity }), false, JSON.stringify(activity));
   // A participant's avatar is a picture in the provider's own streaming service, as a media part's file is.
   const pictured = avatar => ({ participants: [{ id: 'u1', name: '小王', kind: 'person', avatar }] });
   assert.equal(status(pictured({ service: 'media', path: 'avatar/u1/ab12' })), true);

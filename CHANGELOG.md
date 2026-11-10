@@ -2,6 +2,11 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.8.0 — 2026-11-10
+
+- `coda/session@1` 的 status 加可选的 `activity: { participant, text }`：参与者正在做什么，单行、至多 200 字符；停下时删掉，不是消息，不进 `read`，不推进 `head`。
+- 新增记录的远端入口（`schemas/protocol/v1/remote-caller.json`）：令牌只通往一条 `coda/session@1` 记录，支持绑定、`hello`、六个只读工具与白名单流程工单 `file_ticket`；调用以记录为 `parent`，结束结果按通知规则以 `self` `post` 回记录。旧 Agent 远端入口保留，随 grok-bot 0.4.0 退役。
+
 ## 5.7.0 — 2026-11-10
 
 - 插件提供的模型服务的接口（`contributes.modelProviders` 的 `api`，以及设置的 `modelApis` 可列的接口名）加 `openai-speech`：OpenAI 语音合成接口（`POST /v1/audio/speech`）。只加接口名，字段与语义不变。
