@@ -44,7 +44,17 @@
             "id": {"type": "string", "minLength": 1, "maxLength": 2048},
             "name": {"type": "string", "maxLength": 200},
             "kind": {"enum": ["person", "agent", "bot"]},
-            "self": {"const": true, "description": "这个 Provider 登录的账号，即 Coda 的 Bot"}
+            "self": {"const": true, "description": "这个 Provider 登录的账号，即 Coda 的 Bot"},
+            "avatar": {
+              "type": "object",
+              "description": "头像，可选：provider 插件登记的本机流式服务里的一张图，取法同媒体 part 的 path；读不到时观察方用名字代替",
+              "properties": {
+                "service": {"type": "string", "minLength": 1, "maxLength": 200},
+                "path": {"type": "string", "minLength": 1, "maxLength": 2048}
+              },
+              "required": ["service", "path"],
+              "additionalProperties": false
+            }
           },
           "required": ["id", "name", "kind"],
           "additionalProperties": false

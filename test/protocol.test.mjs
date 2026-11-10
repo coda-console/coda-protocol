@@ -259,6 +259,12 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   for (const value of [{}, { head: '', participants }, { participants: [{ id: 'u1', name: '小王', kind: 'robot' }] },
     { participants: [{ id: 'bot', name: 'Coda', kind: 'bot', self: false }] }, { participants, state: 'gone' }])
     assert.equal(status(value), false, JSON.stringify(value));
+  // A participant's avatar is a picture in the provider's own streaming service, as a media part's file is.
+  const pictured = avatar => ({ participants: [{ id: 'u1', name: '小王', kind: 'person', avatar }] });
+  assert.equal(status(pictured({ service: 'media', path: 'avatar/u1/ab12' })), true);
+  for (const avatar of [{}, { service: 'media' }, { path: 'avatar/u1' }, { service: '', path: 'a' }, { service: 'media', path: '' },
+    { service: 'media', path: 'a', url: 'https://x' }, 'https://x/a.jpg'])
+    assert.equal(status(pictured(avatar)), false, JSON.stringify(avatar));
   for (const accepts of [{}, { audio: {} }, { audio: { maxDuration: 60 } }, { audio: { maxDuration: 0.5 } }])
     assert.equal(status({ participants, accepts }), true, JSON.stringify(accepts));
   for (const accepts of [['audio'], { audio: true }, { audio: { maxDuration: 0 } }, { audio: { maxDuration: '60' } },

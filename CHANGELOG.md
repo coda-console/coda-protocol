@@ -2,6 +2,10 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.5.0 — 2026-11-10
+
+- `coda/session@1` 的参与者（`status.participants` 的每一项）加可选的 `avatar`：`{ service, path }`，头像图片在 provider 插件登记的本机流式服务里的路径，取法同媒体 part 的 `path`。不写或读不到时观察方用名字代替；头像换了 Provider 换一个 `path`，观察方按路径缓存（Coda #2393 之后的外部会话头像）。
+
 ## 5.4.0 — 2026-11-10
 
 - Agent 接入协议加通知 `_coda/unrecognized`（`schemas/agent/unrecognized.json`，登记在 `messages.json`）：入口把没适配的东西报给 Coda，参数 `{ sessionId, kind, name, lost, detail? }`。`kind` 为 `output`（上游 Agent 发来、入口没按登记处理的东西，含没送到 Coda 的用户可见文字）或 `tool`（模型能用、入口没登记的原生工具）；`name` 是至多 200 字的稳定标识，只含类型名、字段名与取值，不含用户内容；`lost` 表示用户本该看到的没显示出来，`tool` 一律 `false`；`detail` 至多 2000 字，只用于会话里的说明。Coda 对 `lost: true` 在会话里记一条说明（同一会话同一 `name` 一次），所有上报按 Agent ID、Agent 版本、`kind`、`name`、`lost` 计数，随后端遥测上报，不带 `detail`；缺必填、超长、`kind` 不认识的整条丢弃。
