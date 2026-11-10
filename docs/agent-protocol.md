@@ -427,6 +427,8 @@ Coda 封装的 Agent 会自己长出新能力：上游 Agent 升级、服务端�
 
 ## 远端入口
 
+本节是 Agent 会话的旧入口，随所有机器上的 grok-bot 0.4.0 卸载一起退役；新的外部会话用[记录的远端入口](protocol.md#记录的远端入口)。
+
 绑定码与转交请求的形状分别见 [remote-code.json](../schemas/agent/remote-code.json)、[remote.json](../schemas/agent/remote.json)。
 
 有的 Agent 不在这台机器上干活：它是别处的一个 Bot（比如 Grok Bot，在它自己的云电脑上），会话里的适配器只是它的代言。

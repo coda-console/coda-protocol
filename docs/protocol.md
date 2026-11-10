@@ -307,7 +307,11 @@ status：
 | `participants` | `[{ id, name, kind: "person"\|"agent"\|"bot", self?, avatar? }]`；`self: true` 是这个 Provider 登录的账号，即 Coda 的 Bot；`avatar` 见下 |
 | `state` | 可选，`active` 或 `unreachable` |
 | `reason` | 可选，状态说明 |
+| `activity` | 可选，`{ participant, text }`：参与者正在做什么 |
 | `accepts` | 可选，`post` 除文字以外还收哪些媒体 part，见下 |
+
+`activity.participant` 须是 `status.participants` 中某一项的 `id`；Provider 负责保证这个对应关系。`text` 是 1 到 200 个字符的单行文字（不含换行符），如「正在搜索代码」。
+像聊天软件的「正在输入」：Provider 不提供就不写，对方停下时删掉整个 `activity`。它不是消息，不进 `read`，不推进 `head`。
 
 `accepts` 是一个对象，键是媒体 part 的 `type`，值是这一类型的限制，没有限制就写 `{}`。本版本只有 `audio` 一个键，以后要收别的类型再加键：
 
@@ -446,6 +450,68 @@ status：
   "more": false
 }
 ```
+
+### 记录的远端入口
+
+外部会话里的一位参与者（如跑在别处的 Grok Bot）以这条 `coda/session@1` 记录的身份调 Coda。令牌只通往这条记录，不是设备凭据，不能进入其他接口。
+Coda 直接处理请求，不经 Agent 进程；调用信封的 `parent` 是 `{ kind: "coda/session@1", id: <记录 ID> }`，见[调用信封](#调用信封)。请求不能另指定调用方。
+形状见 [remote-caller.json](../schemas/protocol/v1/remote-caller.json)：顶层校验调用正文，`$defs` 给出绑定、各方法结果及错误；`date-parse` 格式同旧入口，按 `Date.parse` 能否读出时间校验。
+
+#### 绑定
+
+Provider 为自己 provide 的记录向 Coda 申请一次性绑定码，只能为自己的记录申请，且须实现 `coda/session@1`。插件侧的 API 由 Coda 定义。
+回 `{ code, expiresAt, addresses }`：码 10 分钟有效，`expiresAt` 是到期时间；`addresses` 同旧入口，是这台后端在 tailnet 里的入口（`http://<节点地址>:8080`），不在 tailnet 时为空。
+远端以 `POST /v1/remote-caller/bind`、正文 `{ code }` 换得 `{ token, record }`，`record` 是记录 ID。无需凭据，每分钟最多 30 次，码成功兑换后失效。
+同一条记录再绑定，新令牌取代旧的；幂等请求归记录，不随令牌更换重置。
+
+#### 调用
+
+`POST /v1/remote-caller`，头 `Authorization: Bearer <token>`，正文 `{ method, params }`，成功回 `{ result }`。调用正文至多 256 KiB；绑定正文同旧入口至多 4 KiB，`code` 为 1 到 128 个字符。
+`params` 是对象；只有 `hello` 可省略，等同 `{}`。
+
+| method | params | result |
+| --- | --- | --- |
+| `hello` | `{}` | `{ record, machine, tools, workflows }`：记录 ID、所在机器 ID、可用的只读工具名数组、工单白名单 |
+| `tool` | `{ name, arguments }` | 同名 MCP 工具的回答，原样放进 `result` |
+| `file_ticket` | `{ workflow, project?, inputs, requestId }` | `{ run, reused? }`；`run` 为 `{ kind: "workflow-runs", id }`，按运行主键复用时带 `reused: true` |
+
+`tool.name` 只收 `machines`、`machine_diagnostics`、`read_thread`、`read_tool_call`、`workflow_list`、`workflow_status`；`arguments` 是参数对象。
+参数与回答照 Coda 的同名 MCP 工具，见[搜索与 Agent 工具](https://github.com/coda-console/coda/blob/main/docs/peers.md#搜索与-agent-工具)和[流程文档](https://github.com/coda-console/coda/blob/main/docs/workflows.md)，这里不复制它们的 schema。
+`hello.tools` 只列本机可用的上述工具。查工单用 `workflow_status`，不另设方法。
+
+工单白名单是 `{ project, workflow }` 的列表，存在 Coda 侧、由用户给定；怎么配置由 Coda 定义，`hello.workflows` 返回这份列表，没有就返回 `[]`。
+`project` 是这台机器上登记的目录 ID，`workflow` 是流程名。`file_ticket` 省略 `project` 时，按 `workflow` 在白名单里找唯一一项；没有匹配就拒绝，多项匹配就要求填写 `project`。
+写了 `project` 时须与白名单的目录 ID 精确匹配。`inputs` 是流程输入对象，按流程自己的输入契约校验。
+Coda 以记录为 `parent`、`awaited: true` 发起流程；入口不额外出批准卡片，需要批准由流程决定。
+
+`requestId` 是 1 到 200 个字符的不透明字符串，按调用方记录区分。同一记录、同一 `requestId`、同一内容重发，返回首次受理的同一结果，不重复开运行；换内容则报冲突。
+内容按受理时确定的 `project`、`workflow` 和 `inputs` 比较；省略项目的重试沿用首次受理的项目。重试仍须通过记录有效性和当前白名单检查。
+不同 `requestId` 报同一问题，由流程的[运行主键](https://github.com/coda-console/coda/blob/main/docs/workflows.md#运行主键)复用未结束的运行，回原运行和 `reused: true`；不改原运行的调用方，不接管它的结果通知。
+
+#### 结果交付
+
+运行结束（成功或失败）时，照流程的[通知规则](https://github.com/coda-console/coda/blob/main/docs/workflows.md#通知)把结论交给调用方；取消不通知，第一版不推中途状态。
+调用方是 Coda 会话时，给它追加一条叫醒的消息；调用方是 `coda/session@1` 记录时，对这条记录调一次 `post`。这是同一条规则在两种会话上的交付。
+发送者照 `post` 的规定是 `self`，不冒充 Bot；输入的 `text` 是运行的结论：成功用结束事件的输出，没有声明输出时沿用流程通知的步骤输出；失败写失败的步骤和原因。
+`post` 信封的 `requestId` 由运行 ID 与轮次派生，同一运行每轮只发一次，交付重试使用同一个值；不按每次提工单的 `requestId` 各发一条。
+
+#### 拒绝
+
+HTTP 错误正文是 `{ error: { code, message } }`，`message` 是给人看的原因，`code` 用下划线命名：
+
+| HTTP | code | 原因 |
+| --- | --- | --- |
+| 400 | `invalid_input` | JSON、方法或参数不合契约；项目有歧义；流程输入不合法 |
+| 401 | `unauthorized` | 调用令牌缺失、无效或已被新令牌取代 |
+| 401 | `unauthorized` | 绑定码不存在、过期或已用过 |
+| 403 | `forbidden` | 工具不在六个允许的名字中，或流程不在记录的白名单中 |
+| 409 | `invalid_state` | 记录不存在、已删除，或它的 Provider 已不实现 `coda/session@1`；兑换绑定码时也检查 |
+| 409 | `request_conflict` | 同一记录的 `requestId` 用了不同内容 |
+| 413 | `invalid_input` | 正文超过对应入口的上限 |
+| 429 | `rate_limited` | 绑定超过每分钟 30 次 |
+| 503 | `unavailable` | 允许的工具暂不可用，或流程尚未受理就暂时无法发起 |
+
+不在允许列表的工具名回 403，其他正文校验错误回 400。工具自身的业务错误仍按 MCP 工具回答放在 `result` 里；已受理运行的失败经运行状态和结果交付报告，不改成 HTTP 错误。
 
 ## coda/environment@1
 

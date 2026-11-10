@@ -1,0 +1,336 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/protocol/v1/remote-caller.json",
+  "title": "记录的远端入口",
+  "description": "POST /v1/remote-caller 的正文；绑定、回答与错误见 $defs。记录归属、参与者、白名单、幂等与 HTTP 状态由 Coda 检查，见 docs/protocol.md「记录的远端入口」。",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "codeResult": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-parse",
+          "description": "绑定码到期时间，申请后 10 分钟"
+        },
+        "addresses": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "后端的 tailnet 入口；不在 tailnet 时为空"
+        }
+      },
+      "required": [
+        "code",
+        "expiresAt",
+        "addresses"
+      ],
+      "additionalProperties": false
+    },
+    "bindRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "bindResult": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "record": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "token",
+        "record"
+      ],
+      "additionalProperties": false
+    },
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/id"
+        },
+        "workflow": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "project",
+        "workflow"
+      ],
+      "additionalProperties": false
+    },
+    "helloResult": {
+      "type": "object",
+      "properties": {
+        "record": {
+          "$ref": "#/$defs/id"
+        },
+        "machine": {
+          "$ref": "#/$defs/id"
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "machines",
+              "machine_diagnostics",
+              "read_thread",
+              "read_tool_call",
+              "workflow_list",
+              "workflow_status"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "workflows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/workflow"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "record",
+        "machine",
+        "tools",
+        "workflows"
+      ],
+      "additionalProperties": false
+    },
+    "helloRequest": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "hello"
+        },
+        "params": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "additionalProperties": false
+    },
+    "toolRequest": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "tool"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "enum": [
+                "machines",
+                "machine_diagnostics",
+                "read_thread",
+                "read_tool_call",
+                "workflow_list",
+                "workflow_status"
+              ]
+            },
+            "arguments": {
+              "type": "object",
+              "description": "参数同 Coda 的同名 MCP 工具"
+            }
+          },
+          "required": [
+            "name",
+            "arguments"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "method",
+        "params"
+      ],
+      "additionalProperties": false
+    },
+    "ticketRequest": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "const": "file_ticket"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "workflow": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "project": {
+              "$ref": "#/$defs/id"
+            },
+            "inputs": {
+              "type": "object"
+            },
+            "requestId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "workflow",
+            "inputs",
+            "requestId"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "method",
+        "params"
+      ],
+      "additionalProperties": false
+    },
+    "ticketResult": {
+      "type": "object",
+      "properties": {
+        "run": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "workflow-runs"
+            },
+            "id": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "reused": {
+          "const": true
+        }
+      },
+      "required": [
+        "run"
+      ],
+      "additionalProperties": false
+    },
+    "toolResult": {
+      "description": "Coda 同名 MCP 工具的回答，不在本协议复制 schema"
+    },
+    "helloResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/$defs/helloResult"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "toolResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/$defs/toolResult"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "ticketResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "$ref": "#/$defs/ticketResult"
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "enum": [
+                "invalid_input",
+                "unauthorized",
+                "forbidden",
+                "invalid_state",
+                "request_conflict",
+                "rate_limited",
+                "unavailable"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/helloRequest"
+    },
+    {
+      "$ref": "#/$defs/toolRequest"
+    },
+    {
+      "$ref": "#/$defs/ticketRequest"
+    }
+  ]
+}
