@@ -43,6 +43,8 @@
       "description": "从仓库地址添加项目：本机已有就是它，没有就克隆；新项目没有 Tag 时带上运行所属项目的 Tag"},
     "tell-session": {"params": ["text", "key", "session"],
       "description": "告诉一个会话（不写就是运行所属的）一句话，像结果一样叫醒它的 Agent；同一个 key（或同样的话）只说一次，已归档就不说"},
+    "send-session": {"params": ["text", "key", "session"],
+      "description": "在一个会话（不写就是运行所属的）里提交一条普通消息，和用户发的一样开始一轮；同一个 key 只发一次；已归档就不发"},
     "session-state": {"params": ["session"],
       "description": "一个会话（不写就是运行所属的）现在的样子：它或它的根会话是否已归档"}
   }

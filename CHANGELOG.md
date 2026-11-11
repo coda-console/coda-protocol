@@ -2,6 +2,11 @@
 
 按 semver。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.11.0 — 2026-11-11
+
+- Agent 的额度不足标记（`failure.json` 的 `kind: quota_exhausted`）加可选的 `resetAt`：上游给出的额度预计重置时间，UTC ISO 8601 字符串，以 `Z` 结尾，可带 1 到 9 位小数秒；没有确切时间时省略。校验拒绝非法格式；这是兼容扩展，旧发送端可不写、旧接收端可忽略，`service_unavailable` 的约束与语义不变。
+- 流程动作加 `send-session`（参数 `text`、`key`、`session`）：在指定会话（默认运行所属的）里提交普通消息，和用户发的一样开始一轮，供额度重置后发送「继续」；同一个 key 只发一次，已归档就不发。
+
 ## 5.10.0 — 2026-11-10
 
 - 视图（`contributes.views` 的每项）加可选的 `provides`：作为附件来源时能交回的 part 类型，与 `coda/session@1` status 的 `accepts` 的键同一套，现在只有 `audio`。写了的视图出现在外部会话输入框的「+」里，只列会话 accepts 里有的类型；交回的方式由 Coda 客户端的视图桥定（Coda #2398）。
