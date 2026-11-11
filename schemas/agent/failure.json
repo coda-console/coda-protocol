@@ -47,5 +47,16 @@
       "input"
     ]
   },
-  "$comment": "quota_exhausted 不检查 input 或 retryAfterMs；原 agentFailure 对额度不足只检查 kind。"
+  "else": {
+    "type": "object",
+    "properties": {
+      "resetAt": {
+        "type": "string",
+        "format": "date-parse",
+        "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d{1,9})?Z$(?![\\s\\S])",
+        "description": "resetAt 须为 UTC ISO 8601 时间字符串（以 Z 结尾），表示上游给出的额度预计重置时间；没有确切时间时不写"
+      }
+    }
+  },
+  "$comment": "quota_exhausted 不检查 input 或 retryAfterMs；service_unavailable 不检查 resetAt。"
 }

@@ -155,6 +155,22 @@ test('failure categories match agentFailure, including quota fields that are del
   for (const value of [{ kind: 'quota_exhausted' }, { kind: 'quota_exhausted', input: {}, retryAfterMs: -1 }, { kind: 'service_unavailable', input: 'accepted' }]) assert.equal(check(value), null);
 });
 
+test('quota resetAt is optional and requires a UTC ISO 8601 timestamp', () => {
+  const check = resetAt => agentValueProblem('failure.json', { kind: 'quota_exhausted', resetAt }, '值');
+  for (const resetAt of ['2026-11-11T19:00:00Z', '2026-11-11T19:00:00.000Z', '2026-11-11T19:00:00.123456789Z'])
+    assert.equal(check(resetAt), null);
+  for (const resetAt of [null, 1, true, [], {}, '', 'not a time', '2026-11-11', 'November 11, 2026',
+    '2026-11-11T19:00:00', '2026-11-11T19:00:00+08:00', '2026-11-11T19:00:00+00:00',
+    '2026-13-11T19:00:00Z', '2026-11-32T19:00:00Z', '2026-11-11T24:00:00Z',
+    '2026-11-11T19:60:00Z', '2026-11-11T19:00:60Z', '2026-11-11T19:00:00.1234567890Z',
+    '2026-11-11T19:00:00Z\n'])
+    assert.equal(check(resetAt), '值.resetAt：resetAt 须为 UTC ISO 8601 时间字符串（以 Z 结尾），表示上游给出的额度预计重置时间；没有确切时间时不写');
+  assert.equal(agentValueProblem('failure.json', { kind: 'quota_exhausted' }), null);
+  // This extension does not constrain unknown fields on service failures.
+  for (const input of ['accepted', 'not_accepted'])
+    assert.equal(agentValueProblem('failure.json', { kind: 'service_unavailable', input, resetAt: 'unknown' }), null);
+});
+
 test('review accepts unknown risks but exposes the known risk schema for host projection', () => {
   const check = value => valueProblem('review.json', value);
   for (const value of [null, [], true, 1]) assert.equal(check(value), '值：审核须为对象');
