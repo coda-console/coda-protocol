@@ -96,6 +96,19 @@ test('expire-tool-details accepts olderThan and rejects other parameter names; c
   assert.equal(await workflowProblem(task('cold-store', '<coda:param name="anyAfter" value="P7D" /><coda:param name="archivedAfter" value="P1D" />'), 'w'), null);
 });
 
+test('send-session accepts text, key and an optional session, like tell-session', async () => {
+  for (const action of ['send-session', 'tell-session']) {
+    const task = params => workflow(`<startEvent id="start" />
+      <sequenceFlow id="f" sourceRef="start" targetRef="send" />
+      <serviceTask id="send" coda:action="${action}"><extensionElements>${params}</extensionElements></serviceTask>`);
+    const params = '<coda:param name="text" value="继续" /><coda:param name="key" value="quota-resume" />';
+    assert.equal(await workflowProblem(task(params), 'w'), null);
+    assert.equal(await workflowProblem(task(`${params}<coda:param name="session" value="s1" />`), 'w'), null);
+    assert.equal(await workflowProblem(task(`${params}<coda:param name="unknown" value="x" />`), 'w'),
+      `send：coda:action ${action} 只接受参数 text、key、session`);
+  }
+});
+
 test('the names workflows share are the dialect\'s: the kinds, those that deploy among them, and the events Coda sends', () => {
   assert.deepEqual(WORKFLOW_KINDS, ['deploy', 'preview', 'release', 'check', 'premerge', 'prebuild', 'develop']);
   assert.ok(DEPLOYING_KINDS.every(kind => WORKFLOW_KINDS.includes(kind)));
