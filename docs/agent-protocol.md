@@ -1,6 +1,6 @@
 # Agent 接入协议
 
-Coda 用 [ACP](https://agentclientprotocol.com)（Agent Client Protocol）接 Agent，要求 Agent 接受[会话指令](#会话指令)（ACP 的 `systemPrompt`），
+Coda 用 [ACP](https://agentclientprotocol.com)（Agent Client Protocol）接 Agent，把[会话指令](#会话指令)交给 Agent（ACP 的 `systemPrompt`；不收它的由 Coda 在第一轮送入），
 可选支持[插话](#插话)（`_session/steering`），另收 Agent 活动报告（`_coda/wait`）、入口[没适配的东西](#没适配的东西)（`_coda/unrecognized`）、[执行失败事实](#执行失败)（ACP 错误数据里的 `_meta.coda.failure`）和[工具调用的审核](#工具调用的审核)（`_meta.coda.review`）。本文是这份协议的唯一正文，写给要让一个 Agent（比如 Cursor 的）接入 Coda 的人：照它实现，
 Coda 就知道这个 Agent 在一轮之外还在做什么，如实显示、不回收它的进程，把它处理这些东西时的输出、审批和提问放进正确的一轮，
 并在这次调用结清时把结果只交回一次。产品上这些规则的来由见会话行为契约（Coda 的 docs/session-contracts.md）与完成唤醒契约（Coda 的 docs/subagent-design.md「完成唤醒契约」）。
@@ -126,7 +126,7 @@ ACP 只允许在一轮（`session/prompt`）进行时交互。Agent 在两轮之
 
 Coda 给每个会话一份指令：回复怎样在 Mac 与 iPhone 上显示、默认回复语言，再接目录启用的插件说明（插件（Coda 的 docs/plugins.md）的 `contributes.instructions`），
 正文在 `backend/src/components/session-config/client-instructions.mjs`。它走 ACP 的 [`systemPrompt`](https://agentclientprotocol.com/protocol/draft/session-setup#system-prompt-unstable)（unstable），
-**接入 Coda 的 Agent 必须支持**：
+有原生入口的 Agent 声明并接收它；没有的不必声明，由 Coda 自己送入（见本节最后一条）：
 
 - **声明**：`initialize` 结果的 `agentCapabilities.sessionCapabilities.systemPrompt: {}`。Coda 只用 `append` 模式，不需要声明 `mode.override`。
 - **传入**：`session/new` 与 `session/load` 都带同一份 `{"mode": "append", "content": [{"type": "text", "text": …}]}`，只有一个文本块。
@@ -135,7 +135,7 @@ Coda 给每个会话一份指令：回复怎样在 Mac 与 iPhone 上显示、�
   没有原生入口的，由插件在这个原生会话**第一次** `session/prompt` 时把指令作为单独、明确分隔的一段放在用户输入前面一起送入，之后不再送（第一轮是斜杠命令时顺延到下一轮，免得命令不再被认出）；
   `session/load` 恢复的会话已经送过，不再送。Coda 显示与保存的用户原文不变。首条消息里的指令分量不如系统提示词，这是没有原生入口时的近似。
 - **失败**：应用不了（不认识的模式、内容超出上限）时 `session/new`、`session/load` 回错误，不建立会话（ACP 建议 -32602）。
-- 没声明的 Agent，Coda 照 ACP 的规矩不发 `systemPrompt`，会话照常打开，只是没有 Coda 的指令；契约检查判它不合格。
+- **没声明的 Agent**：Coda 照 ACP 的规矩不发 `systemPrompt`，由 Coda 自己在这个原生会话**第一次** `session/prompt` 时把指令作为单独的一个文本块放在用户输入前面一起送入，之后不再送。这一块以 `<coda-session-instructions>` 起、`</coda-session-instructions>` 止，开头写明它来自 Coda、不是用户消息的一部分。第一轮是斜杠命令时顺延到下一轮，免得命令不再被认出；`session/load` 恢复的会话已经送过，不再送。Coda 显示与保存的用户原文不变；Agent 拿这一轮的开头起的标题，Coda 不采用。首条消息里的指令分量不如系统提示词，这是没有原生入口时的近似。插件不用为此写代码。
 
 Coda 的 MCP 服务器只提供工具，不带 `instructions`。
 
