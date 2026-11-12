@@ -146,7 +146,7 @@ agentValueProblem('review.json', review, '工具的审核');
 
 Coda 与检查包都钉一个确切版本。对第三方的兼容承诺只覆盖**稳定面**：第三方实际在用的清单键和页面接口，定义在随 npm 包发布的 [`stable/manifest.json`](stable/manifest.json) 与 [`stable/view.json`](stable/view.json)。稳定面只增不减；要改变或删除承诺，先标弃用，保留过渡时间，不能直接移除定义或破坏现有用法。
 
-其余都是**内部面**，不承诺兼容，删改不为此升主版本。包括未列入稳定面的清单键、扩展点、模块的 `coda` 对象、`CODA_*` 环境变量、Agent 接入协议、协议定义与流程方言，以及 `coda-view://service/…`。新增可选字段、新类型、放宽限制升次版本；此次新增稳定面定义亦升次版本。协议名里的版本（如 `coda/run@1`）与 npm 包版本、schema 的 `$id` 独立。
+其余都是**内部面**，不承诺兼容，删改升次版本。包括未列入稳定面的清单键、扩展点、模块的 `coda` 对象、`CODA_*` 环境变量、Agent 接入协议、协议定义与流程方言，以及 `coda-view://service/…`。新增可选字段、新类型、放宽限制升次版本。主版本只留给稳定面的不兼容改动；按稳定面只增不减的规矩，这不该发生，真要发生须先标弃用、留过渡时间。协议名里的版本（如 `coda/run@1`）与 npm 包版本、schema 的 `$id` 独立。
 
 两份数据各有从 1 起的整数 `revision`。每项清单以 `path` 标识；`.` 分隔固定键，`[]` 表示数组项，`*` 表示插件自行命名的键。例如 `contributes.configuration.properties.*.additionalProperties.properties.*.format`。`values` 是承诺接受的取值，而非完整枚举。页面文件的成员、事件、根类名、CSS 变量分别列出；`open.targets` 只承诺 `{ view, args }`，`toolbar.fields/kinds` 只承诺列出的字段和种类。
 
@@ -154,9 +154,15 @@ Coda 与检查包都钉一个确切版本。对第三方的兼容承诺只覆盖
 
 - `scripts/stable-grows.mjs <基线>`：两份数据的旧条目及其取值必须全部保留，有新增时对应文件的 revision 必须增大，不能倒退。基线可为 git 提交、解包目录或 `npm:latest`。PR 和目标分支比较，发布前下载并解包 npm latest 比较；基线还没有 stable 文件时通过。
 - `test/stable.test.mjs`：53 条路径仍在 schema 中可达，承诺的取值仍被接受。使用固定样本选择条件分支，支持 `$ref`、`allOf`、`anyOf`、`if/then/else`、`not`、`properties`、`items`、`additionalProperties` 及布尔 schema；未知写法失败，不推测其含义。`agents`、`commands`、`skills` 从各自的业务 schema 起步。
-- `test/third-party.test.mjs`：两版 pi、一版 resource-manager 原文与 company 合成样本，分别跑整份清单和每个贡献键的校验，防止样本用到的约束被收紧。不检查磁盘文件与页面桥行为；页面接口在 Coda 一侧的落实检查另行接入。
+- `test/third-party.test.mjs`：两版 pi、一版 resource-manager 原文与 company 合成样本，分别跑整份清单和每个贡献键的校验，防止样本用到的约束被收紧。不检查磁盘文件与页面桥行为。这个仓库只守页面接口清单只增不减；页面接口的实现在 Coda 的客户端里，这里不核对。
 
-增加稳定面一项时，先补 schema 或页面实现，再把路径、取值或页面条目加进对应 JSON；每加一项，该文件 revision 加一。补充能覆盖新路径和条件分支的测试样本，运行三道检查，并更新次版本与 CHANGELOG。改协议在这里开 PR，说明承诺如何变化；发布后 Coda 与检查包各自升依赖。
+增加稳定面一项时，先补 schema 或页面实现，再把路径、取值或页面条目加进对应 JSON；每加一项，该文件 revision 加一。补充能覆盖新路径和条件分支的测试样本，运行三道检查，并更新次版本与 CHANGELOG。
+
+协议自己的大版本写在协议名里（`coda/run@1`）；同一大版本只加可选字段和新操作，改含义或删东西升大版本，新旧可并存。
+
+3.0.0 删除了 `executor` 与 `execution`，并把执行请求并入 `coda/executor@1` 的 `execute`；这是不兼容变更，旧代码须改用 `@coda-console/protocol/protocol` 与 `coda/run@1`。
+
+改协议就在这里开 PR，说明写清动了哪个类型、旧插件受不受影响；发布后 Coda 与检查包各自升依赖。
 
 ## 发布
 
