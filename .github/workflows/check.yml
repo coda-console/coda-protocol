@@ -14,6 +14,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Stable surface grows from the PR target
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch origin "$BASE_REF" --depth=1
+          node scripts/stable-grows.mjs FETCH_HEAD
       - run: npm ci
       - run: npm test
       - name: Inspect the npm archive

@@ -1,0 +1,36 @@
+{
+  "name": "company",
+  "displayName": "Example",
+  "description": "Example",
+  "version": "0.0.0",
+  "categories": [
+    "Example"
+  ],
+  "icon": {
+    "symbol": "building",
+    "color": "blue"
+  },
+  "contributes": {
+    "configuration": {
+      "title": "Example",
+      "properties": {
+        "company.example": {
+          "type": "string",
+          "description": "Example"
+        }
+      }
+    },
+    "skills": [
+      "skills/example"
+    ],
+    "commands": [
+      {
+        "name": "example",
+        "command": "echo example"
+      }
+    ],
+    "environment": {
+      "EXAMPLE": "${config:company.example}:${CODA_PLUGIN_PATH}"
+    }
+  }
+}

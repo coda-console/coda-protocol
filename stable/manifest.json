@@ -1,0 +1,171 @@
+{
+  "revision": 1,
+  "entries": [
+    {
+      "path": "name"
+    },
+    {
+      "path": "id"
+    },
+    {
+      "path": "displayName"
+    },
+    {
+      "path": "description"
+    },
+    {
+      "path": "version"
+    },
+    {
+      "path": "categories"
+    },
+    {
+      "path": "icon.symbol"
+    },
+    {
+      "path": "icon.color"
+    },
+    {
+      "path": "main"
+    },
+    {
+      "path": "contributes.agents[].id"
+    },
+    {
+      "path": "contributes.agents[].displayName"
+    },
+    {
+      "path": "contributes.agents[].command"
+    },
+    {
+      "path": "contributes.agents[].icon.light"
+    },
+    {
+      "path": "contributes.agents[].modes.title"
+    },
+    {
+      "path": "contributes.agents[].modes.note"
+    },
+    {
+      "path": "contributes.agents[].skillsDir"
+    },
+    {
+      "path": "contributes.agents[].configFiles[]"
+    },
+    {
+      "path": "contributes.agents[].setupHint"
+    },
+    {
+      "path": "contributes.agents[].modes.unset"
+    },
+    {
+      "path": "contributes.agents[].modes.auto"
+    },
+    {
+      "path": "contributes.agents[].modes.full"
+    },
+    {
+      "path": "contributes.agents[].icon.dark"
+    },
+    {
+      "path": "contributes.agents[].icon.template"
+    },
+    {
+      "path": "contributes.configuration.title"
+    },
+    {
+      "path": "contributes.configuration.properties.*"
+    },
+    {
+      "path": "contributes.configuration.properties.*.type"
+    },
+    {
+      "path": "contributes.configuration.properties.*.title"
+    },
+    {
+      "path": "contributes.configuration.properties.*.description"
+    },
+    {
+      "path": "contributes.configuration.properties.*.order"
+    },
+    {
+      "path": "contributes.configuration.properties.*.default"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.type"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.type"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.title"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.description"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.order"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.default"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.enum"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.minimum"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.format",
+      "values": [
+        "coda-model-provider",
+        "coda-model-url"
+      ]
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.writeOnly"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.modelKey"
+    },
+    {
+      "path": "contributes.configuration.properties.*.additionalProperties.properties.*.modelApi"
+    },
+    {
+      "path": "contributes.setup.command"
+    },
+    {
+      "path": "contributes.skills[]"
+    },
+    {
+      "path": "contributes.commands[].name"
+    },
+    {
+      "path": "contributes.commands[].command"
+    },
+    {
+      "path": "contributes.environment.*"
+    },
+    {
+      "path": "contributes.views[].id"
+    },
+    {
+      "path": "contributes.views[].title"
+    },
+    {
+      "path": "contributes.views[].entry"
+    },
+    {
+      "path": "contributes.views[].in[]",
+      "values": [
+        "side"
+      ]
+    },
+    {
+      "path": "contributes.views[].icon"
+    }
+  ]
+}
