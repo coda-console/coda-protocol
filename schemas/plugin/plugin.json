@@ -7,6 +7,8 @@
   "properties": {
     "id": {"$ref": "common.json#/$defs/id", "description": "插件 ID：小写字母、数字和「-」，以字母开头，至多 40 个字符；不写就用 name"},
     "name": {"type": "string"},
+    "displayName": {"type": "string"},
+    "version": {"type": "string"},
     "description": {"description": "一句话简介：插件列表里只显示一行，20 字以内为宜；更多的说明写在插件目录的 README.md，插件页里显示", "type": "string"},
     "icon": {
       "description": "插件的图标：插件目录里的 PDF（light 必填，dark 与 template 可选，同 Agent 的图标），或 SF Symbols 的符号画在系统色的底上（symbol 与 color）；客户端裁成圆角方块。不写时，只带一个 Agent 的插件用那个 Agent 的图标，其余用分类的默认图标",

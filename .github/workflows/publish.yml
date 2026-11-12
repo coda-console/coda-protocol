@@ -22,6 +22,8 @@ jobs:
           node-version: 24
       - run: npm ci
       - run: npm test
+      - name: Stable surface grows from npm latest
+        run: node scripts/stable-grows.mjs npm:latest
       - name: Inspect the npm archive
         run: node scripts/publish-npm.mjs --dry-run
   publish:

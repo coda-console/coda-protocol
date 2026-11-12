@@ -1,0 +1,100 @@
+{
+  "revision": 1,
+  "entries": [
+    {
+      "path": "window.coda.platform"
+    },
+    {
+      "path": "window.coda.args"
+    },
+    {
+      "path": "window.coda.getState"
+    },
+    {
+      "path": "window.coda.setState"
+    },
+    {
+      "path": "window.coda.copy"
+    },
+    {
+      "path": "window.coda.open",
+      "targets": [
+        {
+          "view": true,
+          "args": true
+        }
+      ]
+    },
+    {
+      "path": "window.coda.close"
+    },
+    {
+      "path": "window.coda.back"
+    },
+    {
+      "path": "window.coda.toolbar",
+      "fields": [
+        "id",
+        "label",
+        "icon",
+        "kind",
+        "on"
+      ],
+      "kinds": [
+        "button",
+        "toggle"
+      ]
+    },
+    {
+      "path": "window.coda.postMessage"
+    },
+    {
+      "path": "window.coda.on",
+      "events": [
+        "toolbar",
+        "visibility",
+        "back",
+        "theme",
+        "context"
+      ]
+    },
+    {
+      "path": "window",
+      "events": [
+        "message"
+      ]
+    },
+    {
+      "path": "root.classes",
+      "values": [
+        "coda-ios",
+        "coda-mac",
+        "coda-dark",
+        "coda-light"
+      ]
+    },
+    {
+      "path": "root.cssVariables",
+      "values": [
+        "--coda-accent",
+        "--coda-secondary",
+        "--coda-radius",
+        "--coda-selection",
+        "--coda-tertiary",
+        "--coda-background",
+        "--coda-font-size",
+        "--coda-card",
+        "--coda-orange",
+        "--coda-foreground",
+        "--coda-fill",
+        "--coda-separator",
+        "--coda-secondary-background",
+        "--coda-radius-card",
+        "--coda-outline",
+        "--coda-mono",
+        "--coda-hover",
+        "--coda-font"
+      ]
+    }
+  ]
+}
