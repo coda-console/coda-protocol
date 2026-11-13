@@ -155,14 +155,14 @@
         "options": {"type": "array", "maxItems": 12, "x-unique-by": ["id"], "description": "最多 12 个勾选项"}
       },
       "required": ["id", "name"],
-      "allOf": [{"description": "勾选项（coda:option）只能属于没有嵌套 choice 的外层 choice", "not": {"required": ["choices", "options"]}}]
+      "allOf": [{"description": "勾选项（coda:option、coda:optionList）只能属于没有嵌套 choice 的外层 choice", "not": {"required": ["choices", "options"]}}]
     },
     "NestedChoice": {
       "allOf": [{"$ref": "#/$defs/Choice"}],
       "properties": {
         "primary": {"const": false, "description": "只有最外层的选项能是主按钮"},
         "choices": {"maxItems": 0, "description": "按住出现的选项里不能再嵌套"},
-        "options": {"maxItems": 0, "description": "勾选项（coda:option）只能属于没有嵌套 choice 的外层 choice"}
+        "options": {"maxItems": 0, "description": "勾选项（coda:option、coda:optionList）只能属于没有嵌套 choice 的外层 choice"}
       }
     },
     "Option": {
@@ -175,6 +175,18 @@
         "default": {"type": "string", "anyOf": [{"enum": ["true", "false"]}, {"pattern": "^\\s*="}], "x-feel": true, "description": "default 须为 true、false 或表达式"}
       },
       "required": ["id", "name"]
+    },
+    "OptionList": {
+      "type": "object",
+      "properties": {
+        "value": {"type": "string", "pattern": "^\\s*=", "x-feel": true, "description": "coda:optionList 须用 value 写一个「=」开头的表达式（勾选项的列表）"}
+      },
+      "required": ["value"],
+      "description": "coda:optionList 须用 value 写一个「=」开头的表达式（勾选项的列表）"
+    },
+    "ChoiceOption": {
+      "not": {},
+      "description": "勾选项写 coda:option，一组读出来的勾选项写 coda:optionList"
     },
     "Process.children": {
       "type": "object",

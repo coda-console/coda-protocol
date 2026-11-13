@@ -2,6 +2,10 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.13.0 — 2026-11-13
+
+- 流程方言的答复加 `coda:optionList`：`value` 是表达式，任务打开时读出一组勾选项，在它写的位置展开，与 `coda:option` 按写的顺序排（moddle 里两者同属答复的 `options`，类型 `ChoiceOption`）。打开后的整组由新的 `workflow/options.json` 定义（`{ id, name, detail?, default? }`，最多 12 项，id 不重复），`optionsProblem` 检查它，`CODA_OPTIONS` 导出同一份 schema。只加写法，已有流程不变（Coda #2521 第 1 步）。
+
 ## 5.12.0 — 2026-11-13
 
 - 圈定第三方稳定面：随包发布 53 条清单路径及页面接口、外观清单，各从 revision 1 起；增加只增不减、schema 路径可达与第三方清单样本校验，PR 对目标分支、发布前对 npm latest 检查。补充清单的 displayName、version；稳定面只增不减，内部面删改不升主版本（coda#2463）。
