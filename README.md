@@ -140,7 +140,7 @@ agentValueProblem('review.json', review, '工具的审核');
 
 统一调用是 `{ record: {kind,id}, operation, input, requestId, parent: {kind,id}, awaited }`，回答恰为 `{ result }` 或 `{ run: {kind,id} }` 之一。同一 `requestId` 重发只做一次；慢操作返回运行引用，调用方 watch 运行记录取结果，没有推送或回写。
 
-旧 `executor`、`execution` 对象协议与 `@coda-console/protocol/executor` 在 3.0.0 删除；`contributes.executors` 不变，仍用于流程的执行环境 hook。
+旧 `executor`、`execution` 对象协议与 `@coda-console/protocol/executor` 在 3.0.0 删除；`contributes.executors` 在 5.16.0 删除。
 协议大版本、npm 包版本与插件清单 v2 独立演进；不提供旧格式兼容代码。
 
 ## 谁在用
