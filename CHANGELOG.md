@@ -6,6 +6,7 @@
 
 - 流程方言加挂点：流程可写多个 `coda:join`（`hook` 必填，`name`、`detail`、`default` 为 true/false、`order` 为整数，同一流程 hook 不重复），流程属性加 `coda:mergedOnly`（只运行已合并进默认分支的提交，由流程自己声明）。动作加 `hook-joiners`（参数 `hook`、`commit`），`run-workflows` 加参数 `hook`、`only`。只加写法，`coda:kind` 与 `coda:deploy` 不变（Coda #2521 第 2 步）。
 - 报错位置里 `coda:join` 以 hook 称呼。
+- `coda:mergedOnly` 只认 true、false：与字段的布尔、整数属性一样先按文字读、核对拼写后才换成布尔值，写错的读流程时拒绝，不会被当成 false 放开只跑已合并提交的限制。
 
 ## 5.13.0 — 2026-11-13
 

@@ -21,6 +21,9 @@ test('a workflow joins hooks with how it shows there, and says whether it runs o
     [['coda:Join', 'after-merge', '部署', '预览空间后端与 Coda β', 'false', '10'], ['coda:Join', 'check', undefined, undefined, undefined, undefined]]);
   for (const order of ['0', '-5', '999999']) assert.equal(await workflowProblem(process(`<coda:join hook="h" order="${order}" />`), 'w'), null, order);
   assert.equal((await readWorkflow(process('', ' coda:mergedOnly="false"'), 'w')).root.rootElements[0].mergedOnly, false);
+  // Spelled exactly: anything else would quietly read as false and run commits not merged.
+  for (const value of ['tru', 'TRUE', 'no', '1', '', '=inputs.merged'])
+    assert.equal(await workflowProblem(process('', ` coda:mergedOnly="${value}"`), 'w'), 'deploy：coda:mergedOnly 只能是 true 或 false', value);
 });
 
 test('what a join may not be is said: no hook, a hook not a name, the same hook twice, a default read in a run, an order not a number', async () => {
