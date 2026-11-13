@@ -10,7 +10,7 @@
       "name": "ProcessProperties",
       "isAbstract": true,
       "extends": ["bpmn:Process"],
-      "description": "流程本身：concurrency 并发、key 未结束运行的业务键、deploy 只跑默认分支的提交、title 运行在卡片上的名字（同 GitHub 的 run-name）、kind 种类（见 dialect.json 的 kinds）、dispatch 能否手动发起、inline Agent 用 workflow_run 发起时等它结束再回答、subagents 为 false 时会话 Agent 的原生子 Agent 不能发起、agents 生命周期流程跟随哪些 Agent 的会话（ID，逗号或空格分隔，不写是全部）、autoRun 事件（如 PR）来时会话与目录都没设「自动运行」的，按它决定起不起运行：true、false 或 =vars.<插件>.<设置>（不写为起）",
+      "description": "流程本身：concurrency 并发、key 未结束运行的业务键、deploy 只跑默认分支的提交、title 运行在卡片上的名字（同 GitHub 的 run-name）、kind 种类（见 dialect.json 的 kinds）、dispatch 能否手动发起、inline Agent 用 workflow_run 发起时等它结束再回答、subagents 为 false 时会话 Agent 的原生子 Agent 不能发起、agents 生命周期流程跟随哪些 Agent 的会话（ID，逗号或空格分隔，不写是全部）、autoRun 事件（如 PR）来时会话与目录都没设「自动运行」的，按它决定起不起运行：true、false 或 =vars.<插件>.<设置>（不写为起）、mergedOnly 只运行已合并进默认分支的提交（写了就按它，不写由 kind 推出）",
       "properties": [
         {"name": "concurrency", "isAttr": true, "type": "String"},
         {"name": "key", "isAttr": true, "type": "String"},
@@ -21,7 +21,7 @@
         {"name": "inline", "isAttr": true, "type": "Boolean"},
         {"name": "subagents", "isAttr": true, "type": "Boolean"},
         {"name": "agents", "isAttr": true, "type": "String"},
-        {"name": "autoRun", "isAttr": true, "type": "String"}
+        {"name": "autoRun", "isAttr": true, "type": "String"}, {"name": "mergedOnly", "isAttr": true, "type": "Boolean"}
       ]
     },
     {
@@ -117,6 +117,18 @@
         {"name": "completeLabel", "isAttr": true, "type": "String"},
         {"name": "rejectLabel", "isAttr": true, "type": "String"},
         {"name": "noteLabel", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "Join",
+      "superClass": ["Element"],
+      "description": "流程加入一个挂点：hook 是挂点名，宿主按它找到这个流程；name、detail 是它作为勾选项时的名字与说明，default 是否默认勾上，order 排序（小的在前，不写排最后，同序按流程名）",
+      "properties": [
+        {"name": "hook", "isAttr": true, "type": "String"},
+        {"name": "name", "isAttr": true, "type": "String"},
+        {"name": "detail", "isAttr": true, "type": "String"},
+        {"name": "default", "isAttr": true, "type": "String"},
+        {"name": "order", "isAttr": true, "type": "String"}
       ]
     },
     {

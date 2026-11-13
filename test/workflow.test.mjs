@@ -83,7 +83,7 @@ test('what the dialect does not have is said: not BPMN, an attribute or element 
   // And however many there are in one place.
   assert.match(await workflowProblem(workflow(`${'<task/>'.repeat(140_000)}<serviceTask id="wide" coda:action="nope" />`), 'w'), /^wide：coda:action 只能是 /);
   assert.equal(await workflowProblem(workflow('<serviceTask id="go" coda:action="run-workflows"><extensionElements><coda:param name="branch" value="main" /></extensionElements></serviceTask>'), 'w'),
-    'go：coda:action run-workflows 只接受参数 kind、commit、inputs');
+    'go：coda:action run-workflows 只接受参数 kind、hook、only、commit、inputs');
 });
 
 test('expire-tool-details accepts olderThan and rejects other parameter names; cold-store remains compatible', async () => {

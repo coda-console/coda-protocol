@@ -214,7 +214,8 @@ function valuesProblem(root) {
   for (const element of elements) {
     const type = codaType(element);
     if (type) {
-      const name = element.id ?? element.name, kind = type.name === 'Choice' && element.$parent?.$type === 'coda:Choice' ? 'NestedChoice' : type.name;
+      // What names the element where it is said: its id, a join's hook, or its own name.
+      const name = element.id ?? element.hook ?? element.name, kind = type.name === 'Choice' && element.$parent?.$type === 'coda:Choice' ? 'NestedChoice' : type.name;
       const problem = failed(check(kind), codaObject(element), `${owner(element)?.id} 的 coda:${lower(type.name)}${name ? ` ${name}` : ''}`, false, ['Field', 'Fields'].includes(kind));
       if (problem) return problem;
       continue;
