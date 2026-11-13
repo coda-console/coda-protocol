@@ -2,6 +2,12 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.14.0 — 2026-11-13
+
+- 流程方言加挂点：流程可写多个 `coda:join`（`hook` 必填，`name`、`detail`、`default` 为 true/false、`order` 为整数，同一流程 hook 不重复），流程属性加 `coda:mergedOnly`（只运行已合并进默认分支的提交，由流程自己声明）。动作加 `hook-joiners`（参数 `hook`、`commit`），`run-workflows` 加参数 `hook`、`only`。只加写法，`coda:kind` 与 `coda:deploy` 不变（Coda #2521 第 2 步）。
+- 报错位置里 `coda:join` 以 hook 称呼。
+- `coda:mergedOnly` 只认 true、false：与字段的布尔、整数属性一样先按文字读、核对拼写后才换成布尔值，写错的读流程时拒绝，不会被当成 false 放开只跑已合并提交的限制。
+
 ## 5.13.0 — 2026-11-13
 
 - 流程方言的答复加 `coda:optionList`：`value` 是表达式，任务打开时读出一组勾选项，在它写的位置展开，与 `coda:option` 按写的顺序排（moddle 里两者同属答复的 `options`，类型 `ChoiceOption`）。打开后的整组由新的 `workflow/options.json` 定义（`{ id, name, detail?, default? }`，最多 12 项，id 不重复），`optionsProblem` 检查它，`CODA_OPTIONS` 导出同一份 schema。只加写法，已有流程不变（Coda #2521 第 1 步）。

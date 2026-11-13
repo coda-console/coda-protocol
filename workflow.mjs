@@ -111,12 +111,15 @@ const SIZE_LIMIT = 1_000_000;
 // bpmn-moddle rewrites a descriptor as it takes it in (its names get their prefix), and whoever imports CODA_MODDLE may hand
 // it to one: what is read here is a copy taken as this loads, and each parse is given a copy of its own.
 const DESCRIPTOR = structuredClone(moddle);
-// moddle's Boolean/Integer coercion accepts `no` as false and `1.5` as 1. Keep field attributes as text until their
-// complete spelling is known; valid ones are restored to the descriptor's types before returning the parsed workflow.
-const FIELD_SCALARS = DESCRIPTOR.types.find(type => type.name === 'Field').properties.filter(p => ['Boolean', 'Integer'].includes(p.type));
+// moddle's Boolean/Integer coercion accepts `no` as false and `1.5` as 1. Keep these attributes as text until their
+// complete spelling is known; valid ones are restored to the descriptor's types before returning the parsed workflow,
+// and the schemas say no to the rest. A field's, and coda:mergedOnly: a misspelling there would quietly run unmerged
+// commits.
+const SCALARS = [['Field', 'coda:Field'], ['ProcessProperties', 'bpmn:Process', ['mergedOnly']]].map(([name, on, only]) => ({ name, on,
+  properties: DESCRIPTOR.types.find(type => type.name === name).properties.filter(p => ['Boolean', 'Integer'].includes(p.type) && (!only || only.includes(p.name))) }));
 const PARSER_DESCRIPTOR = structuredClone(DESCRIPTOR);
-for (const property of PARSER_DESCRIPTOR.types.find(type => type.name === 'Field').properties)
-  if (FIELD_SCALARS.some(p => p.name === property.name)) property.type = 'String';
+for (const { name, properties } of SCALARS) for (const property of PARSER_DESCRIPTOR.types.find(type => type.name === name).properties)
+  if (properties.some(p => p.name === property.name)) property.type = 'String';
 const children = element => Object.values(element).flatMap(v => (Array.isArray(v) ? v : [v])).filter(v => v?.$type && v.$parent === element);
 // Everything in the definition under `element`, depth first, by a stack of its own, pushed one at a time: a definition may
 // nest deeper than the call stack goes, and hold more in one place than a call takes arguments.
@@ -214,7 +217,8 @@ function valuesProblem(root) {
   for (const element of elements) {
     const type = codaType(element);
     if (type) {
-      const name = element.id ?? element.name, kind = type.name === 'Choice' && element.$parent?.$type === 'coda:Choice' ? 'NestedChoice' : type.name;
+      // What names the element where it is said: its id, a join's hook, or its own name.
+      const name = element.id ?? element.hook ?? element.name, kind = type.name === 'Choice' && element.$parent?.$type === 'coda:Choice' ? 'NestedChoice' : type.name;
       const problem = failed(check(kind), codaObject(element), `${owner(element)?.id} 的 coda:${lower(type.name)}${name ? ` ${name}` : ''}`, false, ['Field', 'Fields'].includes(kind));
       if (problem) return problem;
       continue;
@@ -257,10 +261,10 @@ export async function readWorkflow(source, file = 'workflow') {
   catch (e) { return { problem: `${file}.bpmn 不是有效的 BPMN 2.0：${e.message}` }; }
   const { rootElement: root, warnings } = parsed;
   if (warnings.length) return { problem: `${file}.bpmn 有无法识别的内容：${warnings.slice(0, 3).map(w => w.message).join('；')}` };
-  for (const field of all(root).filter(e => e.$type === 'coda:Field')) for (const { name, type } of FIELD_SCALARS) {
-    const value = field[name];
-    if (type === 'Boolean' && ['true', 'false'].includes(value)) field[name] = value === 'true';
-    if (type === 'Integer' && typeof value === 'string' && /^[+-]?\d+$/.test(value)) field[name] = Number(value);
+  for (const { on, properties } of SCALARS) for (const element of all(root).filter(e => e.$type === on)) for (const { name, type } of properties) {
+    const value = element[name];
+    if (type === 'Boolean' && ['true', 'false'].includes(value)) element[name] = value === 'true';
+    if (type === 'Integer' && typeof value === 'string' && /^[+-]?\d+$/.test(value)) element[name] = Number(value);
   }
   for (const task of all(root).filter(e => e.$type === 'bpmn:ServiceTask' && e.action !== undefined)) {
     if (!Object.hasOwn(CODA_ACTIONS, task.action)) return { problem: `${task.id}：coda:action 只能是 ${Object.keys(CODA_ACTIONS).join('、')}` };

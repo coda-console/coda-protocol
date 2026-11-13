@@ -14,6 +14,8 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 读取定义时原有的 Coda 结构规则已全部纳入协议。Coda 接入 1.8.0 后，`parseBpmn` 只需调用 `readWorkflow`，再把 `root` 编译成引擎、任务、调度和图所需的结构；运行时才能知道的表达式结果、动态字段引用、调度设置实际值及能力是否存在，仍由宿主在运行时检查。
 
+流程方言的 **挂点**是流程之间互相找到的方式：被调用的流程在自己的 extensionElements 里写 `<coda:join hook name? detail? default? order?/>` 加入一个挂点（`hook` 是小写字母开头的名字，一个流程每个挂点只加入一次），`name`、`detail` 是它作为勾选项时的名字与说明，`default` 是否默认勾上（只写 true 或 false：挂点的列表在任何运行之外读出），`order` 是整数，小的在前。宿主用动作 `hook-joiners` 列出一个挂点的加入者（勾选项形状，可直接给 `coda:optionList`），用 `run-workflows` 的 `hook` 调用它们，`only` 只调用勾中的几个。挂点名是普通字符串，传哪些参数、怎么选由声明它的宿主写在自己的说明里。流程属性 `coda:mergedOnly` 说它是否只运行已合并进默认分支的提交。
+
 流程方言的 **勾选项**写在答复（外层的 `coda:choice`）里：`coda:option` 是一项，`coda:optionList` 的 `value` 是一个表达式，任务打开时读出一组勾选项（列表或它的 JSON），在它写的位置展开，两者按写的顺序排。`<coda:options>` 不是它的写法（那个名字是答复自己的勾选项集合）。定义里每个 `coda:optionList` 算一项；打开后的整组由 `workflow/options.json` 定义：每项是 `{ id, name, detail?, default? }`（`default` 为布尔值，没有 `shown`），最多 12 项，id 不重复。`optionsProblem(options, where)` 检查一个答复打开后的整组（静态项已求值、各组已展开），合法时返回 `null`，否则返回「位置：说明」；表达式求值与展开仍由 Coda 完成。
 
 流程方言的 **卡片字段**由 `workflow/fields.json` 定义：七种字段各能写哪些属性、必填项、文字长度与单行限制、路径与网址、视图参数、输入框与密钥选项；`values.json` 的 `Field` 引用它，`Fields` 声明读出 JSON 字段列表的表达式，`UserTask.children` 限定最多 12 个静态字段、id 不重复，以及全部字段已知时答复的 `fields` 只能引用输入字段（含按住出现的答复）。
