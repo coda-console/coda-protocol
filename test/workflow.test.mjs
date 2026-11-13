@@ -109,6 +109,17 @@ test('send-session accepts text, key and an optional session, like tell-session'
   }
 });
 
+test('check-setting and apply-setting take a plugin setting\'s change; apply-setting also the approving task', async () => {
+  const task = (action, params) => workflow(`<startEvent id="start" />
+    <sequenceFlow id="f" sourceRef="start" targetRef="step" />
+    <serviceTask id="step" coda:action="${action}"><extensionElements>${params}</extensionElements></serviceTask>`);
+  const change = '<coda:param name="plugin" value="composer" /><coda:param name="setting" value="composer.templates" /><coda:param name="value" value="[]" /><coda:param name="project" value="" />';
+  assert.equal(await workflowProblem(task('check-setting', change), 'w'), null);
+  assert.equal(await workflowProblem(task('apply-setting', `${change}<coda:param name="approval" value="ask" />`), 'w'), null);
+  assert.equal(await workflowProblem(task('check-setting', `${change}<coda:param name="approval" value="ask" />`), 'w'),
+    'step：coda:action check-setting 只接受参数 plugin、setting、value、project');
+});
+
 test('the names workflows share are the dialect\'s: the kinds, those that deploy among them, and the events Coda sends', () => {
   assert.deepEqual(WORKFLOW_KINDS, ['deploy', 'preview', 'release', 'check', 'premerge', 'prebuild', 'develop']);
   assert.ok(DEPLOYING_KINDS.every(kind => WORKFLOW_KINDS.includes(kind)));

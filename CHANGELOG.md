@@ -2,6 +2,10 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.15.0 — 2026-11-13
+
+- 流程动作加 `check-setting`（参数 `plugin`、`setting`、`value`、`project`）与 `apply-setting`（另加 `approval`）：Agent 提议改一项插件设置，`check-setting` 按设置接口写入的同一套规则检查并给出卡片显示的改前改后（不给 `value` 时读出当前值），`apply-setting` 在用户于 `approval` 任务的卡片上按了主按钮、卡片最后一个 `code` 字段与改后的值逐字相同后写入，流程须来自已装的插件或默认分支。只加动作，已有流程不变（Coda 内置能力 change-setting）。
+
 ## 5.14.0 — 2026-11-13
 
 - 流程方言加挂点：流程可写多个 `coda:join`（`hook` 必填，`name`、`detail`、`default` 为 true/false、`order` 为整数，同一流程 hook 不重复），流程属性加 `coda:mergedOnly`（只运行已合并进默认分支的提交，由流程自己声明）。动作加 `hook-joiners`（参数 `hook`、`commit`），`run-workflows` 加参数 `hook`、`only`。只加写法，`coda:kind` 与 `coda:deploy` 不变（Coda #2521 第 2 步）。
