@@ -182,12 +182,19 @@
         {"name": "note", "isAttr": true, "type": "String"},
         {"name": "fields", "isAttr": true, "type": "String"},
         {"name": "choices", "type": "Choice", "isMany": true},
-        {"name": "options", "type": "Option", "isMany": true}
+        {"name": "options", "type": "ChoiceOption", "isMany": true}
       ]
     },
     {
-      "name": "Option",
+      "name": "ChoiceOption",
+      "isAbstract": true,
       "superClass": ["Element"],
+      "description": "答复里的勾选项：一个 coda:option，或一组由 coda:optionList 在任务打开时读出的勾选项，按写的顺序排",
+      "properties": []
+    },
+    {
+      "name": "Option",
+      "superClass": ["ChoiceOption"],
       "description": "一个答复上可以独立勾选的附加项：default（是否默认勾上）与 shown（是否给出）都在任务打开时读；没给出的总是 false",
       "properties": [
         {"name": "id", "isAttr": true, "type": "String"},
@@ -195,6 +202,14 @@
         {"name": "detail", "isAttr": true, "type": "String"},
         {"name": "shown", "isAttr": true, "type": "String"},
         {"name": "default", "isAttr": true, "type": "String"}
+      ]
+    },
+    {
+      "name": "OptionList",
+      "superClass": ["ChoiceOption"],
+      "description": "一组勾选项：value 是表达式，任务打开时读出勾选项的列表（或它的 JSON），在它所在的位置展开",
+      "properties": [
+        {"name": "value", "isAttr": true, "type": "String"}
       ]
     },
     {

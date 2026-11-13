@@ -22,6 +22,7 @@ import values from './workflow/values.json' with { type: 'json' };
 import actions from './workflow/actions.json' with { type: 'json' };
 import dialect from './workflow/dialect.json' with { type: 'json' };
 import fields from './workflow/fields.json' with { type: 'json' };
+import options from './workflow/options.json' with { type: 'json' };
 import { valueKeywords } from './workflow/keywords.mjs';
 import { structureChecker } from './workflow/structure.mjs';
 export { CODA_STRUCTURE } from './workflow/structure.mjs';
@@ -30,6 +31,7 @@ export const CODA_MODDLE = moddle;
 export const CODA_NAMESPACE = moddle.uri;
 export const CODA_VALUES = values;
 export const CODA_FIELDS = fields;
+export const CODA_OPTIONS = options;
 // Each action by name, with the parameters it takes (`coda:param`).
 export const CODA_ACTIONS = Object.fromEntries(Object.entries(actions.actions).map(([name, action]) => [name, action.params]));
 export const WORKFLOW_KINDS = Object.keys(dialect.kinds);
@@ -95,6 +97,7 @@ ajv.addKeyword({
 ajv.addKeyword({ keyword: 'x-duration', type: 'string', schemaType: 'boolean', compile: spec => value => !spec || isDuration(value) });
 ajv.addKeyword({ keyword: 'x-number', type: 'string', schemaType: 'boolean', compile: spec => value => !spec || Number.isFinite(Number(value)) });
 ajv.addSchema(fields);
+ajv.addSchema(options);
 ajv.addSchema(values);
 const structureProblem = structureChecker(ajv, { feelProblem, isExpression });
 const checks = new Map();
@@ -148,7 +151,7 @@ function said(error, at, attribute) {
   if (error.keyword === 'x-unique-by') return `${at}：${error.message}`;
   return `${at}：${description(error)}`;
 }
-const description = (error, object = {}) => (described(error, { schemas: [values, fields] }) ?? error.message)
+const description = (error, object = {}) => (described(error, { schemas: [values, fields, options] }) ?? error.message)
   .replace(/\{(\w+)\}/g, (whole, key) => Object.hasOwn(error.params, key) ? String(error.params[key])
     : object && Object.hasOwn(object, key) ? String(object[key]) : whole);
 // Required values and allowed attributes come from the same schema as validation; none of the field types is named here.
@@ -180,6 +183,22 @@ export function fieldsProblem(list, where = '任务') {
   }
   const validate = ajv.getSchema(`${values.$id}#/$defs/UserTask.children/properties/field`);
   return validate(list) ? null : `${where}：字段 id 重复：${validate.errors[0].message.slice('id 不能重复：'.length)}`;
+}
+// One answer's options as the task opens: the static ones resolved and each coda:optionList read and put where it is
+// written, in order. Each is an object of id, name and optionally detail and a boolean default; at most 12, ids unique.
+let optionsBound;
+export function optionsProblem(list, where = '答复') {
+  const { $id, $schema, $defs, items, 'x-unique-by': unique, ...shape } = options;
+  // The bound first, then each option, then uniqueness, so that what is said is about the first thing wrong.
+  const bound = optionsBound ??= ajv.compile(shape);
+  if (!bound(list)) return `${where}：${description(bound.errors[0])}`;
+  const validate = ajv.getSchema(`${options.$id}#/$defs/option`);
+  for (const [index, option] of list.entries()) {
+    const at = `${where} 的勾选项 ${typeof option?.id === 'string' && option.id ? option.id : index + 1}`;
+    if (!validate(option)) return `${at}：${description(validate.errors[0], option)}`;
+  }
+  const all = ajv.getSchema(options.$id);
+  return all(list) ? null : `${where}：勾选项的 ${all.errors[0].message}`;
 }
 // What of the coda: values in the definition its schemas do not take, or null: each element in order, its coda:
 // attributes by each type of Coda's extending what it is, the coda: elements it holds by kind, and each coda: element.

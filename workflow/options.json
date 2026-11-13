@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schema/bpmn/1.0/options.json",
+  "title": "一个答复在任务打开时的勾选项",
+  "description": "勾选项须为数组",
+  "type": "array",
+  "items": {"$ref": "#/$defs/option"},
+  "x-unique-by": ["id"],
+  "allOf": [{"maxItems": 12, "description": "最多 12 个勾选项"}],
+  "$defs": {
+    "option": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$", "description": "id 须为字母开头的字母、数字、「_」「-」"},
+        "name": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "name 须为 1–40 个字"},
+        "detail": {"type": "string", "maxLength": 200, "description": "detail 不超过 200 字"},
+        "default": {"type": "boolean", "description": "default 须为 true 或 false"}
+      },
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "description": "勾选项须为对象，有 id 与 name，可有 detail 与 default"
+    }
+  }
+}
