@@ -49,16 +49,34 @@ test('an opened list of options: objects of id, name, detail and a boolean defau
     [null, `${at}：勾选项须为数组`],
     [{ id: 'deploy', name: '部署' }, `${at}：勾选项须为数组`],
     [Array.from({ length: 13 }, (_, i) => ({ id: `o${i}`, name: 'x' })), `${at}：最多 12 个勾选项`],
-    [[1], `${at} 的勾选项 1：勾选项须为对象，有 id 与 name，可有 detail 与 default`],
-    [[{ id: 'deploy' }], `${at} 的勾选项 deploy：勾选项须为对象，有 id 与 name，可有 detail 与 default`],
+    [[1], `${at} 的勾选项 1：勾选项须为对象，有 id 与 name，可有 detail、default 与 inputs`],
+    [[{ id: 'deploy' }], `${at} 的勾选项 deploy：勾选项须为对象，有 id 与 name，可有 detail、default 与 inputs`],
     [[{ id: '1st', name: '先' }], `${at} 的勾选项 1st：id 须为字母开头的字母、数字、「_」「-」`],
     [[{ id: 'a', name: ' ' }], `${at} 的勾选项 a：name 须为 1–40 个字`],
     [[{ id: 'a', name: '字'.repeat(41) }], `${at} 的勾选项 a：name 须为 1–40 个字`],
     [[{ id: 'a', name: 'A', detail: '字'.repeat(201) }], `${at} 的勾选项 a：detail 不超过 200 字`],
     [[{ id: 'a', name: 'A', default: 'true' }], `${at} 的勾选项 a：default 须为 true 或 false`],
     // What decides whether one shows is the list itself: an opened option has no coda:shown.
-    [[{ id: 'a', name: 'A', shown: '=true' }], `${at} 的勾选项 a：勾选项须为对象，有 id 与 name，可有 detail 与 default`],
+    [[{ id: 'a', name: 'A', shown: '=true' }], `${at} 的勾选项 a：勾选项须为对象，有 id 与 name，可有 detail、default 与 inputs`],
     [[{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'a', name: 'A2' }], `${at}：勾选项的 id 不能重复：a`],
+  ];
+  for (const [list, said] of cases) assert.equal(optionsProblem(list, at), said, JSON.stringify(list));
+});
+
+test('an option may bring inputs the card shows while it is ticked: id and label each, at most 4, ids unique within it', () => {
+  const at = 'approve 的答复 merge';
+  const notes = { id: 'notes', label: '发布说明' };
+  // Two options may bring the same input: the card shows it once.
+  assert.equal(optionsProblem([{ id: 'preview', name: '发布预览版', inputs: [notes] }, { id: 'release', name: '发布正式版', inputs: [notes] }], at), null);
+  assert.equal(optionsProblem([{ id: 'a', name: 'A', inputs: [] }], at), null);
+  const cases = [
+    [[{ id: 'a', name: 'A', inputs: notes }], `${at} 的勾选项 a：inputs 须为输入的数组`],
+    [[{ id: 'a', name: 'A', inputs: [{ id: 'notes' }] }], `${at} 的勾选项 a：勾选项的输入须为对象，有 id 与 label：勾上这一项时卡片上出现的一个文字输入，几项带同一个 id 时只出一个`],
+    [[{ id: 'a', name: 'A', inputs: [{ ...notes, required: true }] }], `${at} 的勾选项 a：勾选项的输入须为对象，有 id 与 label：勾上这一项时卡片上出现的一个文字输入，几项带同一个 id 时只出一个`],
+    [[{ id: 'a', name: 'A', inputs: [{ id: 'release-notes', label: '说明' }] }], `${at} 的勾选项 a：输入的 id 须为字母开头的字母、数字、「_」`],
+    [[{ id: 'a', name: 'A', inputs: [{ id: 'notes', label: ' ' }] }], `${at} 的勾选项 a：输入的 label 须为 1–40 个字`],
+    [[{ id: 'a', name: 'A', inputs: Array.from({ length: 5 }, (_, i) => ({ id: `i${i}`, label: 'x' })) }], `${at} 的勾选项 a：一个勾选项最多带 4 个输入`],
+    [[{ id: 'a', name: 'A', inputs: [notes, notes] }], `${at} 的勾选项 a：输入的 id 不能重复：notes`],
   ];
   for (const [list, said] of cases) assert.equal(optionsProblem(list, at), said, JSON.stringify(list));
 });

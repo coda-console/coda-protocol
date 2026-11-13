@@ -198,7 +198,10 @@ export function optionsProblem(list, where = '答复') {
   const validate = ajv.getSchema(`${options.$id}#/$defs/option`);
   for (const [index, option] of list.entries()) {
     const at = `${where} 的勾选项 ${typeof option?.id === 'string' && option.id ? option.id : index + 1}`;
-    if (!validate(option)) return `${at}：${description(validate.errors[0], option)}`;
+    if (!validate(option)) {
+      const error = validate.errors[0];
+      return `${at}：${error.keyword === 'x-unique-by' ? `输入的 ${error.message}` : description(error, option)}`;
+    }
   }
   const all = ajv.getSchema(options.$id);
   return all(list) ? null : `${where}：勾选项的 ${all.errors[0].message}`;
@@ -248,6 +251,27 @@ function valuesProblem(root) {
   return null;
 }
 
+// The names of its own inputs a coda:join asks of the card (`inputs`, comma or space separated), in order.
+export function joinInputNames(join) {
+  return (join.inputs ?? '').split(/[\s,]+/).filter(Boolean);
+}
+// What a coda:join asks of the card that its process does not take as text, or null: each name is once, and one of the
+// process's own coda:input of type string (the default), since what the card gives is what was written.
+function joinInputsProblem(root) {
+  for (const process of (root.rootElements ?? []).filter(e => e.$type === 'bpmn:Process')) {
+    const held = process.extensionElements?.values ?? [];
+    const text = new Set(held.filter(e => e.$type === 'coda:Input' && (e.type ?? 'string') === 'string').map(e => e.name));
+    for (const join of held.filter(e => e.$type === 'coda:Join')) {
+      const names = joinInputNames(join);
+      const repeated = names.find((name, i) => names.indexOf(name) !== i);
+      if (repeated) return `${process.id} 的 coda:join ${join.hook}：inputs 里 ${repeated} 重复`;
+      const stranger = names.find(name => !text.has(name));
+      if (stranger) return `${process.id} 的 coda:join ${join.hook}：inputs 里的 ${stranger} 不是这个流程的文字参数（type 为 string 的 coda:input）`;
+    }
+  }
+  return null;
+}
+
 // A workflow's definition (`file`, its name without `.bpmn`, for what is said) read with Coda's dialect: `{ root }`, the
 // parsed definitions, or `{ problem }`, what of it the dialect does not have — not BPMN, a coda: attribute or element it
 // does not know, an action it does not have or a parameter that action does not take — or a value of it its schema does
@@ -272,7 +296,7 @@ export async function readWorkflow(source, file = 'workflow') {
     const given = (task.extensionElements?.values ?? []).filter(v => v.$type === 'coda:Param');
     if (given.some(p => !params.includes(p.name))) return { problem: `${task.id}：coda:action ${task.action} 只接受参数 ${params.join('、')}` };
   }
-  const problem = valuesProblem(root) ?? structureProblem(root, file);
+  const problem = valuesProblem(root) ?? joinInputsProblem(root) ?? structureProblem(root, file);
   return problem ? { problem } : { root };
 }
 // What of a workflow's definition the dialect does not have, or null.

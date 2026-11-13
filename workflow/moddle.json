@@ -122,13 +122,14 @@
     {
       "name": "Join",
       "superClass": ["Element"],
-      "description": "流程加入一个挂点：hook 是挂点名，宿主按它找到这个流程；name、detail 是它作为勾选项时的名字与说明，default 是否默认勾上，order 排序（小的在前，不写排最后，同序按流程名）",
+      "description": "流程加入一个挂点：hook 是挂点名，宿主按它找到这个流程；name、detail 是它作为勾选项时的名字与说明，default 是否默认勾上，order 排序（小的在前，不写排最后，同序按流程名），inputs 是它要从卡片拿的自己的文字参数（勾上它时卡上出现这些输入）",
       "properties": [
         {"name": "hook", "isAttr": true, "type": "String"},
         {"name": "name", "isAttr": true, "type": "String"},
         {"name": "detail", "isAttr": true, "type": "String"},
         {"name": "default", "isAttr": true, "type": "String"},
-        {"name": "order", "isAttr": true, "type": "String"}
+        {"name": "order", "isAttr": true, "type": "String"},
+        {"name": "inputs", "isAttr": true, "type": "String"}
       ]
     },
     {
