@@ -54,11 +54,22 @@ function directory(files = {}) {
 }
 const settings = { properties: { 'kit.size': { type: 'string' }, 'kit.count': { type: 'integer', default: 1 }, 'kit.key': { type: 'string', writeOnly: true } } };
 
-test('an agent declares external lifecycle ownership without changing the default for existing agents', () => {
+test('an agent no longer declares a lifecycle', () => {
   const agent = { id: 'a', displayName: 'A', icon: { light: 'icon.pdf' }, command: 'run' };
-  for (const extra of [{}, { lifecycle: 'managed' }, { lifecycle: 'external' }])
-    assert.equal(checked({ contributes: { agents: [{ ...agent, ...extra }] } }), null);
-  assert.match(checked({ contributes: { agents: [{ ...agent, lifecycle: 'persistent' }] } }), /lifecycle/);
+  assert.equal(checked({ contributes: { agents: [agent] } }), null);
+  for (const lifecycle of ['managed', 'external'])
+    assert.equal(checked({ contributes: { agents: [{ ...agent, lifecycle }] } }), 'contributes.agents[0] 里有不认识的键：lifecycle');
+});
+
+test('an endpoint no longer names a setting it checks', () => {
+  const manifest = endpoint => ({ contributes: { configuration: settings, endpoints: [{ id: 'check', command: 'run', ...endpoint }] } });
+  assert.equal(checked(manifest({})), null);
+  assert.equal(checked(manifest({ checks: 'kit.size' })), 'contributes.endpoints[0] 里有不认识的键：checks');
+});
+
+test('executors is no type of Coda\'s: no schema checks it', () => {
+  assert.equal(Object.hasOwn(SCHEMAS, 'executors.json'), false);
+  assert.equal(checked({ contributes: { executors: [{ id: 'x' }] } }), null);
 });
 
 test('the manifest\'s schema names only the general types; those of Coda\'s points are kept beside them, by file', () => {
@@ -66,7 +77,7 @@ test('the manifest\'s schema names only the general types; those of Coda\'s poin
     'protocols', 'protocolImplementations']);
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
-    ['agents.json', 'capabilities.json', 'commands.json', 'common.json', 'composer-modes.json', 'events.json', 'executors.json',
+    ['agents.json', 'capabilities.json', 'commands.json', 'common.json', 'composer-modes.json', 'events.json',
       'git-credentials.json', 'groups.json', 'instructions.json', 'mcp-servers.json', 'model-providers.json', 'plugin.json',
       'repositories.json', 'setting.json', 'skills.json']);
   for (const [file, schema] of Object.entries(SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/plugin/v2/${file}`);
@@ -74,7 +85,7 @@ test('the manifest\'s schema names only the general types; those of Coda\'s poin
 
 test('a key of no general type passes the manifest\'s schema, whatever its shape; its own schema checks it in the whole manifest', () => {
   const agent = { id: 'a', displayName: 'A', icon: { light: 'icon.pdf' }, command: 'run' };
-  for (const agents of [[agent], {}, [{ ...agent, lifecycle: 'persistent' }]]) assert.equal(manifestProblem({ name: 'kit', contributes: { agents } }), null);
+  for (const agents of [[agent], {}, [{ ...agent, displayName: 1 }]]) assert.equal(manifestProblem({ name: 'kit', contributes: { agents } }), null);
   assert.match(manifestProblem({ contributes: { 'my-agents': [] } }), /^contributes「my-agents」：/);
   const manifest = { name: 'kit', contributes: { agents: [agent] } };
   assert.equal(contributionProblem(SCHEMAS['agents.json'], manifest, 'agents'), null);
