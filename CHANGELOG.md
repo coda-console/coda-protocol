@@ -2,6 +2,10 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.16.0 — 2026-11-13
+
+- 不兼容：删去三个没人用的清单键。`contributes.executors`（连同 `schemas/plugin/executors.json`，`SCHEMAS` 里不再有它；扩展点仍不能取名 `executors`）、`contributes.agents[].lifecycle`、`contributes.endpoints[].checks`（`x-unique-by` 只剩 `id`）。写了 `lifecycle` 或 `checks` 的清单校验不过。这三个键没有第三方在用，不在稳定面里，属于内部面，按 coda#2463 内部面不为它升大版本，只升次版本；`$id` 不变。
+
 ## 5.15.0 — 2026-11-13
 
 - 流程动作加 `check-setting`（参数 `plugin`、`setting`、`value`、`project`）与 `apply-setting`（另加 `approval`）：Agent 提议改一项插件设置，`check-setting` 按设置接口写入的同一套规则检查并给出卡片显示的改前改后（不给 `value` 时读出当前值），`apply-setting` 在用户于 `approval` 任务的卡片上按了主按钮、卡片最后一个 `code` 字段与改后的值逐字相同后写入，流程须来自已装的插件或默认分支。只加动作，已有流程不变（Coda 内置能力 change-setting）。
