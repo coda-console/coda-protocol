@@ -2,7 +2,7 @@
 // hosts find the joiners of a hook (hook-joiners) and run them, all or those chosen (run-workflows hook, only).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { CODA_ACTIONS, CODA_MODDLE, readWorkflow, workflowProblem } from '../workflow.mjs';
+import { CODA_ACTIONS, CODA_MODDLE, joinInputNames, readWorkflow, workflowProblem } from '../workflow.mjs';
 
 // A runnable process with `head` in its extensionElements and `attributes` on it.
 const process = (head, attributes = '', body = '<startEvent id="s" /><sequenceFlow id="f" sourceRef="s" targetRef="t" /><userTask id="t" /><sequenceFlow id="g" sourceRef="t" targetRef="e" /><endEvent id="e" />') => `<?xml version="1.0" encoding="UTF-8"?>
@@ -54,4 +54,33 @@ test('the hosts\' actions: hook-joiners takes a hook and a commit, run-workflows
   assert.equal(await workflowProblem(process('', '', body), 'host'), null);
   assert.equal(await workflowProblem(process('', '', body.replace('name="hook" value="after-merge" />', 'name="hooks" value="after-merge" />')), 'host'),
     'joiners：coda:action hook-joiners 只接受参数 hook、commit');
+});
+
+test('a join asks the card for its own text inputs, each once', async () => {
+  const inputs = '<coda:input name="notes" label="发布说明" /><coda:input name="title" type="string" /><coda:input name="publish" type="boolean" default="false" />';
+  const { root, problem } = await readWorkflow(process(`${inputs}<coda:join hook="merged" name="发布预览版" inputs="notes, title" />`), 'deploy');
+  assert.equal(problem, undefined);
+  const join = root.rootElements[0].extensionElements.values.find(v => v.$type === 'coda:Join');
+  assert.deepEqual(joinInputNames(join), ['notes', 'title']);
+  assert.deepEqual(joinInputNames({}), []);
+  for (const written of ['notes', ' notes title ', 'notes,title']) assert.equal(await workflowProblem(process(`${inputs}<coda:join hook="h" inputs="${written}" />`), 'w'), null, written);
+  const cases = [
+    ['inputs="missing"', /^deploy 的 coda:join h：inputs 里的 missing 不是这个流程的文字参数（type 为 string 的 coda:input）$/],
+    ['inputs="publish"', /^deploy 的 coda:join h：inputs 里的 publish 不是这个流程的文字参数/],
+    ['inputs="notes notes"', /^deploy 的 coda:join h：inputs 里 notes 重复$/],
+    ['inputs="notes;title"', /^deploy 的 coda:join h：inputs 须为这个流程的参数名，逗号或空格分隔，最多 4 个$/],
+    ['inputs="a b c d e"', /^deploy 的 coda:join h：inputs 须为这个流程的参数名/],
+  ];
+  for (const [attribute, said] of cases) assert.match(await workflowProblem(process(`${inputs}<coda:join hook="h" ${attribute} />`), 'w'), said, attribute);
+});
+
+test('what a join asks of the card is what an option on the card may bring: an id of at most 64, a label of at most 40', async () => {
+  const join = '<coda:join hook="h" inputs="n" />';
+  assert.equal(await workflowProblem(process(`<coda:input name="${'n'.repeat(40)}" />${join.replace('"n"', `"${'n'.repeat(40)}"`)}`), 'w'), null);
+  assert.equal(await workflowProblem(process(`<coda:input name="${'n'.repeat(64)}" label="说明" />${join.replace('"n"', `"${'n'.repeat(64)}"`)}`), 'w'), null);
+  // No label: the name shows, and must fit as one.
+  assert.equal(await workflowProblem(process(`<coda:input name="${'n'.repeat(41)}" />${join.replace('"n"', `"${'n'.repeat(41)}"`)}`), 'w'),
+    `deploy 的 coda:join h：inputs 里的 ${'n'.repeat(41)} 上卡片时输入的 label 须为 1–40 个字（没写 label 时用参数名）`);
+  assert.equal(await workflowProblem(process(`<coda:input name="${'n'.repeat(65)}" label="说明" />${join.replace('"n"', `"${'n'.repeat(65)}"`)}`), 'w'),
+    `deploy 的 coda:join h：inputs 里的 ${'n'.repeat(65)} 上卡片时输入的 id 须为字母开头的字母、数字、「_」`);
 });

@@ -2,6 +2,10 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 5.17.0 — 2026-11-13
+
+- 勾选项可带输入：`coda:join` 加 `inputs`（加入者要从卡片拿的自己的文字参数，逗号或空格分隔，最多 4 个；读流程时检查每个都是本流程 type 为 string 的 `coda:input`、不重复，且上卡片时的 id 与 label（没写 label 用参数名）合乎勾选项输入的限制），`joinInputNames(join)` 读出这些名字。`workflow/options.json` 的勾选项加可选的 `inputs: [{ id, label }]`（一项最多 4 个、id 不重复），勾上这一项时卡片上出现这些文字输入，几项带同一个 id 时只出一个；`hook-joiners` 的列表项带上它们。只加写法，已有流程不变（Coda #2521 第 4 步）。
+
 ## 5.16.0 — 2026-11-13
 
 - 不兼容：删去三个没人用的清单键。`contributes.executors`（连同 `schemas/plugin/executors.json`，`SCHEMAS` 里不再有它；扩展点仍不能取名 `executors`）、`contributes.agents[].lifecycle`、`contributes.endpoints[].checks`（`x-unique-by` 只剩 `id`）。写了 `lifecycle` 或 `checks` 的清单校验不过。这三个键没有第三方在用，不在稳定面里，属于内部面，按 coda#2463 内部面不为它升大版本，只升次版本；`$id` 不变。

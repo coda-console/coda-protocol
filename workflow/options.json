@@ -14,11 +14,23 @@
         "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_-]{0,63}$", "description": "id 须为字母开头的字母、数字、「_」「-」"},
         "name": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "name 须为 1–40 个字"},
         "detail": {"type": "string", "maxLength": 200, "description": "detail 不超过 200 字"},
-        "default": {"type": "boolean", "description": "default 须为 true 或 false"}
+        "default": {"type": "boolean", "description": "default 须为 true 或 false"},
+        "inputs": {"type": "array", "items": {"$ref": "#/$defs/input"}, "x-unique-by": ["id"], "allOf": [{"maxItems": 4, "description": "一个勾选项最多带 4 个输入"}],
+          "description": "inputs 须为输入的数组"}
       },
       "required": ["id", "name"],
       "additionalProperties": false,
-      "description": "勾选项须为对象，有 id 与 name，可有 detail 与 default"
+      "description": "勾选项须为对象，有 id 与 name，可有 detail、default 与 inputs"
+    },
+    "input": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$", "description": "输入的 id 须为字母开头的字母、数字、「_」"},
+        "label": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "输入的 label 须为 1–40 个字"}
+      },
+      "required": ["id", "label"],
+      "additionalProperties": false,
+      "description": "勾选项的输入须为对象，有 id 与 label：勾上这一项时卡片上出现的一个文字输入，几项带同一个 id 时只出一个"
     }
   }
 }

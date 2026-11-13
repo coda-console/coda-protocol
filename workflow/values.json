@@ -203,7 +203,8 @@
         "name": {"type": "string", "pattern": "\\S", "maxLength": 40, "description": "name 须为 1–40 个字"},
         "detail": {"type": "string", "maxLength": 200, "description": "detail 不超过 200 字"},
         "default": {"enum": ["true", "false"], "description": "default 只能是 true 或 false：挂点的列表在任何运行之外读出，不写表达式"},
-        "order": {"type": "string", "pattern": "^-?[0-9]{1,6}$", "description": "order 须为整数（至多 6 位）"}
+        "order": {"type": "string", "pattern": "^-?[0-9]{1,6}$", "description": "order 须为整数（至多 6 位）"},
+        "inputs": {"type": "string", "pattern": "^\\s*[A-Za-z_][A-Za-z0-9_]*(?:\\s*[,\\s]\\s*[A-Za-z_][A-Za-z0-9_]*){0,3}\\s*$", "description": "inputs 须为这个流程的参数名，逗号或空格分隔，最多 4 个"}
       },
       "required": ["hook"],
       "description": "coda:join 需要 hook"
