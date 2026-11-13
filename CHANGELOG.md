@@ -4,7 +4,7 @@
 
 ## 5.17.0 — 2026-11-13
 
-- 勾选项可带输入：`coda:join` 加 `inputs`（加入者要从卡片拿的自己的文字参数，逗号或空格分隔，最多 4 个；读流程时检查每个都是本流程 type 为 string 的 `coda:input`、不重复），`joinInputNames(join)` 读出这些名字。`workflow/options.json` 的勾选项加可选的 `inputs: [{ id, label }]`（一项最多 4 个、id 不重复），勾上这一项时卡片上出现这些文字输入，几项带同一个 id 时只出一个；`hook-joiners` 的列表项带上它们。只加写法，已有流程不变（Coda #2521 第 4 步）。
+- 勾选项可带输入：`coda:join` 加 `inputs`（加入者要从卡片拿的自己的文字参数，逗号或空格分隔，最多 4 个；读流程时检查每个都是本流程 type 为 string 的 `coda:input`、不重复，且上卡片时的 id 与 label（没写 label 用参数名）合乎勾选项输入的限制），`joinInputNames(join)` 读出这些名字。`workflow/options.json` 的勾选项加可选的 `inputs: [{ id, label }]`（一项最多 4 个、id 不重复），勾上这一项时卡片上出现这些文字输入，几项带同一个 id 时只出一个；`hook-joiners` 的列表项带上它们。只加写法，已有流程不变（Coda #2521 第 4 步）。
 
 ## 5.16.0 — 2026-11-13
 

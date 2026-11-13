@@ -73,3 +73,14 @@ test('a join asks the card for its own text inputs, each once', async () => {
   ];
   for (const [attribute, said] of cases) assert.match(await workflowProblem(process(`${inputs}<coda:join hook="h" ${attribute} />`), 'w'), said, attribute);
 });
+
+test('what a join asks of the card is what an option on the card may bring: an id of at most 64, a label of at most 40', async () => {
+  const join = '<coda:join hook="h" inputs="n" />';
+  assert.equal(await workflowProblem(process(`<coda:input name="${'n'.repeat(40)}" />${join.replace('"n"', `"${'n'.repeat(40)}"`)}`), 'w'), null);
+  assert.equal(await workflowProblem(process(`<coda:input name="${'n'.repeat(64)}" label="说明" />${join.replace('"n"', `"${'n'.repeat(64)}"`)}`), 'w'), null);
+  // No label: the name shows, and must fit as one.
+  assert.equal(await workflowProblem(process(`<coda:input name="${'n'.repeat(41)}" />${join.replace('"n"', `"${'n'.repeat(41)}"`)}`), 'w'),
+    `deploy 的 coda:join h：inputs 里的 ${'n'.repeat(41)} 上卡片时输入的 label 须为 1–40 个字（没写 label 时用参数名）`);
+  assert.equal(await workflowProblem(process(`<coda:input name="${'n'.repeat(65)}" label="说明" />${join.replace('"n"', `"${'n'.repeat(65)}"`)}`), 'w'),
+    `deploy 的 coda:join h：inputs 里的 ${'n'.repeat(65)} 上卡片时输入的 id 须为字母开头的字母、数字、「_」`);
+});

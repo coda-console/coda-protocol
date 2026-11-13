@@ -260,13 +260,17 @@ export function joinInputNames(join) {
 function joinInputsProblem(root) {
   for (const process of (root.rootElements ?? []).filter(e => e.$type === 'bpmn:Process')) {
     const held = process.extensionElements?.values ?? [];
-    const text = new Set(held.filter(e => e.$type === 'coda:Input' && (e.type ?? 'string') === 'string').map(e => e.name));
+    const text = new Map(held.filter(e => e.$type === 'coda:Input' && (e.type ?? 'string') === 'string').map(e => [e.name, e]));
+    const input = ajv.getSchema(`${options.$id}#/$defs/input`);
     for (const join of held.filter(e => e.$type === 'coda:Join')) {
-      const names = joinInputNames(join);
+      const at = `${process.id} 的 coda:join ${join.hook}`, names = joinInputNames(join);
       const repeated = names.find((name, i) => names.indexOf(name) !== i);
-      if (repeated) return `${process.id} 的 coda:join ${join.hook}：inputs 里 ${repeated} 重复`;
+      if (repeated) return `${at}：inputs 里 ${repeated} 重复`;
       const stranger = names.find(name => !text.has(name));
-      if (stranger) return `${process.id} 的 coda:join ${join.hook}：inputs 里的 ${stranger} 不是这个流程的文字参数（type 为 string 的 coda:input）`;
+      if (stranger) return `${at}：inputs 里的 ${stranger} 不是这个流程的文字参数（type 为 string 的 coda:input）`;
+      // As hook-joiners gives it on the card (the label, or the name when none is written): what the list must take.
+      for (const name of names) if (!input({ id: name, label: text.get(name).label ?? name }))
+        return `${at}：inputs 里的 ${name} 上卡片时${description(input.errors[0])}${text.get(name).label === undefined ? '（没写 label 时用参数名）' : ''}`;
     }
   }
   return null;
