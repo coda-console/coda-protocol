@@ -238,6 +238,7 @@
         {"name": "view", "isAttr": true, "type": "String"},
         {"name": "args", "isAttr": true, "type": "String"},
         {"name": "presentation", "isAttr": true, "type": "String"},
+        {"name": "options", "isAttr": true, "type": "String"},
         {"name": "default", "isAttr": true, "type": "String"},
         {"name": "autofill", "isAttr": true, "type": "String"},
         {"name": "keep", "isAttr": true, "type": "String"},

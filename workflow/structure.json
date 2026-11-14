@@ -134,7 +134,8 @@
   },
   "inputFields": [
     "text",
-    "secret"
+    "secret",
+    "choices"
   ],
   "rules": [
     {
@@ -478,7 +479,7 @@
       ]
     },
     {
-      "description": "有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee=\"user\"",
+      "description": "有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee=\"user\"（choices 字段也是输入字段）",
       "schema": {
         "required": [
           "assignee"

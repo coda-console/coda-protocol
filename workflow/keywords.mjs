@@ -1,5 +1,6 @@
 // Value operations JSON Schema cannot express: defer checking an expression until it is read, measure UTF-16 text
-// (with a limit optionally named by a sibling), and validate JSON supplied as text or as a value, bounded in UTF-8 bytes.
+// (with a limit optionally named by a sibling), validate JSON supplied as text or as a value, bounded in UTF-8 bytes, and
+// say that the items of an array are keys of a sibling array's items.
 // None knows what a card field is. Schemas select the operations and their limits; validation never changes the input.
 import { isAbsolute } from 'node:path';
 
@@ -85,6 +86,33 @@ export function valueKeywords(ajv, { feelProblem, isExpression }) {
         const valid = validate.call(this, value, cxt);
         deferred.errors = validate.errors;
         return valid;
+      };
+    },
+  });
+  // Each item of the array is the `key` of an item of a sibling's array (`property`: given as such or as its JSON text), one
+  // that satisfies `match` when that is given. A sibling not read yet (an expression in a definition), or not an array of
+  // its JSON, says nothing here: its own schema says what is wrong with it.
+  ajv.addKeyword({
+    keyword: 'x-among', type: 'array', schemaType: 'object', errors: true,
+    metaSchema: { type: 'object', properties: { property: { type: 'string' }, key: { type: 'string' }, match: { type: ['object', 'boolean'] } }, required: ['property', 'key'], additionalProperties: false },
+    compile(spec, parentSchema) {
+      const matches = spec.match === undefined ? null : ajv.compile(spec.match);
+      return function among(values, cxt) {
+        let list = cxt.parentData && Object.hasOwn(cxt.parentData, spec.property) ? cxt.parentData[spec.property] : undefined;
+        if (typeof list === 'string') {
+          if (this?.definition && (isExpression(list) || list.includes('{{'))) return true;
+          try { list = JSON.parse(list); } catch { return true; }
+        }
+        if (!Array.isArray(list)) return true;
+        const items = new Map();
+        for (const item of list) if (item !== null && typeof item === 'object' && Object.hasOwn(item, spec.key) && !items.has(item[spec.key])) items.set(item[spec.key], item);
+        for (const value of values) {
+          const item = items.get(value);
+          if (item !== undefined && (!matches || matches(item))) continue;
+          among.errors = [{ keyword: 'x-among', params: { value: typeof value === 'string' ? value : JSON.stringify(value) }, parentSchema, message: `不在 ${spec.property} 里` }];
+          return false;
+        }
+        return true;
       };
     },
   });
