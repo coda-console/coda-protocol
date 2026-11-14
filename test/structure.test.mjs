@@ -23,7 +23,7 @@ const wrong = [
   [one('<userTask id="n" coda:expect="PT1H"/>'), 'n：coda:expect 只写在子流程上'],
   [one('<userTask id="n" coda:optional="false"/>'), 'n：coda:optional 只写在最外层的子流程上（事件子流程不是阶段）'],
   [one('<subProcess id="n"><endEvent id="e" coda:notify="true"/></subProcess><callActivity id="work" calledElement="work"/>'), 'e：coda:notify 只写在流程最外层的结束事件上'],
-  [one().replace('<startEvent id="s"/>','<startEvent id="s" coda:scope="project"/>'), 's：coda:reportTo、coda:reportOn、coda:scope 只写在定时开始事件上（由会话发起的运行交给发起它的会话）'],
+  [one().replace('<startEvent id="s"/>','<startEvent id="s" coda:scope="project"/>'), 's：coda:scope 只写在定时开始事件上'],
   [one(`<serviceTask id="n">${ext('<coda:script>echo</coda:script>')}</serviceTask>`), 'n：脚本步骤写成 <scriptTask scriptFormat="bash">，脚本放在 <script> 里；serviceTask 只用于 coda:action'],
   [one('<serviceTask id="n"/>'), 'n：serviceTask 是 Coda 自己做的一步，须写 coda:action；脚本步骤写成 scriptTask'],
   [one('<serviceTask id="n" coda:action="hook-joiners" coda:timeout="1"/>'), 'n：coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:source、coda:checkout、coda:retry 等（要为一段占组用 hold-group）'],

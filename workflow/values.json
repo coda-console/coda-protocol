@@ -30,12 +30,6 @@
         "retry": {"type": "string", "pattern": "^[1-5]$", "description": "coda:retry 是失败后最多再试几次，须为 1 到 5 的整数"}
       }
     },
-    "PlacementProperties": {
-      "type": "object",
-      "properties": {
-        "placement": {"enum": ["local", "any"], "description": "coda:placement 只能是 local 或 any；local 限制为发起端，不能隐式回退或被子节点放宽"}
-      }
-    },
     "RunsOnProperties": {
       "type": "object",
       "properties": {
@@ -66,15 +60,8 @@
     "StartEventProperties": {
       "type": "object",
       "properties": {
-        "reportTo": {"type": "string",
-          "anyOf": [{"pattern": "^\\s*=\\s*vars(?:\\.[A-Za-z0-9_-]+)+\\s*$"},
-            {"pattern": "^\\s*(?:coda://threads/|coda\\+space://[^/#]+/threads/)?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:#(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|command:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}))?\\s*$"}],
-          "description": "coda:reportTo 写会话引用（coda://threads/<会话 UUID>），或只读插件设置的表达式，如 =vars.maintenance.reportTo"},
-        "reportOn": {"enum": ["failure", "always"], "description": "coda:reportOn 只能是 failure、always"},
         "scope": {"enum": ["project", "machine"], "description": "coda:scope 只能是 project、machine"}
-      },
-      "if": {"required": ["reportOn"]},
-      "then": {"required": ["reportTo"], "description": "写了 coda:reportOn 就要写 coda:reportTo（结果交给谁）"}
+      }
     },
     "EndEventProperties": {
       "type": "object",

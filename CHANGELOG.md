@@ -2,6 +2,14 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.3.0 — 2026-11-15
+
+- 不兼容：删去 Coda A3-3-0（coda#2641）已经删掉的能力的声明。依据 README「版本」一节：协议定义与流程方言是内部面，删改升次版本（6.2.0 是 failure.json 加 `auth_required`，见 #58）。
+  - 流程方言删去 `coda:reportTo`、`coda:reportOn`（moddle、取值校验与「reportOn 必须配 reportTo」、结构校验里的分支）和 `coda:placement`（`PlacementProperties`）；写了它们的流程读时按认不出的属性拒绝。定时开始事件的 `coda:scope` 及其只写在定时开始事件上的约束不变。
+  - `coda/executor@1` 删去操作 `execute`（连同它的 `$defs`：源码快照 `git/snapshot@1`、`source` 输入等），现在没有操作；spec、status、`EXECUTOR_PROTOCOL` 与 `CORE_PROTOCOLS` 里的登记不变。
+  - 删去 `schemas/protocol/v1/remote-caller.json`（记录的远端入口，含 `file_ticket`）与 `docs/protocol.md` 里的对应正文。
+  - `coda/session@1` 的 `post`、`draft`，以及 `coda:runsOn`、`coda:source`、`group`、`hold-group`、`coda/run@1` 都保留；`coda:runsOn` 的说明改成：对本机执行环境的要求，不符合就一开始失败，不会把步骤交给别台。
+
 ## 6.1.0 — 2026-11-14
 
 - 卡片字段加多选 `choices`（输入字段，须有 `id`、`label`，`required` 默认 true，表示至少勾一项）：`options` 是选项表，`default` 是初始勾上的选项 id，两者都是内容属性，可写表达式在任务打开时读，读出（或写下）的是 JSON 数组或它的文字。选项 `{ id, label, detail?, disabled? }`：`id` 一行、1–64 个字、前后不带空白、表中不重复，`label` 一行、1–80 个字、前后不带空白，`detail` 一行不超过 200 字，`disabled` 为 true 的列出但不能勾；1–32 项，至少一项能勾。`default` 的 id 不重复，每个须是 options 里能勾的一项（两者都已知时读流程就查）。答复是勾中项的 id 组成的数组，按 options 的顺序，在 `answer.values.<id>` 里交来，流程读 `=<任务>.values.<id>`（FEEL 列表），`filled.<id>` 为勾了至少一项。choices 是输入字段：答复的 `fields` 可以引用它，带它的任务只交给用户（`structure.json` 的 `inputFields` 加上它）。moddle 的 `coda:field` 加属性 `options`。
