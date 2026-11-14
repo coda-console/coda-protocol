@@ -2,8 +2,8 @@
 // said, one at a time.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { CANCEL_EVENT, CODA_ACTIONS, CODA_EVENTS, CODA_MODDLE, CODA_VALUES, DEPLOYING_KINDS, DISPATCH_EVENT, feelProblem, INPUT_SOURCES, INPUT_TYPES, isDuration,
-  readWorkflow, SESSION_FACTS, SESSION_OPENED, WORKFLOW_KINDS, workflowProblem } from '../workflow.mjs';
+import { CANCEL_EVENT, CODA_ACTIONS, CODA_EVENTS, CODA_MODDLE, CODA_VALUES, DISPATCH_EVENT, feelProblem, INPUT_SOURCES, INPUT_TYPES, isDuration,
+  readWorkflow, SESSION_FACTS, SESSION_OPENED, workflowProblem } from '../workflow.mjs';
 
 // A workflow of one process holding `body`, `process` the process element's own attributes.
 const workflow = (body, process = '') => `<?xml version="1.0" encoding="UTF-8"?>
@@ -27,7 +27,7 @@ test('placement is a static process, subprocess or script constraint; actions an
   for (const placement of ['', 'remote', '=inputs.place']) {
     assert.match(await workflowProblem(workflow(connected(script('')), ` coda:placement="${placement}"`), 'placement'), /coda:placement/);
   }
-  for (const task of ['<userTask id="s" />', '<serviceTask id="s" coda:action="run-workflows" />']) {
+  for (const task of ['<userTask id="s" />', '<serviceTask id="s" coda:action="run-workflows"><extensionElements><coda:param name="hook" value="check" /></extensionElements></serviceTask>']) {
     assert.equal(await workflowProblem(workflow(connected(task)), 'placement'), null);
     assert.match(await workflowProblem(workflow(connected(task.replace('id="s"', 'id="s" coda:placement="local"'))), 'placement'), /coda:placement/);
   }
@@ -46,15 +46,15 @@ test('a workflow written in the dialect is read: Coda\'s attributes and elements
       <script>echo "version=1" >> "$GITHUB_OUTPUT"</script>
     </scriptTask>
     <serviceTask id="deploy" coda:action="run-workflows">
-      <extensionElements><coda:param name="kind" value="deploy" /><coda:param name="commit" value="=inputs.head" /></extensionElements>
+      <extensionElements><coda:param name="hook" value="deploy" /><coda:param name="commit" value="=inputs.head" /></extensionElements>
     </serviceTask>
     <userTask id="approve" coda:assignee="user">
       <extensionElements><coda:choice id="merge" name="合并" primary="true"><coda:option id="deploy" name="部署" /></coda:choice><coda:choice id="stop" name="暂不合并" note="required" /></extensionElements>
-    </userTask><sequenceFlow id="d" sourceRef="approve" targetRef="brief"/><userTask id="brief" coda:wake="false" />`, ' coda:kind="deploy" coda:title="部署"');
+    </userTask><sequenceFlow id="d" sourceRef="approve" targetRef="brief"/><userTask id="brief" coda:wake="false" />`, ' coda:mergedOnly="true" coda:title="部署"');
   const { root, problem } = await readWorkflow(source, 'deploy');
   assert.equal(problem, undefined);
   const [process] = root.rootElements;
-  assert.deepEqual([process.kind, process.flowElements.find(e => e.id === 'build').timeout, process.flowElements.find(e => e.id === 'brief').wake], ['deploy', 10, 'false']);
+  assert.deepEqual([process.mergedOnly, process.flowElements.find(e => e.id === 'build').timeout, process.flowElements.find(e => e.id === 'brief').wake], [true, 10, 'false']);
   assert.equal(await workflowProblem(source, 'deploy'), null);
 });
 
@@ -82,8 +82,22 @@ test('what the dialect does not have is said: not BPMN, an attribute or element 
   assert.match(await workflowProblem(workflow(nested), 'w'), /^deep：coda:action 只能是 /);
   // And however many there are in one place.
   assert.match(await workflowProblem(workflow(`${'<task/>'.repeat(140_000)}<serviceTask id="wide" coda:action="nope" />`), 'w'), /^wide：coda:action 只能是 /);
-  assert.equal(await workflowProblem(workflow('<serviceTask id="go" coda:action="run-workflows"><extensionElements><coda:param name="branch" value="main" /></extensionElements></serviceTask>'), 'w'),
-    'go：coda:action run-workflows 只接受参数 kind、hook、only、commit、inputs');
+  const run = params => workflow(`<serviceTask id="go" coda:action="run-workflows"><extensionElements>${params}</extensionElements></serviceTask>`);
+  assert.equal(await workflowProblem(run('<coda:param name="hook" value="check" /><coda:param name="branch" value="main" />'), 'w'),
+    'go：coda:action run-workflows 只接受参数 hook、only、commit、inputs');
+  // Workflows are found by the hooks they join: there are no kinds to run, list or declare, and no coda:deploy.
+  assert.equal(await workflowProblem(run('<coda:param name="hook" value="deploy" /><coda:param name="kind" value="deploy" />'), 'w'),
+    'go：coda:action run-workflows 只接受参数 hook、only、commit、inputs');
+  assert.equal(await workflowProblem(run('<coda:param name="only" value="a" /><coda:param name="commit" value="=inputs.head" />'), 'w'),
+    'go：coda:action run-workflows 须写参数 hook');
+  assert.equal(await workflowProblem(workflow('<serviceTask id="go" coda:action="run-workflows" />'), 'w'), 'go：coda:action run-workflows 须写参数 hook');
+  assert.equal(await workflowProblem(workflow(`<startEvent id="s" /><sequenceFlow id="f" sourceRef="s" targetRef="go" />
+    <serviceTask id="go" coda:action="run-workflows"><extensionElements><coda:param name="hook" value="deploy" /></extensionElements></serviceTask>`), 'w'), null);
+  assert.match(await workflowProblem(workflow('<serviceTask id="go" coda:action="workflow-kinds" />'), 'w'), /^go：coda:action 只能是 /);
+  for (const attribute of ['kind', 'deploy']) assert.match(await workflowProblem(workflow('<startEvent id="s" />', ` coda:${attribute}="deploy"`), 'w'),
+    new RegExp(`^w\\.bpmn 有无法识别的内容：unknown attribute <coda:${attribute}>`));
+  // Absent coda:mergedOnly is false: the workflow runs any commit.
+  assert.equal((await readWorkflow(workflow(asked), 'w')).root.rootElements[0].mergedOnly, undefined);
 });
 
 test('expire-tool-details accepts olderThan and rejects other parameter names; cold-store remains compatible', async () => {
@@ -120,9 +134,7 @@ test('check-setting and apply-setting take a plugin setting\'s change; apply-set
     'step：coda:action check-setting 只接受参数 plugin、setting、value、project');
 });
 
-test('the names workflows share are the dialect\'s: the kinds, those that deploy among them, and the events Coda sends', () => {
-  assert.deepEqual(WORKFLOW_KINDS, ['deploy', 'preview', 'release', 'check', 'premerge', 'prebuild', 'develop']);
-  assert.ok(DEPLOYING_KINDS.every(kind => WORKFLOW_KINDS.includes(kind)));
+test('the names workflows share are the dialect\'s: the events Coda sends, and the actions with their parameters', () => {
   assert.deepEqual(CODA_EVENTS, [SESSION_OPENED, SESSION_FACTS, DISPATCH_EVENT, CANCEL_EVENT]);
   assert.deepEqual(CODA_ACTIONS['hold-group'], ['group', 'capacity', 'borrow', 'exclusive']);
 });
@@ -132,7 +144,6 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
   const step = (attrs, inside = '') => workflow(`<scriptTask id="say" scriptFormat="bash"${attrs}>${inside ? `<extensionElements>${inside}</extensionElements>` : ''}<script>echo</script></scriptTask>`);
   const task = inside => workflow(`<userTask id="ask"><extensionElements>${inside}</extensionElements></userTask>`);
   const cases = [
-    [workflow('', ' coda:kind="deploys"'), /^p：coda:kind 只能是 deploy、preview、release、check、premerge、prebuild、develop$/],
     [workflow('', ` coda:title="${'长'.repeat(201)}"`), /^p：coda:title 须为 1–200 个字符$/],
     [workflow('', ' coda:agents=",,"'), /^p：coda:agents 写 Agent 的 ID/],
     // Whether an event starts it is decided before any run: a setting of the plugin's is all there is to read.
@@ -205,7 +216,6 @@ test('FEEL and durations are read as Coda reads them, and the schemas say the na
   assert.equal(feelProblem('=in-queue.count', { 'in-queue': null }), null);
   assert.deepEqual([isDuration('PT1H'), isDuration('-PT1H'), isDuration('soon')], [true, false, false]);
   const defs = CODA_VALUES.$defs;
-  assert.deepEqual(defs.ProcessProperties.properties.kind.enum, WORKFLOW_KINDS);
   assert.deepEqual(defs.Input.properties.type.enum, INPUT_TYPES);
   assert.deepEqual(defs.Input.properties.defaultFrom.enum, Object.keys(INPUT_SOURCES));
   assert.deepEqual(defs.Input.allOf[0].then.properties.type.enum, INPUT_SOURCES['session.branch'].types);

@@ -319,13 +319,13 @@ test('an extension point\'s schema is a file of its plugin\'s that compiles besi
 });
 
 
-// Project-scoped choices use workflow kinds, while personal choices need no condition.
-test('multi-select options may require a declared workflow kind', () => {
-  const spec = workflowKind => ({ contributes: { configuration: { properties: { 'kit.defaults': {
-    type: 'array', items: { anyOf: [{ const: 'notify' }, { const: 'deploy', workflowKind }] }, default: []
+// A multi-select option is { const, title, description }: workflow kinds are gone from the protocol.
+test('multi-select options take no workflowKind', () => {
+  const spec = extra => ({ contributes: { configuration: { properties: { 'kit.defaults': {
+    type: 'array', items: { anyOf: [{ const: 'notify' }, { const: 'deploy', ...extra }] }, default: []
   } } } } });
-  for (const kind of ['check', 'premerge', 'prebuild', 'develop', 'deploy', 'preview', 'release']) assert.equal(checked(spec(kind)), null);
-  for (const kind of ['', 'unknown', true, ['deploy']]) assert.match(checked(spec(kind)), /workflowKind/);
+  assert.equal(checked(spec({})), null);
+  assert.ok(checked(spec({ workflowKind: 'deploy' })));
 });
 
 test('x-ref can name an array item by its own property, with each separated name satisfying match', () => {

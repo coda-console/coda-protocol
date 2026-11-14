@@ -26,8 +26,8 @@ const wrong = [
   [one().replace('<startEvent id="s"/>','<startEvent id="s" coda:scope="project"/>'), 's：coda:reportTo、coda:reportOn、coda:scope 只写在定时开始事件上（由会话发起的运行交给发起它的会话）'],
   [one(`<serviceTask id="n">${ext('<coda:script>echo</coda:script>')}</serviceTask>`), 'n：脚本步骤写成 <scriptTask scriptFormat="bash">，脚本放在 <script> 里；serviceTask 只用于 coda:action'],
   [one('<serviceTask id="n"/>'), 'n：serviceTask 是 Coda 自己做的一步，须写 coda:action；脚本步骤写成 scriptTask'],
-  [one('<serviceTask id="n" coda:action="workflow-kinds" coda:timeout="1"/>'), 'n：coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:source、coda:checkout、coda:retry 等（要为一段占组用 hold-group）'],
-  [one('<serviceTask id="n" coda:action="workflow-kinds" coda:source="/tmp/x"/>'), 'n：coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:source、coda:checkout、coda:retry 等（要为一段占组用 hold-group）'],
+  [one('<serviceTask id="n" coda:action="hook-joiners" coda:timeout="1"/>'), 'n：coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:source、coda:checkout、coda:retry 等（要为一段占组用 hold-group）'],
+  [one('<serviceTask id="n" coda:action="hook-joiners" coda:source="/tmp/x"/>'), 'n：coda:action 的步骤由 Coda 执行，不写脚本与 coda:audience、coda:group、coda:timeout、coda:source、coda:checkout、coda:retry 等（要为一段占组用 hold-group）'],
   [one(job('n','','coda:source="=inputs.worktree"')), 'n：写了 coda:source 的步骤在它给的工作副本目录里就地跑，不检出提交，须同时写 coda:checkout="false"'],
   [one(job('n','','coda:source="=inputs.worktree" coda:checkout="true"')), 'n：写了 coda:source 的步骤在它给的工作副本目录里就地跑，不检出提交，须同时写 coda:checkout="false"'],
   [one('<callActivity id="n" calledElement="UPPER"/>'), 'n：callActivity 的 calledElement 写要调用的能力或流程名（小写字母、数字和「-」，以字母开头）'],
@@ -88,7 +88,7 @@ const wrong = [
   [timed('R/PT6H','<startEvent id="plain"/>'), '由事件或定时启动的流程，开始事件都要带消息或计时器；要手动发起，订阅 workflow.dispatch'],
   [byMessage('session.opened'), '跟随会话的流程（订阅 session.opened）不能有人工任务：n。它不属于任何会话，任务没有人可交'],
   [one('<userTask id="n"/>','','','coda:agents="codex"'), 'coda:agents 只写在生命周期流程上（开始事件订阅 session.opened）'],
-  [byMessage('session.opened','<serviceTask id="n" coda:action="workflow-kinds"/>','','coda:key="fixed"'), '生命周期流程按会话唯一，不能声明 coda:key'],
+  [byMessage('session.opened','<serviceTask id="n" coda:action="hook-joiners"/>','','coda:key="fixed"'), '生命周期流程按会话唯一，不能声明 coda:key'],
   [one('<userTask id="n"/>','','','coda:dispatch="false"'), 'coda:dispatch="false" 的流程须由事件或定时启动（开始事件带消息或计时器），否则无法发起'],
   [one('<userTask id="n"/>','',message+message.replace('id="m"','id="m2"')), '<message name="repo.push"> 写了不止一个：一个事件只写一个 <message>，开始事件与等它的节点都引用它'],
   [one('<userTask id="n"/>','','<message id="inputs" name="repo.push"/>'), '<message id="inputs">：id 不能是 inputs、run、github、vars：表达式按这些名字读运行自带的变量，接到的消息按 id 读'],
@@ -197,7 +197,7 @@ test('lifecycle waits hear facts directly, on outer boundaries, or in an event s
   const start = '<startEvent id="s"><messageEventDefinition messageRef="m"/></startEvent>';
   const build = body => xml(start+flow('s','n')+body,top);
   const deaf = '聋状态：流程在 n 等待时收不到 session.facts，会话的事实变了没有人回应。跟随会话的流程（订阅 session.opened）每个等待节点都要能收 session.facts：自己等它，或挂一个等它的消息边界事件（挂在外层子流程上也算）';
-  for (const wait of [job(), '<callActivity id="n" calledElement="work"/>','<serviceTask id="n" coda:action="run-workflows"/>']) assert.equal(await workflowProblem(build(wait)),deaf);
+  for (const wait of [job(), '<callActivity id="n" calledElement="work"/>','<serviceTask id="n" coda:action="run-workflows"><extensionElements><coda:param name="hook" value="check"/></extensionElements></serviceTask>']) assert.equal(await workflowProblem(build(wait)),deaf);
   const onBoundary = '<boundaryEvent id="b" attachedToRef="n"><messageEventDefinition messageRef="facts"/></boundaryEvent>';
   assert.equal(await workflowProblem(build(job()+onBoundary)),null);
   const listener = '<subProcess id="listen" triggeredByEvent="true"><startEvent id="ls"><messageEventDefinition messageRef="facts"/></startEvent></subProcess>';
@@ -205,8 +205,8 @@ test('lifecycle waits hear facts directly, on outer boundaries, or in an event s
   assert.equal(await workflowProblem(build(job()+'<subProcess id="sibling">'+listener+'</subProcess>')),deaf);
   assert.equal(await workflowProblem(build('<subProcess id="n"><startEvent id="ns"/>'+flow('ns','inner')+job('inner')+'</subProcess>'+onBoundary)),null);
   const direct = '<receiveTask id="n" messageRef="facts"/>';
-  assert.equal(await workflowProblem(build(direct+'<serviceTask id="act" coda:action="workflow-kinds"/>'+flow('n','act'))),null);
-  const timedAction = '<serviceTask id="n" coda:action="workflow-kinds"/><boundaryEvent id="bt" attachedToRef="n">'+timer+'</boundaryEvent>';
+  assert.equal(await workflowProblem(build(direct+'<serviceTask id="act" coda:action="hook-joiners"/>'+flow('n','act'))),null);
+  const timedAction = '<serviceTask id="n" coda:action="hook-joiners"/><boundaryEvent id="bt" attachedToRef="n">'+timer+'</boundaryEvent>';
   assert.equal(await workflowProblem(build(timedAction)),deaf);
   assert.equal(await workflowProblem(build(timedAction+listener)),null);
 });
