@@ -2,6 +2,10 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.2.0 — 2026-11-14
+
+- Agent 的执行失败类别（`schemas/agent/failure.json`）加 `kind: auth_required`：Agent 的登录凭据失效（OAuth 令牌过期或被撤销），须用户重新登录才能继续；可带可选的 `login`（1 到 200 字，指出要重新登录的账号或登录方式），不带 `input`、`retryAfterMs`、`resetAt`，带了也不检查。`docs/agent-protocol.md` 的「执行失败」写清三类的用途：`service_unavailable` 会自己好，Coda 退避后在同一会话续；`quota_exhausted` 到恢复时间再续；`auth_required` 提醒用户重新登录，登录后续；并写明什么时候该报它、什么时候不该报（API key 配错、权限不足仍是普通错误）。握手阶段回 -32000 的「未登录」不变。新增类别与可选字段，旧插件不受影响（Coda #2642）。
+
 ## 6.1.0 — 2026-11-14
 
 - 卡片字段加多选 `choices`（输入字段，须有 `id`、`label`，`required` 默认 true，表示至少勾一项）：`options` 是选项表，`default` 是初始勾上的选项 id，两者都是内容属性，可写表达式在任务打开时读，读出（或写下）的是 JSON 数组或它的文字。选项 `{ id, label, detail?, disabled? }`：`id` 一行、1–64 个字、前后不带空白、表中不重复，`label` 一行、1–80 个字、前后不带空白，`detail` 一行不超过 200 字，`disabled` 为 true 的列出但不能勾；1–32 项，至少一项能勾。`default` 的 id 不重复，每个须是 options 里能勾的一项（两者都已知时读流程就查）。答复是勾中项的 id 组成的数组，按 options 的顺序，在 `answer.values.<id>` 里交来，流程读 `=<任务>.values.<id>`（FEEL 列表），`filled.<id>` 为勾了至少一项。choices 是输入字段：答复的 `fields` 可以引用它，带它的任务只交给用户（`structure.json` 的 `inputFields` 加上它）。moddle 的 `coda:field` 加属性 `options`。
