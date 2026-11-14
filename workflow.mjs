@@ -1,7 +1,7 @@
 // Coda's dialect of BPMN 2.0 (workflow/): what a workflow of a project or a plugin may write in Coda's namespace, as a
 // bpmn-moddle descriptor (moddle.json); what each of those values may be, as JSON Schemas (values.json); the steps it may
 // ask of Coda itself, each with the parameters it takes (actions.json); and the names workflows share (dialect.json):
-// their kinds, the events Coda sends, the error code of a failed step, the run's variables an expression reads by name,
+// the events Coda sends, the error code of a failed step, the run's variables an expression reads by name,
 // the types a run's inputs take. Coda reads a workflow with them, and coda-plugins' contract check does where a plugin is
 // written. readWorkflow checks values and structure: structure.json describes local constraints and structure.mjs
 // checks BPMN topology, leaving only compilation to Coda.
@@ -34,9 +34,8 @@ export const CODA_FIELDS = fields;
 export const CODA_OPTIONS = options;
 // Each action by name, with the parameters it takes (`coda:param`).
 export const CODA_ACTIONS = Object.fromEntries(Object.entries(actions.actions).map(([name, action]) => [name, action.params]));
-export const WORKFLOW_KINDS = Object.keys(dialect.kinds);
-// The kinds that deploy or release: a workflow of one runs only commits merged into the default branch.
-export const DEPLOYING_KINDS = dialect.deploying;
+// The parameters an action must be given, by its name; an action with none is not listed.
+const REQUIRED_PARAMS = Object.fromEntries(Object.entries(actions.actions).filter(([, action]) => action.required).map(([name, action]) => [name, action.required]));
 // The events Coda sends (dialect.json says what each is).
 export const CODA_EVENTS = Object.keys(dialect.events);
 export const { lifecycleStart: SESSION_OPENED, lifecycleFacts: SESSION_FACTS, dispatch: DISPATCH_EVENT, cancel: CANCEL_EVENT } = dialect.eventRoles;
@@ -278,7 +277,7 @@ function joinInputsProblem(root) {
 
 // A workflow's definition (`file`, its name without `.bpmn`, for what is said) read with Coda's dialect: `{ root }`, the
 // parsed definitions, or `{ problem }`, what of it the dialect does not have — not BPMN, a coda: attribute or element it
-// does not know, an action it does not have or a parameter that action does not take — or a value of it its schema does
+// does not know, an action it does not have, a parameter that action does not take or one it must be given — or a value of it its schema does
 // not take, or a structure the workflow cannot run with.
 export async function readWorkflow(source, file = 'workflow') {
   if (typeof source !== 'string' || source.length > SIZE_LIMIT) return { problem: `${file}.bpmn 过大` };
@@ -299,6 +298,8 @@ export async function readWorkflow(source, file = 'workflow') {
     const params = CODA_ACTIONS[task.action];
     const given = (task.extensionElements?.values ?? []).filter(v => v.$type === 'coda:Param');
     if (given.some(p => !params.includes(p.name))) return { problem: `${task.id}：coda:action ${task.action} 只接受参数 ${params.join('、')}` };
+    const missing = (REQUIRED_PARAMS[task.action] ?? []).filter(name => !given.some(p => p.name === name));
+    if (missing.length) return { problem: `${task.id}：coda:action ${task.action} 须写参数 ${missing.join('、')}` };
   }
   const problem = valuesProblem(root) ?? joinInputsProblem(root) ?? structureProblem(root, file);
   return problem ? { problem } : { root };

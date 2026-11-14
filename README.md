@@ -5,7 +5,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 - **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v2/<文件>`）。`plugin.json` 是整份清单，只列通用键（`configuration`、`extensionPoints`、`extensions`、`services`、`setup`、`environment`、`path`、`endpoints`、`views`、`protocols`、`protocolImplementations`）；`setting.json` 是一项设置的声明。其余键由 Coda 的贡献点登记表或某个插件的扩展点声明：Coda 自己的（`agents`、`composerModes`、`modelProviders` 等）的 schema 仍放在这里作公开数据（如 `agents.json`、`composer-modes.json`），由登记它的 provider 引用；扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
 - **协议定义与调用**（`schemas/protocol/`、`protocol.mjs`、`docs/protocol.md`）：协议是 `命名空间/名字@大版本` + spec/status 的 JSON Schema + 操作；插件在 `contributes.protocols` 里定义自己命名空间下的协议，在 `contributes.protocolImplementations` 里声明实现哪些协议。调用是 `{ record, operation, input, requestId, parent, awaited }`，回答是 `{ result }` 或 `{ run }`；`coda/run@1`、`coda/executor@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1` 是六个核心协议。
-- **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是流程种类、Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
+- **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是 Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
 - **Agent 接入扩展**（`schemas/agent/`、`agent.mjs`、`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核）。
 
 流程方言的 **结构规则**从 1.8.0 起也由 `readWorkflow` / `workflowProblem` 检查。`workflow/structure.json` 声明支持的顶层元素与不支持的流程元素、各位置的事件定义、`coda:` 属性的位置限制、任务与多实例的局部写法、脚本数量、定时间隔和生命周期等待类型。`rules` 使用 JSON Schema 检查节点的无环投影（原始标量属性与父级、事件种类等固定事实），复用 `newAjv()` 和已有关键字；`moddle.json` 的 `extends` 仍声明属性可附着的基础类型。`CODA_STRUCTURE` 导出同一份表。新增局部规则改数据，不增加校验器分支。
@@ -14,7 +14,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 读取定义时原有的 Coda 结构规则已全部纳入协议。Coda 接入 1.8.0 后，`parseBpmn` 只需调用 `readWorkflow`，再把 `root` 编译成引擎、任务、调度和图所需的结构；运行时才能知道的表达式结果、动态字段引用、调度设置实际值及能力是否存在，仍由宿主在运行时检查。
 
-流程方言的 **挂点**是流程之间互相找到的方式：被调用的流程在自己的 extensionElements 里写 `<coda:join hook name? detail? default? order?/>` 加入一个挂点（`hook` 是小写字母开头的名字，一个流程每个挂点只加入一次），`name`、`detail` 是它作为勾选项时的名字与说明，`default` 是否默认勾上（只写 true 或 false：挂点的列表在任何运行之外读出），`order` 是整数，小的在前；`inputs` 是它要从卡片拿的自己的文字参数（`coda:input`，type 为 string，逗号或空格分隔，最多 4 个，读流程时检查），`joinInputNames(join)` 读出这些名字。宿主用动作 `hook-joiners` 列出一个挂点的加入者（勾选项形状，带上各自的 `inputs`，可直接给 `coda:optionList`），用 `run-workflows` 的 `hook` 调用它们，`only` 只调用勾中的几个。挂点名是普通字符串，传哪些参数、怎么选由声明它的宿主写在自己的说明里。流程属性 `coda:mergedOnly` 说它是否只运行已合并进默认分支的提交。
+流程方言的 **挂点**是流程之间互相找到的方式：被调用的流程在自己的 extensionElements 里写 `<coda:join hook name? detail? default? order?/>` 加入一个挂点（`hook` 是小写字母开头的名字，一个流程每个挂点只加入一次），`name`、`detail` 是它作为勾选项时的名字与说明，`default` 是否默认勾上（只写 true 或 false：挂点的列表在任何运行之外读出），`order` 是整数，小的在前；`inputs` 是它要从卡片拿的自己的文字参数（`coda:input`，type 为 string，逗号或空格分隔，最多 4 个，读流程时检查），`joinInputNames(join)` 读出这些名字。宿主用动作 `hook-joiners` 列出一个挂点的加入者（勾选项形状，带上各自的 `inputs`，可直接给 `coda:optionList`），用 `run-workflows` 的 `hook`（必写）调用它们，`only` 只调用勾中的几个。挂点名是普通字符串，传哪些参数、怎么选由声明它的宿主写在自己的说明里。流程属性 `coda:mergedOnly` 说它是否只运行已合并进默认分支的提交，不写为 false（任何提交都能跑）。
 
 流程方言的 **勾选项**写在答复（外层的 `coda:choice`）里：`coda:option` 是一项，`coda:optionList` 的 `value` 是一个表达式，任务打开时读出一组勾选项（列表或它的 JSON），在它写的位置展开，两者按写的顺序排。`<coda:options>` 不是它的写法（那个名字是答复自己的勾选项集合）。定义里每个 `coda:optionList` 算一项；打开后的整组由 `workflow/options.json` 定义：每项是 `{ id, name, detail?, default?, inputs? }`（`default` 为布尔值，没有 `shown`），最多 12 项，id 不重复；`inputs` 是勾上这一项时卡片上出现的文字输入，每个 `{ id, label }`，一项最多 4 个、id 不重复，几项带同一个 id 时卡上只出一个。`optionsProblem(options, where)` 检查一个答复打开后的整组（静态项已求值、各组已展开），合法时返回 `null`，否则返回「位置：说明」；表达式求值与展开仍由 Coda 完成。
 
@@ -88,10 +88,6 @@ optionsProblem([{ id: 'release', name: '发布正式版', default: false, inputs
 插件清单可以声明 `"coda": { "channels": ["preview"] }`，限定只在预览版后端安装和更新。允许的通道是 `stable`（正式版）和 `preview`（预览版）；数组非空、不重复。不写 `channels` 的插件不限制通道。
 
 宿主按每台目标后端自己的安装记录判断，不按 Mac / iPhone 客户端版本判断；没有通道记录的后端不满足显式限制。商店和直接从 npm、Git 安装执行同一限制。这是 Coda 的安装约束，不改变 npm 包的公开性，也不能约束不认识该字段的旧宿主。
-
-## 项目中的多选选项
-
-设置的 `items.anyOf` 选项可附带 `workflowKind`（`check`、`premerge`、`prebuild`、`develop`、`deploy`、`preview`、`release`）。全局设置显示全部选项；项目设置只显示该项目有的流程类别，未写此字段的选项始终显示。宿主负责按项目提供可选项，流程执行时仍需按运行的提交判断可用操作。
 
 ## 输入框模式
 

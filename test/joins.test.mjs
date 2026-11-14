@@ -42,7 +42,7 @@ test('what a join may not be is said: no hook, a hook not a name, the same hook 
 
 test('the hosts\' actions: hook-joiners takes a hook and a commit, run-workflows a hook and the ones chosen', async () => {
   assert.deepEqual(CODA_ACTIONS['hook-joiners'], ['hook', 'commit']);
-  assert.deepEqual(CODA_ACTIONS['run-workflows'], ['kind', 'hook', 'only', 'commit', 'inputs']);
+  assert.deepEqual(CODA_ACTIONS['run-workflows'], ['hook', 'only', 'commit', 'inputs']);
   const body = `<startEvent id="s" /><sequenceFlow id="a" sourceRef="s" targetRef="joiners" />
     <serviceTask id="joiners" coda:action="hook-joiners"><extensionElements><coda:param name="hook" value="after-merge" /></extensionElements></serviceTask>
     <sequenceFlow id="b" sourceRef="joiners" targetRef="ask" />

@@ -1,5 +1,5 @@
 {
-  "description": "coda:action：serviceTask 上写它，就是 Coda 在后端里做的一步，不写脚本。参数写成 <coda:param name value>，只认这里列出的",
+  "description": "coda:action：serviceTask 上写它，就是 Coda 在后端里做的一步，不写脚本。参数写成 <coda:param name value>，只认 params 列出的，required 列出的必须写",
   "actions": {
     "publish-stage": {"params": ["stage", "detail"],
       "description": "发布运行主体的会话此刻在流程里的阶段（stage）和放在状态旁的说明（detail），两者都空就是清掉；只用于由会话事件启动的运行"},
@@ -11,10 +11,8 @@
       "description": "请运行主体的会话的 Agent 压缩上下文（_coda/session/compact，见 docs/agent-protocol.md），从不失败：没压缩就写明原因"},
     "hold-group": {"params": ["group", "capacity", "borrow", "exclusive"],
       "description": "为这一步所在的那一段排进并发组 group，离开这一段或运行结束才放开；borrow 为 only 只借不排、no 从不借，exclusive 为 true 占满整组"},
-    "run-workflows": {"params": ["kind", "hook", "only", "commit", "inputs"],
-      "description": "在 commit（默认本次运行的）上启动项目里所选种类（kind，逗号分隔）或加入挂点 hook 的全部流程（两者写一个），only（流程名的 JSON 数组或逗号分隔）只启动其中这几个；各给它声明了的 inputs（JSON 对象），等它们都结束；有一个失败就失败"},
-    "workflow-kinds": {"params": ["commit"],
-      "description": "项目在这个提交上有没有各种类可调用的流程（项目自己的和启用插件的），各是布尔值"},
+    "run-workflows": {"params": ["hook", "only", "commit", "inputs"], "required": ["hook"],
+      "description": "在 commit（默认本次运行的）上启动项目里加入挂点 hook 的全部流程（项目自己的和启用插件的），only（流程名的 JSON 数组或逗号分隔）只启动其中这几个；各给它声明了的 inputs（JSON 对象），等它们都结束；有一个失败就失败"},
     "hook-joiners": {"params": ["hook", "commit"],
       "description": "项目在这个提交上加入挂点 hook 的流程（项目自己的和启用插件的）：list 是勾选项形状的数组（id 为流程名、name、detail、default，以及 join 声明了 inputs 时的 inputs：各为 id 与这个参数的 label，没写 label 时为参数名），按 order 排好，可直接给 coda:optionList；count 是个数"},
     "expire-tool-details": {"params": ["olderThan"],

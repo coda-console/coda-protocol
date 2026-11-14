@@ -2,6 +2,11 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.0.0 — 2026-11-14
+
+- 不兼容：流程方言删去流程种类，流程只靠挂点（`<coda:join hook=…/>`）互相找到，「只运行已合并的提交」只由 `coda:mergedOnly` 声明。删去流程属性 `coda:kind` 与 `coda:deploy`（moddle 与 `values.json` 里都没有了，写了的流程读时按认不出的属性拒绝）；`dialect.json` 删去 `kinds` 与 `deploying`，`workflow.mjs` 不再导出 `WORKFLOW_KINDS`、`DEPLOYING_KINDS`；删去动作 `workflow-kinds`；`run-workflows` 删去参数 `kind`，`hook` 必写（`actions.json` 的动作加 `required`，读流程时没写的报「须写参数」）；设置的 `items.anyOf` 选项删去 `workflowKind`，写了的清单校验不过（Coda #2521 第 5 步）。
+- 不写 `coda:mergedOnly` 就是 false：任何提交都能跑，不再由种类推出。
+
 ## 5.17.0 — 2026-11-13
 
 - 勾选项可带输入：`coda:join` 加 `inputs`（加入者要从卡片拿的自己的文字参数，逗号或空格分隔，最多 4 个；读流程时检查每个都是本流程 type 为 string 的 `coda:input`、不重复，且上卡片时的 id 与 label（没写 label 用参数名）合乎勾选项输入的限制），`joinInputNames(join)` 读出这些名字。`workflow/options.json` 的勾选项加可选的 `inputs: [{ id, label }]`（一项最多 4 个、id 不重复），勾上这一项时卡片上出现这些文字输入，几项带同一个 id 时只出一个；`hook-joiners` 的列表项带上它们。只加写法，已有流程不变（Coda #2521 第 4 步）。
