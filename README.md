@@ -22,7 +22,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 输入字段有 `text`、`secret` 与多选 `choices`。`choices` 的 `options` 是选项表，每项 `{ id, label, detail?, disabled? }`（`id` 一行、1–64 个字、前后不带空白、表中不重复，`label` 一行、1–80 个字、前后不带空白，`detail` 一行不超过 200 字，`disabled` 为 true 的列出但不能勾），1–32 项，至少一项能勾；`default` 是初始勾上的选项 id，每个须是 options 里能勾的一项，不写就是都不勾；两者都可写表达式在任务打开时读，读出（或直接写下）的是 JSON 数组或它的文字。`required`（默认 true）要求至少勾一项。答复是勾中项的 id 组成的数组，按 options 的顺序，在答复的 `values.<id>` 里（其余输入是文字，它是数组），流程读 `=<任务>.values.<id>`，是 FEEL 列表；它不认识机器或别的什么，选项的意思由给出它的步骤定（如 `check-setting` 的 `machines`）。
 
-脚本步骤的 **工作副本** 由 `coda:source` 声明：这一步在哪个工作副本目录里跑，写本机上的绝对路径，可以写 FEEL 表达式。它只用于 `coda:checkout="false"` 的步骤：在本机跑就在那个目录里就地跑，不检出提交；交给别的执行环境时，由调用方给这个目录所在的工作副本拍快照（含未提交、未跟踪的改动，不含忽略的文件），对方检出快照、在对应的子目录里跑。协议里 `coda/executor@1` 的 `execute` 输入已有 `source.snapshot` 与 `workingDirectory`，交给别台时就用这两项，执行器协议本身不改。
+脚本步骤的 **工作副本** 由 `coda:source` 声明：这一步在哪个工作副本目录里跑，写本机上的绝对路径，可以写 FEEL 表达式。它只用于 `coda:checkout="false"` 的步骤：在那个目录里就地跑，不检出提交。
 
 定义和运行时共用这一份 schema。`x-deferred` 包住一个 schema：读定义时，文字先检查 FEEL，表达式或含 `{{ … }}` 的模板留到打开任务后查；运行时只按包住的 schema 严格检查，不再把结果当表达式。只有内容属性使用它，`type`、`id`、布尔值、枚举和 `maxLength` 不放宽。另有 `x-length`（沿用 Coda 的 UTF-16 长度，可用 `{ "property": "maxLength" }` 读取同一对象的上限）、`x-json`（解析 JSON 文字或检查 JSON 值，按序列化后的 UTF-8 字节数限制大小）、`x-among`（`{ property, key, match? }`：数组的每一项是同一对象里 `property`（数组或它的 JSON 文字）某一项的 `key`，且那一项合乎 `match`；`property` 还是定义里的表达式时不查）；`absolute-path`、`https-url`、`link-url` 三个 format 按本机路径与 URL 解析器检查；`link-url` 接受 https 网址或 `action=download-manifest` 且 `url` 解码后为 https 网址的 `itms-services:` 安装链接。已有的 `x-ref` 增加 `key`（按数组元素的属性引用）和 `split`（逐个检查分隔后的名字）。这些操作都不改写输入。
 
@@ -61,7 +61,7 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 definitionProblem(RUN_PROTOCOL); // null，或说明
 ownedProtocolsProblem(manifest); // contributes.protocols 只能在自己的命名空间下
 runStatusProblem({ state: 'completed', result: null }, { state: 'working' }); // 终态不能再变
-invocationRequestProblem({ record: { kind: 'coda/executor@1', id: 'host' }, operation: 'execute', input: {},
+invocationRequestProblem({ record: { kind: 'coda/session@1', id: 'chat-1' }, operation: 'post', input: { text: 'hi' },
   requestId: 'r1', parent: { kind: 'coda/run@1', id: 'caller-run' }, awaited: true });
 invocationResponseProblem({ run: { kind: 'coda/run@1', id: 'run-1' } });
 ```
@@ -131,7 +131,7 @@ agentValueProblem('review.json', review, '工具的审核');
 命名空间 `coda` 保留给核心协议。
 
 - **`coda/run@1`**：被调用方自己的运行记录。spec 记录调用的记录、操作、输入、请求 ID、父引用和是否被等待；status 是 `working`、`input-required`、`completed`、`failed`、`canceled`，后三个是终态。`completed`/`failed` 必带 `result`，`failed` 的 `result` 约定为 `{ code, message }`（`code: "unknown"` 表示结局不明），`canceled` 可带取消前的话和留下的东西；另有可选的 `progress` 和等输入时的 `awaiting`。操作是 `cancel`。
-- **`coda/executor@1`**：执行器。操作 `execute` 接一份执行工作并返回运行引用，运行记录在执行器那边；没有 `target`、`executor` 或 `assignmentId` 绑定，也不回写调用方的记录。
+- **`coda/executor@1`**：执行器，一台机器上的执行环境。spec 是配置意图，status 是持有端观察到的事实；没有操作。
 - **`coda/agent@1`**：Agent 资源，复数名 `agents`；spec 照 Coda 的 Agent 资源（`agent`、`title`、`plugin?`、`defaultModel`、`models`、`modes` 等），`plugin` 是提供 Agent 程序的插件、不是记录的 provider；status 为空对象；操作 `spawn`（`run: true`）开一个子会话。
 - **`coda/session@1`**：插件提供的外部会话。spec 是标题、容器和可选的环境引用；status 是 `head` 游标、参与者（可带头像 `avatar`）与 `post` 收不收语音（`accepts`）；操作 `read`（`safe`）与 `draft`（`idempotent`）是立即结果，`post` 开运行；撤回、编辑、表情是用 `about` 指向旧消息的新消息。
 - **`coda/environment@1`**：插件提供的只读外部环境。spec 带 `actions`；操作 `list` 列目录、`read` 读文件（一次至多 1 MiB）。
@@ -164,7 +164,7 @@ Coda 与检查包都钉一个确切版本。对第三方的兼容承诺只覆盖
 
 协议自己的大版本写在协议名里（`coda/run@1`）；同一大版本只加可选字段和新操作，改含义或删东西升大版本，新旧可并存。
 
-3.0.0 删除了 `executor` 与 `execution`，并把执行请求并入 `coda/executor@1` 的 `execute`；这是不兼容变更，旧代码须改用 `@coda-console/protocol/protocol` 与 `coda/run@1`。
+3.0.0 删除了 `executor` 与 `execution`；这是不兼容变更，旧代码须改用 `@coda-console/protocol/protocol` 与 `coda/run@1`。
 
 改协议就在这里开 PR，说明写清动了哪个类型、旧插件受不受影响；发布后 Coda 与检查包各自升依赖。
 

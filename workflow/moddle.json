@@ -48,17 +48,10 @@
       ]
     },
     {
-      "name": "PlacementProperties",
-      "isAbstract": true,
-      "extends": ["bpmn:Process", "bpmn:ScriptTask", "bpmn:SubProcess"],
-      "description": "local 将脚本限制在发起端；any 允许符合要求的执行器。上层 local 不可被子节点放宽；显式执行器绑定仍须满足此约束",
-      "properties": [{"name": "placement", "isAttr": true, "type": "String"}]
-    },
-    {
       "name": "RunsOnProperties",
       "isAbstract": true,
       "extends": ["bpmn:ScriptTask", "bpmn:SubProcess"],
-      "description": "脚本步骤要在哪里跑（同 GitHub 的 runs-on）：标签如 linux,x64，由这台机器上的项目绑到执行环境；写在子流程上对其中每个脚本步骤生效",
+      "description": "脚本步骤要在哪里跑（同 GitHub 的 runs-on）：标签如 linux,x64，是对本机执行环境的要求，不符合就一开始失败，不会把步骤交给别台；写在子流程上对其中每个脚本步骤生效",
       "properties": [
         {"name": "runsOn", "isAttr": true, "type": "String"}
       ]
@@ -88,10 +81,8 @@
       "name": "StartEventProperties",
       "isAbstract": true,
       "extends": ["bpmn:StartEvent"],
-      "description": "计时器开始事件的：reportTo 运行向哪个会话汇报（会话引用，或读本插件设置的 =vars.…），reportOn 是 failure（默认）或 always，scope 是 project（默认，每个有它的项目各跑）或 machine（整台机器一次）",
+      "description": "计时器开始事件的：scope 是 project（默认，每个有它的项目各跑）或 machine（整台机器一次）",
       "properties": [
-        {"name": "reportTo", "isAttr": true, "type": "String"},
-        {"name": "reportOn", "isAttr": true, "type": "String"},
         {"name": "scope", "isAttr": true, "type": "String"}
       ]
     },
