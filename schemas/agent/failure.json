@@ -7,9 +7,10 @@
     "kind": {
       "enum": [
         "quota_exhausted",
-        "service_unavailable"
+        "service_unavailable",
+        "auth_required"
       ],
-      "description": "kind 只能是 quota_exhausted 或 service_unavailable"
+      "description": "kind 只能是 quota_exhausted、service_unavailable 或 auth_required"
     }
   },
   "required": [
@@ -49,14 +50,39 @@
   },
   "else": {
     "type": "object",
-    "properties": {
-      "resetAt": {
-        "type": "string",
-        "format": "date-parse",
-        "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d{1,9})?Z$(?![\\s\\S])",
-        "description": "resetAt 须为 UTC ISO 8601 时间字符串（以 Z 结尾），表示上游给出的额度预计重置时间；没有确切时间时不写"
+    "if": {
+      "properties": {
+        "kind": {
+          "const": "auth_required"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "then": {
+      "type": "object",
+      "properties": {
+        "login": {
+          "type": "string",
+          "minLength": 1,
+          "x-length": 200,
+          "description": "login 须为 1 到 200 字的文本，说明要重新登录的账号或登录方式"
+        }
+      }
+    },
+    "else": {
+      "type": "object",
+      "properties": {
+        "resetAt": {
+          "type": "string",
+          "format": "date-parse",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d{1,9})?Z$(?![\\s\\S])",
+          "description": "resetAt 须为 UTC ISO 8601 时间字符串（以 Z 结尾），表示上游给出的额度预计重置时间；没有确切时间时不写"
+        }
       }
     }
   },
-  "$comment": "quota_exhausted 不检查 input 或 retryAfterMs；service_unavailable 不检查 resetAt。"
+  "$comment": "quota_exhausted 不检查 input、retryAfterMs 或 login；service_unavailable 不检查 resetAt 或 login；auth_required 只检查可选的 login，不检查 input、retryAfterMs 或 resetAt。"
 }
