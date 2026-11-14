@@ -2,6 +2,13 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.1.0 — 2026-11-14
+
+- 卡片字段加多选 `choices`（输入字段，须有 `id`、`label`，`required` 默认 true，表示至少勾一项）：`options` 是选项表，`default` 是初始勾上的选项 id，两者都是内容属性，可写表达式在任务打开时读，读出（或写下）的是 JSON 数组或它的文字。选项 `{ id, label, detail?, disabled? }`：`id` 一行、1–64 个字、前后不带空白、表中不重复，`label` 一行、1–80 个字、前后不带空白，`detail` 一行不超过 200 字，`disabled` 为 true 的列出但不能勾；1–32 项，至少一项能勾。`default` 的 id 不重复，每个须是 options 里能勾的一项（两者都已知时读流程就查）。答复是勾中项的 id 组成的数组，按 options 的顺序，在 `answer.values.<id>` 里交来，流程读 `=<任务>.values.<id>`（FEEL 列表），`filled.<id>` 为勾了至少一项。choices 是输入字段：答复的 `fields` 可以引用它，带它的任务只交给用户（`structure.json` 的 `inputFields` 加上它）。moddle 的 `coda:field` 加属性 `options`。
+- 值的关键字加 `x-among`（`{ property, key, match? }`）：数组的每一项是同一对象里 `property`（数组或它的 JSON 文字）某一项的 `key`，且那一项合乎 `match`；`property` 还没读出（定义里的表达式）时不查。
+- 动作 `check-setting` 加参数 `machines`（建议写入的机器：空间里机器的 ID 或名字，JSON 数组或逗号分隔；不写时是空间里装了这个插件的每一台，不在空间里时是本机，写了 `project` 时只有目录所在的那台）；`valid` 加输出 `machines`（choices 字段的 options：各台，`id` 为机器 ID，离线、不合法的在 `detail` 写明，不合法的 `disabled`）与 `selected`（choices 字段的 default），`before` 改为各台这一层的现值，值相同的合成一份，`after` 仍是一个。`apply-setting` 写到卡片最后一个 choices 字段勾中的各台（卡片没有 choices 字段时同 6.0，只写本机或目录所在的那台），逐台写、部分成功保留、不重试，加输出 `results`（逐台 `machine`、`name`、`result` 为 `written`、`offline`、`not-installed`、`refused` 或 `failed`，以及 `reason` 或 `layer`、`value`）、`written`、`failed`；`layer`、`value` 照旧，为第一台写成的那台的。参数与输出都只加不改，已有流程不变（Coda 内置能力 change-setting 写到多台）。
+- 有输入字段的任务只交给用户这条报错的末尾加「（choices 字段也是输入字段）」，前面的说法不变。
+
 ## 6.0.0 — 2026-11-14
 
 - 不兼容：流程方言删去流程种类，流程只靠挂点（`<coda:join hook=…/>`）互相找到，「只运行已合并的提交」只由 `coda:mergedOnly` 声明。删去流程属性 `coda:kind` 与 `coda:deploy`（moddle 与 `values.json` 里都没有了，写了的流程读时按认不出的属性拒绝）；`dialect.json` 删去 `kinds` 与 `deploying`，`workflow.mjs` 不再导出 `WORKFLOW_KINDS`、`DEPLOYING_KINDS`；删去动作 `workflow-kinds`；`run-workflows` 删去参数 `kind`，`hook` 必写（`actions.json` 的动作加 `required`，读流程时没写的报「须写参数」）；设置的 `items.anyOf` 选项删去 `workflowKind`，写了的清单校验不过（Coda #2521 第 5 步）。

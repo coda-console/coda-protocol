@@ -12,7 +12,8 @@
 // - `x-duration`: true — the value is an ISO 8601 duration, not negative;
 // - `x-number`: true — the text, read as a number, is a finite one (`1e999` reads as none).
 // workflow/keywords.mjs adds x-deferred (check FEEL now, the result later), x-length (UTF-16 text length, optionally
-// limited by a sibling), x-json (a JSON value or its text, with a byte budget), and absolute-path / https-url formats.
+// limited by a sibling), x-json (a JSON value or its text, with a byte budget), x-among (each item names an item of a
+// sibling array), and absolute-path / https-url formats.
 import { parseDuration } from '@0dep/piso';
 import { BpmnModdle } from 'bpmn-moddle';
 import { parseExpression } from 'feelin';
@@ -158,11 +159,14 @@ const description = (error, object = {}) => (described(error, { schemas: [values
     : object && Object.hasOwn(object, key) ? String(object[key]) : whole);
 // Required values and allowed attributes come from the same schema as validation; none of the field types is named here.
 function fieldSaid(error, at, field) {
-  if (error.keyword === 'additionalProperties') {
+  // A key a field's type does not have; one inside a value (a choices field's option) is said by that value's schema.
+  if (error.keyword === 'additionalProperties' && error.parentSchema.properties?.type?.const) {
     const allowed = Object.keys(error.parentSchema.properties), type = error.parentSchema.properties.type.const;
     const extra = Object.keys(error.data).filter(key => !Object.hasOwn(error.parentSchema.properties, key));
     return `${at}：${type} 字段没有 ${extra.join('、')}，可写 ${allowed.join('、')}`;
   }
+  // Items repeated in a value of the field (its options' ids): which value, then what is repeated.
+  if (error.keyword === 'x-unique-by') return `${at}：${error.instancePath.split('/')[1]} 里的 ${error.message}`;
   return `${at}：${error.keyword === 'x-feel' ? error.message : description(error, field)}`;
 }
 // A resolved field, at task opening or when accepting an answer. No expression is evaluated and no default is inserted.

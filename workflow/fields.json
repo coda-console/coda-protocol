@@ -5,15 +5,16 @@
   "description": "字段须为对象",
   "type": "object",
   "allOf": [
-    {"required": ["type"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view"},
-    {"properties": {"type": {"enum": ["markdown", "code", "image", "text", "secret", "link", "view"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view"}}},
+    {"required": ["type"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view、choices"},
+    {"properties": {"type": {"enum": ["markdown", "code", "image", "text", "secret", "link", "view", "choices"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view、choices"}}},
     {"if": {"properties": {"type": {"const": "markdown"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/markdown"}},
     {"if": {"properties": {"type": {"const": "code"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/code"}},
     {"if": {"properties": {"type": {"const": "image"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/image"}},
     {"if": {"properties": {"type": {"const": "text"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/text"}},
     {"if": {"properties": {"type": {"const": "secret"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/secret"}},
     {"if": {"properties": {"type": {"const": "link"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/link"}},
-    {"if": {"properties": {"type": {"const": "view"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/view"}}
+    {"if": {"properties": {"type": {"const": "view"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/view"}},
+    {"if": {"properties": {"type": {"const": "choices"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/choices"}}
   ],
   "$defs": {
     "markdown": {
@@ -201,6 +202,75 @@
         {"required": ["label"], "description": "须写 label"},
         {"required": ["plugin"], "description": "须写 plugin"},
         {"required": ["view"], "description": "须写 view"}
+      ]
+    },
+    "choices": {
+      "$comment": "多选：卡片列出 options，用户勾其中几项；答复是勾中项的 id 组成的数组，按 options 的顺序（流程读 =<任务>.values.<id>）。required 为 true（默认）时至少勾一项。",
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "choices"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "required": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/required"},
+            "options": {
+              "x-deferred": {
+                "x-json": {
+                  "schema": {
+                    "description": "options 须为不超过 65536 字节的 JSON 数组",
+                    "allOf": [
+                      {"type": "array", "description": "options 须为选项的 JSON 数组"},
+                      {"minItems": 1, "maxItems": 32, "description": "options 须有 1–32 个选项"},
+                      {
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {"type": "string", "pattern": "^\\S(?:[^\\r\\n]*\\S)?$", "x-length": 64, "description": "选项的 id 须为一行、1–64 个字，前后不带空白"},
+                            "label": {"type": "string", "pattern": "^\\S(?:[^\\r\\n]*\\S)?$", "x-length": 80, "description": "选项的 label 须为一行、1–80 个字，前后不带空白"},
+                            "detail": {"type": "string", "pattern": "^[^\\r\\n]*$", "x-length": 200, "description": "选项的 detail 须为一行、不超过 200 个字"},
+                            "disabled": {"type": "boolean", "description": "选项的 disabled 须为 true 或 false"}
+                          },
+                          "required": ["id", "label"],
+                          "additionalProperties": false,
+                          "description": "选项须为对象，有 id 与 label，可有 detail 与 disabled"
+                        }
+                      },
+                      {"x-unique-by": ["id"]},
+                      {"contains": {"not": {"required": ["disabled"], "properties": {"disabled": {"const": true}}}}, "description": "options 里至少要有一项能勾（不是 disabled）"}
+                    ]
+                  },
+                  "maxBytes": 65536
+                },
+                "description": "options 须为选项的 JSON 数组"
+              }
+            },
+            "default": {
+              "x-deferred": {
+                "x-json": {
+                  "schema": {
+                    "description": "default 须为不超过 8192 字节的 JSON 数组",
+                    "allOf": [
+                      {"type": "array", "items": {"type": "string", "description": "default 须为选项 id 的 JSON 数组"}, "description": "default 须为选项 id 的 JSON 数组"},
+                      {"uniqueItems": true, "description": "default 里的 id 不能重复"},
+                      {"x-among": {"property": "options", "key": "id"}, "description": "default 里的 {value} 不在 options 里"},
+                      {
+                        "x-among": {"property": "options", "key": "id", "match": {"not": {"required": ["disabled"], "properties": {"disabled": {"const": true}}}}},
+                        "description": "default 里的 {value} 是不能勾的选项（disabled）"
+                      }
+                    ]
+                  },
+                  "maxBytes": 8192
+                },
+                "description": "default 须为选项 id 的 JSON 数组"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {"required": ["id"], "description": "须有 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）"},
+        {"required": ["label"], "description": "须写 label"},
+        {"required": ["options"], "description": "须写 options"}
       ]
     },
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$", "description": "须有 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）"},

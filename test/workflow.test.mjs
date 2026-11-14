@@ -123,15 +123,48 @@ test('send-session accepts text, key and an optional session, like tell-session'
   }
 });
 
-test('check-setting and apply-setting take a plugin setting\'s change; apply-setting also the approving task', async () => {
+test('check-setting and apply-setting take a plugin setting\'s change; check-setting also the machines suggested, apply-setting the approving task', async () => {
   const task = (action, params) => workflow(`<startEvent id="start" />
     <sequenceFlow id="f" sourceRef="start" targetRef="step" />
     <serviceTask id="step" coda:action="${action}"><extensionElements>${params}</extensionElements></serviceTask>`);
   const change = '<coda:param name="plugin" value="composer" /><coda:param name="setting" value="composer.templates" /><coda:param name="value" value="[]" /><coda:param name="project" value="" />';
+  assert.deepEqual(CODA_ACTIONS['check-setting'], ['plugin', 'setting', 'value', 'project', 'machines']);
+  assert.deepEqual(CODA_ACTIONS['apply-setting'], ['plugin', 'setting', 'value', 'project', 'approval']);
   assert.equal(await workflowProblem(task('check-setting', change), 'w'), null);
+  for (const machines of ['=inputs.machines', '["rig","macmini2"]', 'rig, macmini2', ''])
+    assert.equal(await workflowProblem(task('check-setting', `${change}<coda:param name="machines" value="${machines.replaceAll('"', '&quot;')}" />`), 'w'), null);
   assert.equal(await workflowProblem(task('apply-setting', `${change}<coda:param name="approval" value="ask" />`), 'w'), null);
   assert.equal(await workflowProblem(task('check-setting', `${change}<coda:param name="approval" value="ask" />`), 'w'),
-    'step：coda:action check-setting 只接受参数 plugin、setting、value、project');
+    'step：coda:action check-setting 只接受参数 plugin、setting、value、project、machines');
+  // Where apply-setting writes is what the user ticked on the approving card, not a parameter.
+  assert.equal(await workflowProblem(task('apply-setting', `${change}<coda:param name="approval" value="ask" /><coda:param name="machines" value="rig" />`), 'w'),
+    'step：coda:action apply-setting 只接受参数 plugin、setting、value、project、approval');
+});
+
+test('a card approving a setting on several machines: check-setting\'s machines and selected feed a choices field the primary answer sends', async () => {
+  const flow = (field, fields = 'machines', assignee = ' coda:assignee="user"') => workflow(`<startEvent id="start" />
+    <sequenceFlow id="f1" sourceRef="start" targetRef="check" />
+    <serviceTask id="check" coda:action="check-setting"><extensionElements><coda:param name="plugin" value="=inputs.plugin" /><coda:param name="setting" value="=inputs.setting" />
+      <coda:param name="value" value="=inputs.value" /><coda:param name="machines" value="=inputs.machines" /></extensionElements></serviceTask>
+    <sequenceFlow id="f2" sourceRef="check" targetRef="ask" />
+    <userTask id="ask"${assignee}><extensionElements>
+      <coda:field id="before" type="code" label="现在" text="=check.before" />
+      <coda:field id="after" type="code" label="改后" text="=check.after" />
+      ${field}
+      <coda:field id="note" type="text" label="拒绝理由" required="false" />
+      <coda:choice id="apply" name="应用" primary="true" fields="${fields}" /><coda:choice id="decline" name="拒绝" fields="note" />
+    </extensionElements></userTask>
+    <sequenceFlow id="f3" sourceRef="ask" targetRef="apply" />
+    <serviceTask id="apply" coda:action="apply-setting"><extensionElements><coda:param name="plugin" value="=inputs.plugin" /><coda:param name="setting" value="=inputs.setting" />
+      <coda:param name="value" value="=inputs.value" /><coda:param name="approval" value="ask" /></extensionElements></serviceTask>
+    <sequenceFlow id="f4" sourceRef="apply" targetRef="end" />
+    <endEvent id="end"><extensionElements><coda:output name="results" value="=apply.results" /><coda:output name="failed" value="=apply.failed" /></extensionElements></endEvent>`);
+  const machines = '<coda:field id="machines" type="choices" label="写到" options="=check.machines" default="=check.selected" />';
+  assert.equal(await workflowProblem(flow(machines), 'w'), null);
+  assert.equal(await workflowProblem(flow(machines.replace(' default="=check.selected"', '')), 'w'), null);
+  assert.equal(await workflowProblem(flow(machines, 'machines, nope'), 'w'), 'ask 的 coda:choice apply：fields 里的 nope 不是这个任务的输入字段');
+  assert.equal(await workflowProblem(flow(machines.replace(' options="=check.machines"', '')), 'w'), 'ask 的 coda:field machines：须写 options');
+  assert.equal(await workflowProblem(flow(machines, 'machines', ''), 'w'), 'ask：有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee="user"（choices 字段也是输入字段）');
 });
 
 test('the names workflows share are the dialect\'s: the events Coda sends, and the actions with their parameters', () => {
