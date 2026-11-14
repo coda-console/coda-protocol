@@ -148,11 +148,22 @@ test('compact display names are optional metadata beside defaults and never chan
 test('failure categories match agentFailure, including quota fields that are deliberately ignored', () => {
   const check = value => valueProblem('failure.json', value);
   for (const value of [null, [], 'x', 2]) assert.equal(check(value), '值：执行失败须为对象');
-  for (const kind of [undefined, null, 'unknown', '__proto__', 'constructor', {}]) assert.equal(check(kind === undefined ? {} : { kind }), '值.kind：kind 只能是 quota_exhausted 或 service_unavailable');
+  for (const kind of [undefined, null, 'unknown', '__proto__', 'constructor', {}]) assert.equal(check(kind === undefined ? {} : { kind }), '值.kind：kind 只能是 quota_exhausted、service_unavailable 或 auth_required');
   for (const input of [undefined, null, true, 'unknown', {}]) assert.equal(check({ kind: 'service_unavailable', ...(input === undefined ? {} : { input }) }), '值.input：input 只能是 accepted 或 not_accepted');
   for (const retryAfterMs of [-1, Infinity, NaN, -Infinity, '1', null, {}]) assert.equal(check({ kind: 'service_unavailable', input: 'accepted', retryAfterMs }), '值.retryAfterMs：retryAfterMs 须为非负有限数');
   for (const input of ['accepted', 'not_accepted']) for (const retryAfterMs of [0, 0.5, 60001, Number.MAX_VALUE]) assert.equal(check({ kind: 'service_unavailable', input, retryAfterMs }), null);
   for (const value of [{ kind: 'quota_exhausted' }, { kind: 'quota_exhausted', input: {}, retryAfterMs: -1 }, { kind: 'service_unavailable', input: 'accepted' }]) assert.equal(check(value), null);
+});
+
+test('auth_required is a bare category with an optional login description and ignores other categories\' fields', () => {
+  const check = value => valueProblem('failure.json', value);
+  for (const value of [{ kind: 'auth_required' }, { kind: 'auth_required', login: 'ChatGPT 账号' }, { kind: 'auth_required', login: 'x'.repeat(200) }, { kind: 'auth_required', login: '😀'.repeat(100) },
+    { kind: 'auth_required', input: 'unknown', retryAfterMs: -1, resetAt: 'unknown', future: 1 }])
+    assert.equal(check(value), null);
+  for (const login of ['', null, 1, true, [], {}, 'x'.repeat(201), '😀'.repeat(101)])
+    assert.equal(check({ kind: 'auth_required', login }), '值.login：login 须为 1 到 200 字的文本，说明要重新登录的账号或登录方式');
+  // login belongs to auth_required only; the other categories do not check it.
+  for (const value of [{ kind: 'quota_exhausted', login: 1 }, { kind: 'service_unavailable', input: 'accepted', login: '' }]) assert.equal(check(value), null);
 });
 
 test('quota resetAt is optional and requires a UTC ISO 8601 timestamp', () => {
