@@ -230,7 +230,9 @@ const choicesCases = [
   [{ ...choices, options: [{ id: 'a', label: 'A', name: 'A' }] }, optionSaid],
   ...['', ' a', 'a ', 'a\nb', 'x'.repeat(65)].map(id => [{ ...choices, options: [{ id, label: 'A' }] }, '选项的 id 须为一行、1–64 个字，前后不带空白']),
   [{ ...choices, options: [{ id: 1, label: 'A' }] }, '选项的 id 须为一行、1–64 个字，前后不带空白'],
-  ...[' ', 'a\nb', 'x'.repeat(81)].map(label => [{ ...choices, options: [{ id: 'a', label }] }, '选项的 label 须为一行、1–80 个字']),
+  // An option's label is read from JSON as it is, never trimmed: a line break or a space at either end is refused.
+  ...[' ', 'a\nb', 'x'.repeat(81), '\nA', 'A\n', ' A ']
+    .map(label => [{ ...choices, options: [{ id: 'a', label }] }, '选项的 label 须为一行、1–80 个字，前后不带空白']),
   ...['a\nb', 'x'.repeat(201), 42].map(detail => [{ ...choices, options: [{ id: 'a', label: 'A', detail }] }, '选项的 detail 须为一行、不超过 200 个字']),
   [{ ...choices, options: [{ id: 'a', label: 'A', disabled: 'true' }] }, '选项的 disabled 须为 true 或 false'],
   [{ ...choices, options: [{ id: 'a', label: 'A' }, { id: 'a', label: 'B' }] }, 'options 里的 id 不能重复：a'],
@@ -256,7 +258,7 @@ for (const [index, [field, description]] of choicesCases.entries()) test(`choice
 test('a choices field takes its options and default as JSON values or their text, and leaves them as they are', async () => {
   const good = [choices, { ...choices, required: false }, { ...choices, default: [] },
     { ...choices, default: ['rig', machines[0].id] }, { ...choices, options: JSON.stringify(machines), default: '["rig"]' },
-    { ...choices, options: [{ id: 'only one', label: '  一台  ', detail: '' }] },
+    { ...choices, options: [{ id: 'only one', label: '一台', detail: '' }] },
     { ...choices, options: Array.from({ length: 32 }, (_, i) => ({ id: `m${i}`, label: `第 ${i} 台`, detail: 'x'.repeat(200) })) },
     { ...choices, options: [{ id: 'x'.repeat(64), label: 'x'.repeat(80), disabled: false }], default: ['x'.repeat(64)] }];
   for (const field of good) {

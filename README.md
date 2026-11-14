@@ -20,7 +20,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 流程方言的 **卡片字段**由 `workflow/fields.json` 定义：八种字段各能写哪些属性、必填项、文字长度与单行限制、路径与网址、视图参数、输入框与密钥选项、多选的选项表；`values.json` 的 `Field` 引用它，`Fields` 声明读出 JSON 字段列表的表达式，`UserTask.children` 限定最多 12 个静态字段、id 不重复，以及全部字段已知时答复的 `fields` 只能引用输入字段（含按住出现的答复）。
 
-输入字段有 `text`、`secret` 与多选 `choices`。`choices` 的 `options` 是选项表，每项 `{ id, label, detail?, disabled? }`（`id` 一行、1–64 个字、前后不带空白、表中不重复，`label` 一行 1–80 个字，`detail` 一行不超过 200 字，`disabled` 为 true 的列出但不能勾），1–32 项，至少一项能勾；`default` 是初始勾上的选项 id，每个须是 options 里能勾的一项，不写就是都不勾；两者都可写表达式在任务打开时读，读出（或直接写下）的是 JSON 数组或它的文字。`required`（默认 true）要求至少勾一项。答复是勾中项的 id 组成的数组，按 options 的顺序，在答复的 `values.<id>` 里（其余输入是文字，它是数组），流程读 `=<任务>.values.<id>`，是 FEEL 列表；它不认识机器或别的什么，选项的意思由给出它的步骤定（如 `check-setting` 的 `machines`）。
+输入字段有 `text`、`secret` 与多选 `choices`。`choices` 的 `options` 是选项表，每项 `{ id, label, detail?, disabled? }`（`id` 一行、1–64 个字、前后不带空白、表中不重复，`label` 一行、1–80 个字、前后不带空白，`detail` 一行不超过 200 字，`disabled` 为 true 的列出但不能勾），1–32 项，至少一项能勾；`default` 是初始勾上的选项 id，每个须是 options 里能勾的一项，不写就是都不勾；两者都可写表达式在任务打开时读，读出（或直接写下）的是 JSON 数组或它的文字。`required`（默认 true）要求至少勾一项。答复是勾中项的 id 组成的数组，按 options 的顺序，在答复的 `values.<id>` 里（其余输入是文字，它是数组），流程读 `=<任务>.values.<id>`，是 FEEL 列表；它不认识机器或别的什么，选项的意思由给出它的步骤定（如 `check-setting` 的 `machines`）。
 
 脚本步骤的 **工作副本** 由 `coda:source` 声明：这一步在哪个工作副本目录里跑，写本机上的绝对路径，可以写 FEEL 表达式。它只用于 `coda:checkout="false"` 的步骤：在本机跑就在那个目录里就地跑，不检出提交；交给别的执行环境时，由调用方给这个目录所在的工作副本拍快照（含未提交、未跟踪的改动，不含忽略的文件），对方检出快照、在对应的子目录里跑。协议里 `coda/executor@1` 的 `execute` 输入已有 `source.snapshot` 与 `workingDirectory`，交给别台时就用这两项，执行器协议本身不改。
 

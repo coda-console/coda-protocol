@@ -227,7 +227,7 @@
                           "type": "object",
                           "properties": {
                             "id": {"type": "string", "pattern": "^\\S(?:[^\\r\\n]*\\S)?$", "x-length": 64, "description": "选项的 id 须为一行、1–64 个字，前后不带空白"},
-                            "label": {"type": "string", "pattern": "^\\s*\\S(?:[^\\r\\n]*\\S)?\\s*$", "x-length": 80, "description": "选项的 label 须为一行、1–80 个字"},
+                            "label": {"type": "string", "pattern": "^\\S(?:[^\\r\\n]*\\S)?$", "x-length": 80, "description": "选项的 label 须为一行、1–80 个字，前后不带空白"},
                             "detail": {"type": "string", "pattern": "^[^\\r\\n]*$", "x-length": 200, "description": "选项的 detail 须为一行、不超过 200 个字"},
                             "disabled": {"type": "boolean", "description": "选项的 disabled 须为 true 或 false"}
                           },
