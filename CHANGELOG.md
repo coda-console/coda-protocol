@@ -5,6 +5,7 @@
 ## 6.2.0 — 2026-11-14
 
 - Agent 的执行失败类别（`schemas/agent/failure.json`）加 `kind: auth_required`：Agent 的登录凭据失效（OAuth 令牌过期或被撤销），须用户重新登录才能继续；可带可选的 `login`（1 到 200 字，指出要重新登录的账号或登录方式），不带 `input`、`retryAfterMs`、`resetAt`，带了也不检查。`docs/agent-protocol.md` 的「执行失败」写清三类的用途：`service_unavailable` 会自己好，Coda 退避后在同一会话续；`quota_exhausted` 到恢复时间再续；`auth_required` 提醒用户重新登录，登录后续；并写明什么时候该报它、什么时候不该报（API key 配错、权限不足仍是普通错误）。握手阶段回 -32000 的「未登录」不变。新增类别与可选字段，旧插件不受影响（Coda #2642）。
+- 动作 `send-session` 加可选参数 `resumes`（要续跑的那条输入的 ID，须是 `session` 指定的会话、不写就是运行所属的会话里的输入）与 `how`（`original` 原样重发那条输入的完整内容，`verify` 先核对已经做了什么、再接着做，同样带上完整内容；只写 `resumes` 时按 `original`）：写了 `resumes` 时 `text` 只是存在会话里给人看的一句短说明，发给 Agent 的是那条输入的完整内容（附件、引用都在），不再抄成一条新消息的文字（Coda quota-resume 流程）。`actions.json` 的动作加两种约束：`requires`（写了某参数就须写它列出的参数）与 `enum`（某参数写成文字时的取值，表达式与 `{{ … }}` 不查），读流程时检查：`how` 须与 `resumes` 一起写，且只能是 `original` 或 `verify`；`resumes` 是否这个会话里的输入由实现方在运行时检查。只加参数与约束，已有流程不变。
 
 ## 6.1.0 — 2026-11-14
 
