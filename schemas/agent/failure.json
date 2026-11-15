@@ -75,6 +75,13 @@
     "else": {
       "type": "object",
       "properties": {
+        "input": {
+          "enum": [
+            "accepted",
+            "not_accepted"
+          ],
+          "description": "input 只能是 accepted 或 not_accepted"
+        },
         "resetAt": {
           "type": "string",
           "format": "date-parse",
@@ -84,5 +91,5 @@
       }
     }
   },
-  "$comment": "quota_exhausted 不检查 input、retryAfterMs 或 login；service_unavailable 不检查 resetAt 或 login；auth_required 只检查可选的 login，不检查 input、retryAfterMs 或 resetAt。"
+  "$comment": "quota_exhausted 的 input 可选，写了就须是 accepted 或 not_accepted，不检查 retryAfterMs 或 login；service_unavailable 不检查 resetAt 或 login；auth_required 只检查可选的 login，不检查 input、retryAfterMs 或 resetAt。"
 }
