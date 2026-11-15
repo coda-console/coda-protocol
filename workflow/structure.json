@@ -203,7 +203,7 @@
       }
     },
     {
-      "description": "coda:reportTo、coda:reportOn、coda:scope 只写在定时开始事件上（由会话发起的运行交给发起它的会话）",
+      "description": "coda:scope 只写在定时开始事件上",
       "schema": {
         "properties": {
           "position": {
@@ -215,22 +215,8 @@
         }
       },
       "when": {
-        "anyOf": [
-          {
-            "required": [
-              "reportTo"
-            ]
-          },
-          {
-            "required": [
-              "reportOn"
-            ]
-          },
-          {
-            "required": [
-              "scope"
-            ]
-          }
+        "required": [
+          "scope"
         ]
       }
     },

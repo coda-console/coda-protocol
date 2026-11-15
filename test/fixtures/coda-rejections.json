@@ -479,31 +479,7 @@
     {
       "source": "backend/test/workflows/workflow-schedules.test.mjs",
       "file": "nightly",
-      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"=inputs.who\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
-      "pattern": "/只读插件设置的表达式/"
-    },
-    {
-      "source": "backend/test/workflows/workflow-schedules.test.mjs",
-      "file": "nightly",
-      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"维护者\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
-      "pattern": "/coda:reportTo 写会话引用（coda:\\/\\/threads\\/<会话 UUID>）/"
-    },
-    {
-      "source": "backend/test/workflows/workflow-schedules.test.mjs",
-      "file": "nightly",
-      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportOn=\"always\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
-      "pattern": "/就要写 coda:reportTo/"
-    },
-    {
-      "source": "backend/test/workflows/workflow-schedules.test.mjs",
-      "file": "nightly",
-      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"=vars.probe.reportTo\" coda:reportOn=\"success\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
-      "pattern": "/只能是 failure、always/"
-    },
-    {
-      "source": "backend/test/workflows/workflow-schedules.test.mjs",
-      "file": "nightly",
-      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"asked\" coda:reportTo=\"=vars.probe.reportTo\"><messageEventDefinition messageRef=\"dispatch\" /></startEvent><sequenceFlow id=\"asked-step\" sourceRef=\"asked\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"asked\" coda:scope=\"project\"><messageEventDefinition messageRef=\"dispatch\" /></startEvent><sequenceFlow id=\"asked-step\" sourceRef=\"asked\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>",
       "pattern": "/只写在定时开始事件上/"
     },
     {
@@ -788,16 +764,6 @@
       "source": "backend/test/workflows/workflow-schedules.test.mjs",
       "file": "nightly",
       "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">=vars.probe.every</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
-    },
-    {
-      "source": "backend/test/workflows/workflow-schedules.test.mjs",
-      "file": "nightly",
-      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"=vars.probe.reportTo\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
-    },
-    {
-      "source": "backend/test/workflows/workflow-schedules.test.mjs",
-      "file": "nightly",
-      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\"\n  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" id=\"d\" targetNamespace=\"https://coda.pub/test\">\n<message id=\"dispatch\" name=\"workflow.dispatch\" />\n<process id=\"p\" isExecutable=\"true\"><startEvent id=\"due\" coda:reportTo=\"coda://threads/f63f8870-3592-4252-a5ac-c1b101995ab6\" coda:reportOn=\"always\"><timerEventDefinition><timeCycle xsi:type=\"tFormalExpression\">R/PT6H</timeCycle></timerEventDefinition></startEvent><sequenceFlow id=\"due-step\" sourceRef=\"due\" targetRef=\"step\" /><scriptTask id=\"step\" scriptFormat=\"bash\"><script>echo hi</script></scriptTask><sequenceFlow id=\"step-end\" sourceRef=\"step\" targetRef=\"end\" /><endEvent id=\"end\" /></process></definitions>"
     },
     {
       "source": "backend/test/workflows/workflow-schedules.test.mjs",

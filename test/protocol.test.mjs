@@ -68,7 +68,7 @@ test('core definitions validate, and definitions reject malformed names, operati
     ['coda/run@1', 'coda/executor@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1', 'coda/card@1']);
   assert.equal(definitionProblem(own), null);
   assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel', 'answer']);
-  assert.equal(EXECUTOR_PROTOCOL.operations.execute.run, true);
+  assert.deepEqual(EXECUTOR_PROTOCOL.operations, {});
   assert.equal(Object.hasOwn(EXECUTOR_PROTOCOL, 'target'), false);
   assert.equal(AGENT_PROTOCOL.operations.spawn.run, true);
   const safe = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
@@ -178,24 +178,13 @@ test('a terminal run cannot change again', () => {
   }
 });
 
-test('executor execute references use the git protocol names', () => {
-  const execute = new Ajv({ strict: false }).compile(EXECUTOR_PROTOCOL.operations.execute.input);
-  const base = { requirements: { labels: [] }, resources: {}, task: { command: 'npm', args: [] }, env: {} };
-  assert.equal(execute({ ...base, source: { snapshot: { kind: 'git/snapshot@1', id: 'snapshot-1' } } }), true);
-  assert.equal(execute({ ...base, source: { repository: { kind: 'git/source@1', id: 'source-1' }, commit: 'a'.repeat(40) } }), true);
-  for (const source of [
-    { snapshot: { kind: 'sourceSnapshot', id: 'snapshot-1' } },
-    { repository: { kind: 'gitSource', id: 'source-1' }, commit: 'a'.repeat(40) },
-  ]) assert.equal(execute({ ...base, source }), false);
-});
-
 test('the invocation envelope answers with exactly one of result and run', () => {
-  const request = { record: reference('coda/executor@1', 'host'), operation: 'execute', input: { task: {} },
+  const request = { record: reference('coda/session@1', 'chat'), operation: 'post', input: { text: 'hi' },
     requestId: 'request-1', parent: reference('coda/run@1', 'caller-run'), awaited: true };
   const without = (value, key) => Object.fromEntries(Object.entries(value).filter(([name]) => name !== key));
   assert.equal(invocationRequestProblem(request), null);
-  for (const value of [null, {}, { ...request, record: null }, { ...request, record: { kind: 'coda/executor@1' } },
-    { ...request, operation: 'Execute' }, { ...request, operation: '' }, { ...request, requestId: '' },
+  for (const value of [null, {}, { ...request, record: null }, { ...request, record: { kind: 'coda/session@1' } },
+    { ...request, operation: 'Post' }, { ...request, operation: '' }, { ...request, requestId: '' },
     { ...request, requestId: 1 }, { ...request, future: true }, without(request, 'parent'), without(request, 'awaited'),
     { ...request, parent: null }, { ...request, parent: { kind: 'coda/run@1' } }, { ...request, awaited: 'true' }])
     assert.equal(typeof invocationRequestProblem(value), 'string', JSON.stringify(value));

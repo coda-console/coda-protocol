@@ -2,6 +2,15 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.3.0 — 2026-11-15
+
+- 这是在 6.2.0 之上的次版本（6.2.0 见下）。
+- 不兼容：删去 Coda A3-3-0（coda#2641）已经删掉的能力的声明。依据 README「版本」一节：协议定义与流程方言是内部面，删改升次版本（6.2.0 是 failure.json 加 `auth_required`，见 #58）。
+  - 流程方言删去 `coda:reportTo`、`coda:reportOn`（moddle、取值校验与「reportOn 必须配 reportTo」、结构校验里的分支）和 `coda:placement`（`PlacementProperties`）；写了它们的流程读时按认不出的属性拒绝。定时开始事件的 `coda:scope` 及其只写在定时开始事件上的约束不变。
+  - `coda/executor@1` 删去操作 `execute`（连同它的 `$defs`：源码快照 `git/snapshot@1`、`source` 输入等），现在没有操作；spec、status、`EXECUTOR_PROTOCOL` 与 `CORE_PROTOCOLS` 里的登记不变。
+  - 删去 `schemas/protocol/v1/remote-caller.json`（记录的远端入口，含 `file_ticket`）与 `docs/protocol.md` 里的对应正文。
+  - `coda/session@1` 的 `post`、`draft`，以及 `coda:runsOn`、`coda:source`、`group`、`hold-group`、`coda/run@1` 都保留；`coda:runsOn` 的说明改成：对本机执行环境的要求，不符合就一开始失败，不会把步骤交给别台。
+
 ## 6.2.0 — 2026-11-14
 
 - Agent 的执行失败类别（`schemas/agent/failure.json`）加 `kind: auth_required`：Agent 的登录凭据失效（OAuth 令牌过期或被撤销），须用户重新登录才能继续；可带可选的 `login`（1 到 200 字，指出要重新登录的账号或登录方式），不带 `input`、`retryAfterMs`、`resetAt`，带了也不检查。`docs/agent-protocol.md` 的「执行失败」写清三类的用途：`service_unavailable` 会自己好，Coda 退避后在同一会话续；`quota_exhausted` 到恢复时间再续；`auth_required` 提醒用户重新登录，登录后续；额度不足与要重新登录两类本轮内不即时重试、也不进入服务故障重试，之后的续跑由 Coda 在同一会话里决定；并写明什么时候该报它、什么时候不该报（API key 配错、权限不足仍是普通错误）。握手阶段回 -32000 的「未登录」不变。新增类别与可选字段，旧插件不受影响（Coda #2642）。
