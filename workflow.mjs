@@ -312,7 +312,7 @@ export async function readWorkflow(source, file = 'workflow') {
         return { problem: `${task.id}：coda:action ${task.action} 写了参数 ${name} 就须写参数 ${needs.join('、')}` };
     for (const [name, values] of Object.entries(PARAM_RULES[task.action]?.enum ?? {})) {
       const value = given.find(p => p.name === name)?.value;
-      if (value !== undefined && !value.startsWith('=') && !value.includes('{{') && !values.includes(value))
+      if (value !== undefined && !isExpression(value) && !value.includes('{{') && !values.includes(value))
         return { problem: `${task.id}：coda:action ${task.action} 的参数 ${name} 只能是 ${values.join('、')}` };
     }
   }
