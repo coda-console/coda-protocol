@@ -176,9 +176,9 @@ HTTP 429 或上游的认证错误分类判断。认证失败按[需要重新登�
 ```
 
 Coda 按该类别显示「额度不足」，保留完整原因；本轮内不即时重试，也不进入服务故障重试，之后由 Coda 到 `resetAt` 在同一会话续（没有 `resetAt` 时按 Coda 自己的间隔再试）。
-可选 `input`（`accepted` 或 `not_accepted`）含义同[服务暂不可用](#服务暂不可用)：表示这一轮的输入 Agent 有没有收到。
+可选 `input`（`accepted` 或 `not_accepted`）含义与何时报沿用[服务暂不可用](#服务暂不可用)里 `input: accepted`、`input: not_accepted` 的定义：确认输入已经进入原生会话，才报 `accepted`；明确知道没被接收，报 `not_accepted`；无法确定就省略。
 Coda 只用它决定续跑时发什么——`not_accepted` 重发原输入，`accepted` 从已有进度接着做，没报则按「不确定」处理，带上原输入、先核对已经做了什么再接着做；
-它不会让额度不足进入服务故障重试。插件确定这一轮输入没交给上游时报 `not_accepted`，确定交过了报 `accepted`，拿不准就不报。`retryAfterMs` 不采用。
+它不会让额度不足进入服务故障重试。`retryAfterMs` 不采用。
 该回执确认本轮因额度不足而结束，轮次记为 `ended`、`stopReason: quota_exhausted` 并保留 `error`，操作记为 `completed`；
 操作已结算不代表任务成功，子会话向调用方交回 `failed`。两端同一原因只显示一次，不再标作「执行结果未知」。
 交回 `failed` 的状态文案为「失败」，涵盖准备与执行阶段。调用结清前，后续轮次的额度错误仍连同原因算进这次调用的结果，即使没有正文或还有其他活动在等；结清后不再另交。
