@@ -1,5 +1,5 @@
 {
-  "description": "coda:action：serviceTask 上写它，就是 Coda 在后端里做的一步，不写脚本。参数写成 <coda:param name value>，只认 params 列出的，required 列出的必须写",
+  "description": "coda:action：serviceTask 上写它，就是 Coda 在后端里做的一步，不写脚本。参数写成 <coda:param name value>，只认 params 列出的，required 列出的必须写；requires 写了某参数就必须同时写它列出的参数；enum 限定某参数写成文字（不是表达式、不含 {{ … }}）时的取值",
   "actions": {
     "publish-stage": {"params": ["stage", "detail"],
       "description": "发布运行主体的会话此刻在流程里的阶段（stage）和放在状态旁的说明（detail），两者都空就是清掉；只用于由会话事件启动的运行"},
@@ -47,8 +47,9 @@
       "description": "从仓库地址添加项目：本机已有就是它，没有就克隆；新项目没有 Tag 时带上运行所属项目的 Tag"},
     "tell-session": {"params": ["text", "key", "session"],
       "description": "告诉一个会话（不写就是运行所属的）一句话，像结果一样叫醒它的 Agent；同一个 key（或同样的话）只说一次，已归档就不说"},
-    "send-session": {"params": ["text", "key", "session"],
-      "description": "在一个会话（不写就是运行所属的）里提交一条普通消息，和用户发的一样开始一轮；同一个 key 只发一次；已归档就不发"},
+    "send-session": {"params": ["text", "key", "session", "resumes", "how"],
+      "requires": {"how": ["resumes"]}, "enum": {"how": ["original", "verify"]},
+      "description": "在一个会话（不写就是运行所属的）里提交一条普通消息，和用户发的一样开始一轮；同一个 key 只发一次；已归档就不发。resumes 是要续跑的那条输入的 ID，须是 session 指定的会话（不写是运行所属的）里的输入；写了 resumes 时，text 只是存在会话里给人看的一句短说明，发给 Agent 的是那条输入的完整内容（附件、引用都在），how 为 original（默认）是原样重发，为 verify 是先核对已经做了什么、再接着做，加上核对说明。how 须与 resumes 一起写，只能是 original 或 verify（写成文字时读流程就查）；resumes 不是这个会话里的输入由实现方在运行时检查"},
     "session-state": {"params": ["session"],
       "description": "一个会话（不写就是运行所属的）现在的样子：它或它的根会话是否已归档"}
   }

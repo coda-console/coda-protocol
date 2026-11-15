@@ -4,11 +4,18 @@
 
 ## 6.3.0 — 2026-11-15
 
+- 这是在 6.2.0 之上的次版本（6.2.0 见下）。
 - 不兼容：删去 Coda A3-3-0（coda#2641）已经删掉的能力的声明。依据 README「版本」一节：协议定义与流程方言是内部面，删改升次版本（6.2.0 是 failure.json 加 `auth_required`，见 #58）。
   - 流程方言删去 `coda:reportTo`、`coda:reportOn`（moddle、取值校验与「reportOn 必须配 reportTo」、结构校验里的分支）和 `coda:placement`（`PlacementProperties`）；写了它们的流程读时按认不出的属性拒绝。定时开始事件的 `coda:scope` 及其只写在定时开始事件上的约束不变。
   - `coda/executor@1` 删去操作 `execute`（连同它的 `$defs`：源码快照 `git/snapshot@1`、`source` 输入等），现在没有操作；spec、status、`EXECUTOR_PROTOCOL` 与 `CORE_PROTOCOLS` 里的登记不变。
   - 删去 `schemas/protocol/v1/remote-caller.json`（记录的远端入口，含 `file_ticket`）与 `docs/protocol.md` 里的对应正文。
   - `coda/session@1` 的 `post`、`draft`，以及 `coda:runsOn`、`coda:source`、`group`、`hold-group`、`coda/run@1` 都保留；`coda:runsOn` 的说明改成：对本机执行环境的要求，不符合就一开始失败，不会把步骤交给别台。
+
+## 6.2.0 — 2026-11-14
+
+- Agent 的执行失败类别（`schemas/agent/failure.json`）加 `kind: auth_required`：Agent 的登录凭据失效（OAuth 令牌过期或被撤销），须用户重新登录才能继续；可带可选的 `login`（1 到 200 字，指出要重新登录的账号或登录方式），不带 `input`、`retryAfterMs`、`resetAt`，带了也不检查。`docs/agent-protocol.md` 的「执行失败」写清三类的用途：`service_unavailable` 会自己好，Coda 退避后在同一会话续；`quota_exhausted` 到恢复时间再续；`auth_required` 提醒用户重新登录，登录后续；额度不足与要重新登录两类本轮内不即时重试、也不进入服务故障重试，之后的续跑由 Coda 在同一会话里决定；并写明什么时候该报它、什么时候不该报（API key 配错、权限不足仍是普通错误）。握手阶段回 -32000 的「未登录」不变。新增类别与可选字段，旧插件不受影响（Coda #2642）。
+- 额度不足（`kind: quota_exhausted`）可带可选的 `input`（`accepted` 或 `not_accepted`），含义与何时报同 `service_unavailable`（`accepted` 是输入已经进入原生会话，`not_accepted` 是明确拒绝、输入尚未进入原生会话，无法确定就省略）；写了就校验取值，写别的值校验不过。Coda 只用它决定续跑时发什么（`not_accepted` 重发原输入，`accepted` 接着做，没报按不确定处理：带上原输入、先核对再接着做），不会因它进入服务故障重试；`retryAfterMs` 仍不采用。可选字段，旧发送端可不写、旧接收端可忽略。
+- 动作 `send-session` 加可选参数 `resumes`（要续跑的那条输入的 ID，须是 `session` 指定的会话、不写就是运行所属的会话里的输入）与 `how`（`original` 原样重发那条输入的完整内容，`verify` 先核对已经做了什么、再接着做，同样带上完整内容；只写 `resumes` 时按 `original`）：写了 `resumes` 时 `text` 只是存在会话里给人看的一句短说明，发给 Agent 的是那条输入的完整内容（附件、引用都在），不再抄成一条新消息的文字（Coda quota-resume 流程）。`actions.json` 的动作加两种约束：`requires`（写了某参数就须写它列出的参数）与 `enum`（某参数写成文字时的取值，表达式与 `{{ … }}` 不查），读流程时检查：`how` 须与 `resumes` 一起写，且只能是 `original` 或 `verify`；`resumes` 是否这个会话里的输入由实现方在运行时检查。只加参数与约束，已有流程不变。
 
 ## 6.1.0 — 2026-11-14
 

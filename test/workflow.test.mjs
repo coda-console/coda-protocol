@@ -92,8 +92,22 @@ test('send-session accepts text, key and an optional session, like tell-session'
     assert.equal(await workflowProblem(task(params), 'w'), null);
     assert.equal(await workflowProblem(task(`${params}<coda:param name="session" value="s1" />`), 'w'), null);
     assert.equal(await workflowProblem(task(`${params}<coda:param name="unknown" value="x" />`), 'w'),
-      `send：coda:action ${action} 只接受参数 text、key、session`);
+      `send：coda:action ${action} 只接受参数 ${action === 'send-session' ? 'text、key、session、resumes、how' : 'text、key、session'}`);
   }
+});
+
+test('send-session resumes an input of the session: how needs resumes and is original or verify', async () => {
+  const task = params => workflow(`<startEvent id="start" />
+    <sequenceFlow id="f" sourceRef="start" targetRef="send" />
+    <serviceTask id="send" coda:action="send-session"><extensionElements>${params}</extensionElements></serviceTask>`);
+  const param = (name, value) => `<coda:param name="${name}" value="${value}" />`;
+  const text = param('text', '额度已重置，继续');
+  assert.deepEqual(CODA_ACTIONS['send-session'], ['text', 'key', 'session', 'resumes', 'how']);
+  for (const params of [text + param('resumes', 'm1'), text + param('resumes', 'm1') + param('how', 'original'), text + param('resumes', 'm1') + param('how', 'verify') + param('session', 's1'),
+    text + param('resumes', '=inputs.message') + param('how', '=inputs.how'), text + param('resumes', 'm1') + param('how', ' =inputs.how'), text + param('resumes', 'm1') + param('how', '{{inputs.how}}')])
+    assert.equal(await workflowProblem(task(params), 'w'), null);
+  assert.equal(await workflowProblem(task(text + param('how', 'verify')), 'w'), 'send：coda:action send-session 写了参数 how 就须写参数 resumes');
+  assert.equal(await workflowProblem(task(text + param('resumes', 'm1') + param('how', 'again')), 'w'), 'send：coda:action send-session 的参数 how 只能是 original、verify');
 });
 
 test('check-setting and apply-setting take a plugin setting\'s change; check-setting also the machines suggested, apply-setting the approving task', async () => {
