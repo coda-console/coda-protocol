@@ -131,7 +131,7 @@ test('send-session resumes an input of the session: how needs resumes and is ori
   const text = param('text', '额度已重置，继续');
   assert.deepEqual(CODA_ACTIONS['send-session'], ['text', 'key', 'session', 'resumes', 'how']);
   for (const params of [text + param('resumes', 'm1'), text + param('resumes', 'm1') + param('how', 'original'), text + param('resumes', 'm1') + param('how', 'verify') + param('session', 's1'),
-    text + param('resumes', '=inputs.message') + param('how', '=inputs.how'), text + param('resumes', 'm1') + param('how', '{{inputs.how}}')])
+    text + param('resumes', '=inputs.message') + param('how', '=inputs.how'), text + param('resumes', 'm1') + param('how', ' =inputs.how'), text + param('resumes', 'm1') + param('how', '{{inputs.how}}')])
     assert.equal(await workflowProblem(task(params), 'w'), null);
   assert.equal(await workflowProblem(task(text + param('how', 'verify')), 'w'), 'send：coda:action send-session 写了参数 how 就须写参数 resumes');
   assert.equal(await workflowProblem(task(text + param('resumes', 'm1') + param('how', 'again')), 'w'), 'send：coda:action send-session 的参数 how 只能是 original、verify');
