@@ -2,6 +2,13 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.5.0 — 2026-11-16
+
+- 这是在 6.4.0 之上的次版本。依据 README「版本」一节：Agent 接入协议是内部面，新增可选字段、放宽限制升次版本。
+- Agent 接入协议新增「配置探测」（`docs/agent-protocol.md`）：Coda 探测 Agent 的模型与模式目录时，对声明了该能力的 Agent，在 `session/new` 里带 `_meta.coda.probe: true`；入口返回一个只在当前连接里有效的虚拟会话，不建原生会话、不执行 prompt。正文写明声明、请求、会话、配置（逐模型 `session/set_config_option`、恢复默认思考档位、只有 `models` 的 Agent 支持 `session/set_model`）、错误（prompt 回 -32602，未知或失效的 ID 回 -32002）与通知的约定。
+- `agent-capabilities.json` 的 `coda` 加 `probe`：用对象声明（通常为 `{}`），允许以后加键，null、数组、布尔、字符串不合。
+- 新增 `schemas/agent/probe.json`，校验整个 `session/new` 参数的 `_meta`：`coda.probe` 只能是 `true`，其他键保留；经 `agentValueProblem('probe.json', params._meta, …)` 使用，`_meta` 缺省由调用方跳过。`session/new` 仍是 ACP 的方法，没有加进 `AGENT_METHODS`。可选字段与新 schema，旧 Agent 与旧调用方不受影响。
+
 ## 6.4.0 — 2026-11-16
 
 - 这是在 6.3.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，删改升次版本，先例见 6.3.0（#59）、6.2.0（#58）。

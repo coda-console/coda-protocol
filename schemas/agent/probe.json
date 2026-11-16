@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/probe.json",
+  "type": "object",
+  "description": "_meta 须为对象",
+  "properties": {
+    "coda": {
+      "type": "object",
+      "description": "_meta.coda 须为对象",
+      "properties": {
+        "probe": {
+          "const": true,
+          "description": "probe 只能为 true；普通会话省略此字段"
+        }
+      }
+    }
+  }
+}
