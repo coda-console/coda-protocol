@@ -125,7 +125,7 @@ test('capabilities are optional, extensible declarations; each known declaration
     for (const value of [undefined, {}, { future: true }, { coda: {} }]) assert.equal(agentCapabilitiesProblem(value, side), null);
     for (const value of [null, 0, [], 'x']) assert.equal(agentCapabilitiesProblem(value, side, '能力'), '能力：_meta 须为对象');
     for (const coda of [null, 0, [], 'x']) assert.equal(agentCapabilitiesProblem({ coda }, side, '能力'), '能力.coda：_meta.coda 须为对象');
-    for (const key of side === 'agent' ? ['waits', 'remote', 'compact'] : ['waits', 'remote', 'unrecognized']) {
+    for (const key of side === 'agent' ? ['waits', 'remote', 'compact', 'probe'] : ['waits', 'remote', 'unrecognized']) {
       assert.equal(agentCapabilitiesProblem({ coda: { [key]: { future: true } } }, side), null);
       for (const value of [null, 1, true, [], 'yes']) assert.equal(agentCapabilitiesProblem({ coda: { [key]: value } }, side, '能力'), `能力.coda.${key}：${key} 能力用对象声明（通常为 {}）`);
     }
@@ -135,6 +135,22 @@ test('capabilities are optional, extensible declarations; each known declaration
   assert.equal(valueProblem('default.json', {}), null);
   assert.equal(valueProblem('default.json', { default: 1 }), '值.default：default 须为 true 或 false；true 表示交给 Agent 自己的默认');
   assert.equal(valueProblem('default.json', []), '值：_meta.coda 须为对象');
+});
+
+test('the probe marker is optional _meta.coda.probe: true, extensible and never rewritten', () => {
+  for (const value of [{}, { coda: {} }, { coda: { probe: true } }, { future: 1, coda: { probe: true, future: [] } }, { coda: { future: null } }])
+    assert.equal(valueProblem('probe.json', value), null);
+  for (const probe of [false, 0, 1, '', 'true', null, {}, [], { probe: true }])
+    assert.equal(valueProblem('probe.json', { coda: { probe } }), '值.coda.probe：probe 只能为 true；普通会话省略此字段');
+  for (const meta of [null, true, 1, 'x', []]) assert.equal(valueProblem('probe.json', meta), '值：_meta 须为对象');
+  for (const coda of [null, true, 1, 'x', []]) assert.equal(valueProblem('probe.json', { coda }), '值.coda：_meta.coda 须为对象');
+  const meta = { coda: { probe: true, other: { a: [1] } } }, before = structuredClone(meta);
+  assert.equal(valueProblem('probe.json', meta), null);
+  assert.deepEqual(meta, before);
+  const cycle = { coda: { probe: true } }; cycle.self = cycle;
+  assert.equal(valueProblem('probe.json', cycle), '值：' + AGENT_SCHEMAS['json.json'].description);
+  assert.equal(valueProblem('probe.json', { coda: { probe: true }, n: NaN }), '值：' + AGENT_SCHEMAS['json.json'].description);
+  assert.ok(!Object.hasOwn(AGENT_METHODS, 'session/new'));
 });
 
 test('compact display names are optional metadata beside defaults and never change option identity', () => {
@@ -249,6 +265,9 @@ test('documentation wire examples remain valid for the extension parts', () => {
     if (!line.startsWith('{"jsonrpc"')) continue;
     const message = JSON.parse(line);
     if (Object.hasOwn(AGENT_METHODS, message.method ?? '')) { assert.equal(agentMessageProblem(message.method, message.params), null); checked++; }
+    if (message.method === 'session/new' && message.params._meta !== undefined) { assert.equal(valueProblem('probe.json', message.params._meta), null); checked++; }
+    const capabilities = message.result?.agentCapabilities?._meta;
+    if (capabilities) { assert.equal(agentCapabilitiesProblem(capabilities), null); checked++; }
     const failure = message.error?.data?._meta?.coda?.failure;
     if (failure) { assert.equal(valueProblem('failure.json', failure), null); checked++; }
     const update = message.params?.update;
