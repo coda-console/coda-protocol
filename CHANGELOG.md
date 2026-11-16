@@ -5,7 +5,8 @@
 ## 6.4.0 — 2026-11-16
 
 - 这是在 6.3.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，删改升次版本，先例见 6.3.0（#59）、6.2.0（#58）。
-- 统一调用的请求信封（`schemas/protocol/v1/request.json`）加可选字段 `deadline`：调用方给的截止时刻，绝对时刻的毫秒时间戳（自 1970 年起的毫秒数，正整数），与调用内核 `@coda-console/kernel` 定时器的 `due` 同一表示；持有方到点触发处理函数的取消，不带时由持有方按操作定义里的 `timeout` 或默认期限处理。`invocationRequestProblem` 不带照样通过，带了必须是正整数，字符串、负数、零、小数、null 报问题。可选字段，旧请求不受影响（Coda 宿主设计 coda#2749 6.4）。
+- 统一调用的请求信封（`schemas/protocol/v1/request.json`）加可选字段 `deadline`：调用方给的截止时刻，绝对时刻的毫秒时间戳（自 1970 年起的毫秒数，正整数），与调用内核 `@coda-console/kernel` 定时器的 `due` 同一表示；持有方到点触发处理函数的取消，不带时持有方从收到请求起按操作定义里的 `timeout` 算，操作没写就用宿主的默认期限。`invocationRequestProblem` 不带照样通过，带了必须是正整数，字符串、负数、零、小数、null 报问题。可选字段，旧请求不受影响（Coda 宿主设计 coda#2749 6.4）。
+- 操作定义（`schemas/protocol/v1/definition.json`）加可选字段 `timeout`：这个操作的默认期限，毫秒数，正整数；调用方没给 `deadline` 时，持有方从收到请求起按它算，不写就用宿主的默认期限，具体数由宿主定，协议不规定。`definitionProblem` 认它，0、负数、小数、字符串、null 报问题。可选字段，已有定义不受影响。
 - 不兼容：`coda/run@1` 删去操作 `answer`（连同它的输入、结果格式与测试）；它没有实现也没有调用方，卡片的回答已改走调用内核（coda#2749 6.1）。现在 `coda/run@1` 只有 `cancel`，`idempotent` 的核心操作只剩 `coda/session@1 draft`。`coda/card@1` 的说明不再写「回答走运行的 `answer`」。
 
 ## 6.3.0 — 2026-11-15

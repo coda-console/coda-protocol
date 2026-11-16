@@ -94,12 +94,15 @@ test('core definitions validate, and definitions reject malformed names, operati
     { ...own, operations: { do: { input: {}, run: true, idempotent: true } } },
     { ...own, operations: { do: { input: {}, result: {}, idempotent: false } } },
     { ...own, operations: { do: { input: {}, result: {}, safe: true, idempotent: true } } },
+    ...[0, -1, 1.5, '30000', null].map(timeout => ({ ...own, operations: { do: { input: {}, result: {}, timeout } } })),
     { ...own, operations: { do: { input: { type: 'not-a-type' }, result: {} } } },
     { ...own, operations: { do: { input: { $ref: '#/$defs/missing' }, result: {} } } },
   ]) assert.equal(typeof definitionProblem(definition), 'string', JSON.stringify(definition));
   assert.equal(definitionProblem({ ...own, operations: { start: { input: {}, run: true } } }), null);
   assert.equal(definitionProblem({ ...own, operations: { peek: { input: {}, result: {}, safe: true } } }), null);
   assert.equal(definitionProblem({ ...own, operations: { set: { input: {}, result: {}, idempotent: true } } }), null);
+  for (const timeout of [undefined, 1, 30000])
+    assert.equal(definitionProblem({ ...own, operations: { ask: { input: {}, result: {}, safe: true, timeout } } }), null, String(timeout));
 
   for (const plural of ['agents', 'a', 'my-things2', `a${'b'.repeat(62)}`]) assert.equal(definitionProblem({ ...own, plural }), null, plural);
   for (const plural of ['', 'Agents', '1agents', '-agents', 'my_things', 'a.b', `a${'b'.repeat(63)}`, 1, null])
