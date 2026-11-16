@@ -164,12 +164,19 @@ test('compact display names are optional metadata beside defaults and never chan
 test('failure categories match agentFailure, including quota retryAfterMs that is deliberately ignored', () => {
   const check = value => valueProblem('failure.json', value);
   for (const value of [null, [], 'x', 2]) assert.equal(check(value), '值：执行失败须为对象');
-  for (const kind of [undefined, null, 'unknown', '__proto__', 'constructor', {}]) assert.equal(check(kind === undefined ? {} : { kind }), '值.kind：kind 只能是 quota_exhausted、service_unavailable 或 auth_required');
+  for (const kind of [undefined, null, 'unknown', '__proto__', 'constructor', {}]) assert.equal(check(kind === undefined ? {} : { kind }), '值.kind：kind 只能是 quota_exhausted、service_unavailable、auth_required 或 session_ended');
   for (const input of [undefined, null, true, 'unknown', {}]) assert.equal(check({ kind: 'service_unavailable', ...(input === undefined ? {} : { input }) }), '值.input：input 只能是 accepted 或 not_accepted');
   for (const retryAfterMs of [-1, Infinity, NaN, -Infinity, '1', null, {}]) assert.equal(check({ kind: 'service_unavailable', input: 'accepted', retryAfterMs }), '值.retryAfterMs：retryAfterMs 须为非负有限数');
   for (const input of ['accepted', 'not_accepted']) for (const retryAfterMs of [0, 0.5, 60001, Number.MAX_VALUE]) assert.equal(check({ kind: 'service_unavailable', input, retryAfterMs }), null);
   for (const value of [{ kind: 'quota_exhausted' }, { kind: 'quota_exhausted', input: 'accepted' }, { kind: 'quota_exhausted', input: 'not_accepted', retryAfterMs: -1 }, { kind: 'service_unavailable', input: 'accepted' }]) assert.equal(check(value), null);
   for (const input of [null, true, 'unknown', {}]) assert.equal(check({ kind: 'quota_exhausted', input }), '值.input：input 只能是 accepted 或 not_accepted');
+});
+
+test('session_ended takes an optional input and checks no other category\'s fields', () => {
+  const check = value => valueProblem('failure.json', value);
+  for (const value of [{ kind: 'session_ended' }, { kind: 'session_ended', input: 'accepted' }, { kind: 'session_ended', input: 'not_accepted' },
+    { kind: 'session_ended', retryAfterMs: -1, resetAt: 'unknown', login: 1 }]) assert.equal(check(value), null);
+  for (const input of [null, true, 'unknown', {}]) assert.equal(check({ kind: 'session_ended', input }), '值.input：input 只能是 accepted 或 not_accepted');
 });
 
 test('auth_required is a bare category with an optional login description and ignores other categories\' fields', () => {
