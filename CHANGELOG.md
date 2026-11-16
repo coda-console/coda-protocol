@@ -2,6 +2,11 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.6.0 — 2026-11-17
+
+- 这是在 6.5.0 之上的次版本。依据 README「版本」一节：Agent 接入协议是内部面，新增类别与可选字段升次版本，先例见 6.2.0（`auth_required`）。
+- Agent 的执行失败类别（`schemas/agent/failure.json`）加 `kind: session_ended`：Agent 的原生会话或进程已经结束（被杀、崩溃、查询自行结束），不是上游服务问题，不得再借 `service_unavailable` 报告。可带可选的 `input`（`accepted` / `not_accepted`），**不必填**：插件确定时才写，不确定就不写，Coda 按「先核对」处理；不带 `retryAfterMs`、`resetAt`、`login`，带了也不检查。`docs/agent-protocol.md` 新增「原生会话已结束」一节，写清何时报、`input` 三种取值（含不写）的含义，以及插件不重试、策略归 Coda。已有三个类别的含义与必填项不变，旧插件不受影响。
+
 ## 6.5.0 — 2026-11-16
 
 - 这是在 6.4.0 之上的次版本。依据 README「版本」一节：Agent 接入协议是内部面，新增可选字段、放宽限制升次版本。
