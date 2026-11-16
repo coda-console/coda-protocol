@@ -150,6 +150,8 @@ definitionProblem(definition, { namespace: 'my-plugin' }); // 同时核对命名
 
 `parent` 是发起这次调用的一方（调用方的运行、会话或其他记录），`awaited` 表示调用方是否在等它。被调用方建运行时把这两项照抄进 `coda/run@1` 的 spec。
 
+可选的 `deadline` 是调用方给的截止时刻：绝对时刻的毫秒时间戳，即自 1970 年起的毫秒数，正整数，与调用内核（`@coda-console/kernel`）定时器的 `due` 是同一种表示。持有方到点就触发处理函数的取消。不带 `deadline` 时，由持有方按操作定义里的 `timeout` 或默认期限处理。
+
 回答二选一：
 
 ```json
@@ -225,9 +227,7 @@ status：
 
 操作 `cancel` 的输入是空对象，立即返回空结果；是否真的停下看 status。
 
-操作 `answer` 回答运行在等的那张卡片，立即返回 `{ state? }`，运行接着怎样看 status。输入是 `{ card, answer, answeredBy?, attachments? }`：`card` 须等于 `status.awaiting`；`answer` 是对象，形状由卡片种类定；`answeredBy` 是代答的会话，用户答时不写；`attachments` 是随答案带的上传文件 ID（至多 20 个）。它标 `idempotent`：答案里可能有密钥原文，调用双方都不按 `requestId` 保存这次调用；重复提交由持有者按卡片挡住。
-
-`cancel` 和 `answer` 都交给运行的持有者处理：被调用方按 `spec.record.kind` 找到持有这条运行的一方。
+`cancel` 交给运行的持有者处理：被调用方按 `spec.record.kind` 找到持有这条运行的一方。
 
 ```json
 {
@@ -473,7 +473,7 @@ status 是 `{ state: "available"|"unreachable", reason? }`。
 
 ## coda/card@1
 
-会话向用户或上层 Agent 要的一个输入。复数名是 `cards`。由提出它的会话所在的后端持有；持有方可以按自己的表读穿给出，不另存。运行等它时，`coda/run@1` 的 `status.awaiting` 指向这条记录，回答走那条运行的 `answer`。卡片自己没有操作。
+会话向用户或上层 Agent 要的一个输入。复数名是 `cards`。由提出它的会话所在的后端持有；持有方可以按自己的表读穿给出，不另存。运行等它时，`coda/run@1` 的 `status.awaiting` 指向这条记录。卡片自己没有操作。
 
 spec：
 
@@ -486,7 +486,7 @@ spec：
 | `answers` | 谁能答：`user` 只有用户，`any` 上层 Agent 也能代答 |
 | `shown` | 代答的 Agent 要看的内容，对象；`answers` 为 `user` 时不写 |
 
-spec 不带答案的 schema：答案的形状由卡片种类定，持有者在 `answer` 里校验。
+spec 不带答案的 schema：答案的形状由卡片种类定，持有者在收到答案时校验。
 
 status：
 

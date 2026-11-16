@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/protocol/v1/request.json",
   "title": "统一调用请求",
-  "description": "对一条记录的一次操作：记录引用、操作名、输入、请求 ID、发起方引用和是否被等待。同一个请求 ID 重发只做一次；被调用方建运行时照抄 parent 与 awaited。",
+  "description": "对一条记录的一次操作：记录引用、操作名、输入、请求 ID、发起方引用、是否被等待和可选的截止时刻。同一个请求 ID 重发只做一次；被调用方建运行时照抄 parent 与 awaited。",
   "type": "object",
   "$defs": {
     "reference": {
@@ -22,7 +22,8 @@
     "input": true,
     "requestId": {"type": "string", "minLength": 1, "maxLength": 2048},
     "parent": {"$ref": "#/$defs/reference", "description": "发起这次调用的一方：调用方的运行、会话或其他记录"},
-    "awaited": {"type": "boolean", "description": "调用方是否在等它"}
+    "awaited": {"type": "boolean", "description": "调用方是否在等它"},
+    "deadline": {"type": "integer", "minimum": 1, "description": "调用方给的截止时刻：绝对时刻的毫秒时间戳（自 1970 年起的毫秒数，正整数），与调用内核定时器的 due 同一表示；持有方到点触发处理函数的取消。不带时由持有方按操作定义里的 timeout 或默认期限处理"}
   },
   "required": ["record", "operation", "input", "requestId", "parent", "awaited"],
   "additionalProperties": false

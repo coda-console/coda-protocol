@@ -1,7 +1,7 @@
 {
   "name": "coda/card@1",
   "title": "卡片",
-  "description": "会话向用户或上层 Agent 要的一个输入。由提出它的会话所在的后端持有；运行等它时，status.awaiting 指向这条记录，回答走那条运行的 answer。持有方可以按自己的表读穿给出，不另存。",
+  "description": "会话向用户或上层 Agent 要的一个输入。由提出它的会话所在的后端持有；运行等它时，status.awaiting 指向这条记录。持有方可以按自己的表读穿给出，不另存。",
   "plural": "cards",
   "spec": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -67,7 +67,7 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.deepEqual(Object.keys(CORE_PROTOCOLS),
     ['coda/run@1', 'coda/executor@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1', 'coda/card@1']);
   assert.equal(definitionProblem(own), null);
-  assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel', 'answer']);
+  assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel']);
   assert.deepEqual(EXECUTOR_PROTOCOL.operations, {});
   assert.equal(Object.hasOwn(EXECUTOR_PROTOCOL, 'target'), false);
   assert.equal(AGENT_PROTOCOL.operations.spawn.run, true);
@@ -76,7 +76,7 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.deepEqual(safe, ['coda/session@1 read', 'coda/environment@1 list', 'coda/environment@1 read']);
   const idempotent = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
     Object.entries(protocol.operations).filter(([, operation]) => operation.idempotent).map(([name]) => `${protocol.name} ${name}`));
-  assert.deepEqual(idempotent, ['coda/run@1 answer', 'coda/session@1 draft']);
+  assert.deepEqual(idempotent, ['coda/session@1 draft']);
 
   const without = (value, key) => Object.fromEntries(Object.entries(value).filter(([name]) => name !== key));
   for (const definition of [null, [], {}, without(own, 'spec'), without(own, 'status'), without(own, 'operations'),
@@ -188,6 +188,10 @@ test('the invocation envelope answers with exactly one of result and run', () =>
     { ...request, requestId: 1 }, { ...request, future: true }, without(request, 'parent'), without(request, 'awaited'),
     { ...request, parent: null }, { ...request, parent: { kind: 'coda/run@1' } }, { ...request, awaited: 'true' }])
     assert.equal(typeof invocationRequestProblem(value), 'string', JSON.stringify(value));
+
+  for (const deadline of [1, 1795000000000]) assert.equal(invocationRequestProblem({ ...request, deadline }), null, String(deadline));
+  for (const deadline of ['1795000000000', -1, 0, 1.5, null])
+    assert.equal(typeof invocationRequestProblem({ ...request, deadline }), 'string', JSON.stringify(deadline));
 
   assert.equal(invocationResponseProblem({ result: { ok: true } }), null);
   assert.equal(invocationResponseProblem({ result: null }), null);
@@ -354,24 +358,6 @@ test('environment records, listings and reads follow the read-only coda/environm
   assert.equal(read.result({ path: 'a.txt', size: 3, base64: 'YWJj', more: false }), true);
   for (const value of [{ path: 'a.txt', size: 3, base64: 'YWJj' }, { path: 'a.txt', size: 3, base64: '不是', more: false }])
     assert.equal(read.result(value), false, JSON.stringify(value));
-});
-
-test('run answer is an idempotent immediate result that names the awaited card', () => {
-  const { operations: { answer } } = checks(RUN_PROTOCOL);
-  const operation = RUN_PROTOCOL.operations.answer;
-  assert.equal(operation.idempotent, true);
-  assert.equal(operation.run, undefined);
-  assert.equal(operation.safe, undefined);
-
-  const input = { card: reference('coda/card@1', 'card-1'), answer: { choice: 'ok' } };
-  for (const value of [input, { ...input, answer: {} }, { ...input, answeredBy: 'thread-1', attachments: ['upload-1'] }])
-    assert.equal(answer.input(value), true, JSON.stringify(value));
-  for (const value of [{}, { card: input.card }, { answer: input.answer }, { ...input, card: { kind: 'coda/card@1' } },
-    { ...input, answer: 'ok' }, { ...input, answeredBy: '' }, { ...input, attachments: [''] },
-    { ...input, attachments: Array.from({ length: 21 }, (_, index) => `upload-${index}`) }, { ...input, future: true }])
-    assert.equal(answer.input(value), false, JSON.stringify(value));
-  for (const value of [{}, { state: 'completed' }]) assert.equal(answer.result(value), true, JSON.stringify(value));
-  for (const value of [{ state: 1 }, { ok: true }]) assert.equal(answer.result(value), false, JSON.stringify(value));
 });
 
 test('card records follow coda/card@1 and have no operations', () => {
