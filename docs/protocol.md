@@ -73,7 +73,7 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `plural` | 复数名（见「复数名」），可选；不写就是短名 |
 | `spec` | 记录的 spec 的 JSON Schema，必填 |
 | `status` | 记录的 status 的 JSON Schema，必填 |
-| `operations` | 操作名 → `{ description?, input, result, safe?, idempotent? }` 或 `{ description?, input, run: true }`，必填；不定义操作写 `{}` |
+| `operations` | 操作名 → `{ description?, input, result, safe?, idempotent?, timeout? }` 或 `{ description?, input, run: true, timeout? }`，必填；不定义操作写 `{}` |
 
 `spec`、`status`、`input`、`result` 都是 JSON Schema draft 2020-12，只引用自己文档里的 `#/$defs/...`，不引用别的文件。`input` 必有。操作的输出二选一：
 
@@ -83,6 +83,8 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 `safe: true` 只能和 `result` 一起写，不能和 `run` 一起写，表示只读、没有副作用、立即给结果的操作；调用方和被调用方都不按 `requestId` 留它的请求和回答（见「调用信封」）。
 
 `idempotent: true` 也只能和 `result` 一起写，不能和 `run` 一起写，表示可以改状态、但重发做的是同一件事的立即结果操作，比如把草稿设成某一段：调用双方和 `safe` 一样，都不按 `requestId` 留请求和回答。两者是 HTTP 的 safe 与 idempotent 之分：`safe` 只读，`idempotent` 可以改状态。`safe` 已含 `idempotent`，两个不同时写。
+
+`timeout` 可选，是这个操作的默认期限：毫秒数，正整数。调用方没给截止时刻（请求信封的 `deadline`，见「调用信封」）时，持有方从收到请求起按它算；不写就用宿主的默认期限，具体数由宿主定。
 
 ```json
 {
@@ -149,6 +151,8 @@ definitionProblem(definition, { namespace: 'my-plugin' }); // 同时核对命名
 ```
 
 `parent` 是发起这次调用的一方（调用方的运行、会话或其他记录），`awaited` 表示调用方是否在等它。被调用方建运行时把这两项照抄进 `coda/run@1` 的 spec。
+
+可选的 `deadline` 是调用方给的截止时刻：绝对时刻的毫秒时间戳，即自 1970 年起的毫秒数，正整数，与调用内核（`@coda-console/kernel`）定时器的 `due` 是同一种表示。持有方到点就触发处理函数的取消。不带 `deadline` 时，持有方从收到请求起按操作定义里的 `timeout`（毫秒数）算；操作没写 `timeout` 就用宿主的默认期限。
 
 回答二选一：
 
@@ -225,9 +229,7 @@ status：
 
 操作 `cancel` 的输入是空对象，立即返回空结果；是否真的停下看 status。
 
-操作 `answer` 回答运行在等的那张卡片，立即返回 `{ state? }`，运行接着怎样看 status。输入是 `{ card, answer, answeredBy?, attachments? }`：`card` 须等于 `status.awaiting`；`answer` 是对象，形状由卡片种类定；`answeredBy` 是代答的会话，用户答时不写；`attachments` 是随答案带的上传文件 ID（至多 20 个）。它标 `idempotent`：答案里可能有密钥原文，调用双方都不按 `requestId` 保存这次调用；重复提交由持有者按卡片挡住。
-
-`cancel` 和 `answer` 都交给运行的持有者处理：被调用方按 `spec.record.kind` 找到持有这条运行的一方。
+`cancel` 交给运行的持有者处理：被调用方按 `spec.record.kind` 找到持有这条运行的一方。
 
 ```json
 {
@@ -473,7 +475,7 @@ status 是 `{ state: "available"|"unreachable", reason? }`。
 
 ## coda/card@1
 
-会话向用户或上层 Agent 要的一个输入。复数名是 `cards`。由提出它的会话所在的后端持有；持有方可以按自己的表读穿给出，不另存。运行等它时，`coda/run@1` 的 `status.awaiting` 指向这条记录，回答走那条运行的 `answer`。卡片自己没有操作。
+会话向用户或上层 Agent 要的一个输入。复数名是 `cards`。由提出它的会话所在的后端持有；持有方可以按自己的表读穿给出，不另存。运行等它时，`coda/run@1` 的 `status.awaiting` 指向这条记录。卡片自己没有操作。
 
 spec：
 
@@ -486,7 +488,7 @@ spec：
 | `answers` | 谁能答：`user` 只有用户，`any` 上层 Agent 也能代答 |
 | `shown` | 代答的 Agent 要看的内容，对象；`answers` 为 `user` 时不写 |
 
-spec 不带答案的 schema：答案的形状由卡片种类定，持有者在 `answer` 里校验。
+spec 不带答案的 schema：答案的形状由卡片种类定，持有者在收到答案时校验。
 
 status：
 
