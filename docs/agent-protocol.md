@@ -23,6 +23,7 @@ ACP 的消息、内容块、会话指令和能力由 ACP SDK 校验，这里只�
 | `_coda/remote/code` 参数、答复 | [remote-code.json](../schemas/agent/remote-code.json) 的 `$defs/params`、`$defs/result` |
 | `_coda/remote` 参数、答复 | [remote.json](../schemas/agent/remote.json) 的 `$defs/params`、`$defs/result` |
 | `clientCapabilities._meta`、`agentCapabilities._meta` 的 Coda 声明 | [client-capabilities.json](../schemas/agent/client-capabilities.json)、[agent-capabilities.json](../schemas/agent/agent-capabilities.json) |
+| `session/new` 参数的 `_meta`（[配置探测](#配置探测)标记） | [probe.json](../schemas/agent/probe.json)（传入整个 `params._meta`，缺省则跳过） |
 | `_session/steering` 的 Coda 约定 | [steering.json](../schemas/agent/steering.json) 的 `$defs/params`、`$defs/result`、`$defs/capabilities`（initialize 顶层 `_meta`）；`prompt` 内容仍由 ACP SDK 校验 |
 | `error.data._meta.coda.failure` | [failure.json](../schemas/agent/failure.json) |
 | 工具更新的 `_meta.coda.review` | [review.json](../schemas/agent/review.json)；已知风险值见 `$defs/risk` |
@@ -58,7 +59,7 @@ Coda 是 ACP 的客户端。每个会话的 Agent 进程由一个会话托管进
 | 方法 | 方向 | Coda 怎么用 |
 | --- | --- | --- |
 | `initialize` | Coda → Agent | 握手。`clientCapabilities` 带 `elicitation.form`、`elicitation.url`、`session.compaction`、`session.configOptions.boolean`、`_meta.coda.waits`（见[能力协商](#能力协商)）、`_meta.coda.unrecognized`（见[没适配的东西](#没适配的东西)）与 `_meta.coda.remote`（见[远端入口](#远端入口)） |
-| `session/new`、`session/load` | Coda → Agent | 新建或恢复原生会话，会话 ID 由 Agent 给；Agent 声明 `loadSession` 才会被要求恢复。Agent 声明了才带 `systemPrompt`（[会话指令](#会话指令)）。结果里要报出当前模型（见下）。恢复期间重放的历史 Coda 不收（它有自己的），只收命令与标题 |
+| `session/new`、`session/load` | Coda → Agent | 新建或恢复原生会话，会话 ID 由 Agent 给；Agent 声明 `loadSession` 才会被要求恢复。Agent 声明了才带 `systemPrompt`（[会话指令](#会话指令)）。带 `_meta.coda.probe: true` 时改为连接内虚拟会话，见[配置探测](#配置探测)。结果里要报出当前模型（见下）。恢复期间重放的历史 Coda 不收（它有自己的），只收命令与标题 |
 | `session/prompt` | Coda → Agent | 一轮：Coda 送出用户的消息或它自己合成的输入（子会话结果等），Agent 回复 `stopReason` 即本轮结束 |
 | `_session/steering` | Coda → Agent | [插话](#插话)：把用户的消息加进正在进行的一轮；只对声明支持的 Agent 发 |
 | `session/cancel` | Coda → Agent | 停止：本轮在进行时取消本轮；Agent 在一轮之外处理活动（`handling`）时，停止处理 |
@@ -101,6 +102,30 @@ ACP 只允许在一轮（`session/prompt`）进行时交互。Agent 在两轮之
   报那个 CLI 或 SDK 的名字与版本（如 `codex`、`0.130.0`），不报插件自己的版本（插件版本 Coda 已从清单知道）。
   Coda 记下每个 Agent 最近一次握手报的值，随后端遥测上报（Coda 遥测服务（Coda 的 docs/../telemetry/README.md「后端上报」）），用于复盘 Agent 版本带来的兼容问题；
   只取版本号式的字符（字母、数字与 `.+()-_` 空格，至多 64 个），其他写法不记。不报不影响会话。
+
+## 配置探测
+
+Coda 读 Agent 的模型与模式目录时，不必建一个真实的原生会话：对声明了该能力的 Agent，改请它开一个只在当前连接里有效的虚拟会话。
+
+**声明**：Agent 在 `initialize` 结果的 `agentCapabilities` 里带 `_meta.coda.probe: {}`（[agent-capabilities.json](../schemas/agent/agent-capabilities.json)），表示接受只查询配置的虚拟会话。`session/close`、`session/delete`、`loadSession` 都不算支持这个约定。
+
+```json
+{"jsonrpc":"2.0","id":0,"result":{"protocolVersion":1,"agentCapabilities":{"loadSession":true,"_meta":{"coda":{"probe":{}}}}}}
+```
+
+**请求**：Coda 只在内部目录探测、且 Agent 声明了该能力时，才在 `session/new` 的参数里带 `_meta.coda.probe: true`，其他元数据原样保留。没声明的 Agent 照常收普通 `session/new`。支持本约定的入口满足不了探测时必须报错，不能去掉标记、当普通会话转发；标记格式不对（整个 `_meta` 合乎 [probe.json](../schemas/agent/probe.json)；`probe` 只能是 `true`，普通会话省略它）回 -32602。
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"session/new","params":{"cwd":"/work","mcpServers":[],"_meta":{"coda":{"probe":true}}}}
+```
+
+**会话**：返回合乎 ACP 的 `session/new` 结果：非空的 `sessionId`，以及模型、模式与配置选项。这个 `sessionId` 只在当前连接里有效，不能恢复，也不出现在会话列表里；入口不执行 prompt，不启动项目的工具或 MCP。连接一断就释放全部虚拟会话的状态，不要求客户端发 `session/delete` 或 `session/close`。若入口为了维护自己的目录缓存而建了真实会话，那不是返回给 Coda 的虚拟会话，由入口自己约束次数与副作用。
+
+**配置**：Coda 逐个模型读配置：用 `session/set_config_option` 设 `category: model` 那一项，每次返回这个模型完整的 `configOptions`，不能留着上一个模型才适用的档位。之后可能再对思考档位发 `session/set_config_option`，把它恢复成 Agent 标了默认（`_meta.coda.default`）的值，入口要接受。只有 `models`、没有 `category: model` 配置项的 Agent，要支持 `session/set_model`，并按 ACP 的方式报告变化；只报 `models`、却拒绝切换模型，不算满足本约定。当前的探测不会设模式，`session/set_mode` 不是必需的。入口若允许设其他已公开的选项，也只能改虚拟会话的状态；不支持的请求必须报错，不能转给真实会话。
+
+**错误与收尾**：虚拟会话收到 `session/prompt` 回 -32602（配置探测会话不接受 prompt）；不认识或已失效的 `sessionId` 回 -32002；拿不到目录就报明确的错误；未登录照旧回 -32000。`session/close` 若支持，释放内存并回 `{}`，不触发原生的 close 或 delete。会话列表与恢复不暴露、不接受旧的虚拟 ID。
+
+**通知**：入口可以报与目录相关的配置或可用命令更新（命令发现可选）；不得借探测执行命令，也不得向用户发审批。
 
 ## 会话指令
 
