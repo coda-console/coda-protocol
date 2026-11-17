@@ -424,9 +424,11 @@ test('an operation sits in at most one permission group; core groups follow the 
   ]) assert.equal(definitionProblem(grouped(permissions)), null, JSON.stringify(permissions));
   assert.equal(definitionProblem({ ...own, operations: {}, permissions: { read: { title: '读取任务', read: true } } }), null);
   assert.equal(definitionProblem({ ...own, operations: ops }), null);
-  for (const protocol of [RUN_PROTOCOL, AGENT_PROTOCOL, SESSION_PROTOCOL, ENVIRONMENT_PROTOCOL]) {
-    assert.ok(Object.values(protocol.permissions).every(group => group.trial === true), protocol.name);
-  }
+  const groups = ({ permissions }) => Object.fromEntries(Object.entries(permissions).map(([name, { title, ...rest }]) => [name, rest]));
+  assert.deepEqual(groups(RUN_PROTOCOL), { read: { trial: true, read: true }, cancel: { trial: true, operations: ['cancel'] } });
+  assert.deepEqual(groups(AGENT_PROTOCOL), { read: { trial: true, read: true }, spawn: { trial: true, operations: ['spawn'] } });
+  assert.deepEqual(groups(SESSION_PROTOCOL), { read: { trial: true, read: true, operations: ['read'] }, post: { trial: true, operations: ['post'] } });
+  assert.deepEqual(groups(ENVIRONMENT_PROTOCOL), { read: { trial: true, read: true, operations: ['list', 'read'] } });
   assert.equal(Object.hasOwn(EXECUTOR_PROTOCOL, 'permissions'), false);
   assert.ok(!Object.values(SESSION_PROTOCOL.permissions).some(group => group.operations?.includes('draft')));
   assert.equal(definitionProblem(grouped({ read: { title: '读取任务', operations: ['peek'] } })), null);
