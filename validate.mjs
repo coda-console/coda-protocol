@@ -121,7 +121,7 @@ function keywords(ajv) {
               : item && typeof item === 'object' && Object.hasOwn(item, key) ? item[key] : undefined;
             if (value === undefined) continue;
             const said = JSON.stringify(value);
-            if (seen.has(said)) return fail(unique, 'x-unique-by', part ? `不能重复：${value}` : `${key} 不能重复：${value}`, parentSchema);
+            if (seen.has(said)) return fail(unique, 'x-unique-by', part || text ? `不能重复：${value}` : `${key} 不能重复：${value}`, parentSchema);
             seen.add(said);
           }
         }

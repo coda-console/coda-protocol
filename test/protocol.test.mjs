@@ -408,6 +408,6 @@ test('a protocol is implemented by the module (a name) or in part by commands (a
   ]) assert.match(check([bad]), /protocolImplementations\[0\]/, JSON.stringify(bad));
   for (const bad of [1, true, null, ['coda/run@1']]) assert.match(check([bad]), /protocolImplementations\[0\] 须为对象：不是协议名时须为 \{ kind, commands \}/, JSON.stringify(bad));
   const thing = { kind: 'coda/run@1', commands };
-  for (const twice of [['coda/run@1', thing], [thing, 'coda/run@1'], [thing, { ...thing, commands: { other: 'bin/cancel.sh' } }]])
-    assert.match(check(twice), /protocolImplementations：kind 不能重复：coda\/run@1/);
+  for (const twice of [['coda/run@1', 'coda/run@1'], ['coda/run@1', thing], [thing, 'coda/run@1'], [thing, { ...thing, commands: { other: 'bin/cancel.sh' } }]])
+    assert.equal(check(twice), 'contributes.protocolImplementations：不能重复：coda/run@1');
 });
