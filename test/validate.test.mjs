@@ -40,6 +40,13 @@ test('a view may provide the part types a session accepts, the same words as sta
     Object.keys(schema('protocol/v1/session.json').status.properties.accepts.properties));
 });
 
+test('a command may not take Coda\'s own name `coda`; the old `coda-run`, `coda-event`, `coda-resources` are free', () => {
+  const commands = name => ({ contributes: { commands: [{ name, command: 'run.sh' }] } });
+  for (const name of ['coda-run', 'coda-event', 'coda-resources', 'coda-x', 'codas'])
+    assert.equal(checked(commands(name)), null);
+  assert.match(checked(commands('coda')), /^contributes\.commands\[0\]\.name/);
+});
+
 test('a model service may speak the OpenAI speech API', () => {
   assert.equal(checked({ contributes: { modelProviders: [{ id: 'p', title: 'P', api: 'openai-speech', url: 'https://p' }] } }), null);
 });

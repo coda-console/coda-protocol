@@ -2,9 +2,28 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/plugin/v2/protocol-implementations.json",
   "title": "contributes.protocolImplementations：插件实现的协议",
-  "description": "插件实现哪些协议，写协议名「命名空间/名字@大版本」，不重复。可以实现在别的命名空间下定义的协议。",
+  "description": "插件实现哪些协议，写协议名「命名空间/名字@大版本」。可以实现在别的命名空间下定义的协议。每项是文本（这个协议的全部操作由模块实现），或 { kind, commands }（commands 里列出的操作由插件目录里的命令实现，没列的由模块实现）。同一个协议只能出现一次，不论写成文本还是对象。",
   "type": "array",
   "maxItems": 100,
-  "uniqueItems": true,
-  "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"}
+  "x-unique-by": [{"key": "kind", "text": true}],
+  "items": {
+    "if": {"type": "string"},
+    "then": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"},
+    "else": {
+      "description": "不是协议名时须为 { kind, commands }，按命令实现这个协议的部分操作：kind 是协议名，commands 的键是操作名，值是插件目录里的文件",
+      "type": "object",
+      "properties": {
+        "kind": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"},
+        "commands": {
+          "description": "操作名 → 插件目录里的文件（相对路径，不离开插件目录），至少一项；操作是否在协议定义里由 Coda 装载时查",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/operationName"},
+          "additionalProperties": {"type": "string", "x-file": {"type": "file"}}
+        }
+      },
+      "required": ["kind", "commands"],
+      "additionalProperties": false
+    }
+  }
 }

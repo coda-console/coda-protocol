@@ -1,6 +1,9 @@
 // Protocol definitions, names and the invocation envelope; no live store, scheduler or provider is involved.
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, test } from 'node:test';
 import Ajv from 'ajv/dist/2020.js';
 import { agentMessageProblem } from '../agent.mjs';
 import { manifestProblem } from '../validate.mjs';
@@ -384,4 +387,27 @@ test('card records follow coda/card@1 and have no operations', () => {
   for (const value of [{}, { state: 'open' }, { state: 'pending', holder: { kind: 'coda/thread@1', id: 't1' } }, { state: 'pending', holder: '' },
     { state: 'pending', toldAlong: false }, { state: 'pending', setAside: false }, { state: 'pending', future: true }])
     assert.equal(status(value), false, JSON.stringify(value));
+});
+
+test('a protocol is implemented by the module (a name) or in part by commands (an object), once', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'coda-protocol-'));
+  after(() => rmSync(dir, { recursive: true, force: true }));
+  mkdirSync(join(dir, 'bin', 'sub'), { recursive: true });
+  writeFileSync(join(dir, 'bin', 'cancel.sh'), '');
+  const check = protocolImplementations => manifestProblem({ contributes: { protocolImplementations } }, dir);
+  const commands = { cancel: 'bin/cancel.sh' };
+  assert.equal(check(['coda/run@1', { kind: 'my-plugin/thing@1', commands }, { kind: 'coda/card@1', commands: { 'a-1': 'bin/cancel.sh', b: 'bin/cancel.sh' } }]), null);
+  assert.equal(check(Array.from({ length: 100 }, (_, i) => `my-plugin/t${i}@1`)), null);
+  assert.match(check(Array.from({ length: 101 }, (_, i) => `my-plugin/t${i}@1`)), /protocolImplementations/);
+  for (const bad of [
+    { kind: 'coda/run@1', commands: {} }, { kind: 'coda/run@1' }, { commands }, { kind: 'Coda/run@1', commands },
+    { kind: 'coda/run@1', commands, extra: 1 }, { kind: 'coda/run@1', commands: { Cancel: 'bin/cancel.sh' } },
+    { kind: 'coda/run@1', commands: { '1cancel': 'bin/cancel.sh' } }, { kind: 'coda/run@1', commands: { cancel: 1 } },
+    { kind: 'coda/run@1', commands: { cancel: '../cancel.sh' } }, { kind: 'coda/run@1', commands: { cancel: '/bin/cancel.sh' } },
+    { kind: 'coda/run@1', commands: { cancel: 'bin/none.sh' } }, { kind: 'coda/run@1', commands: { cancel: 'bin/sub' } },
+  ]) assert.match(check([bad]), /protocolImplementations\[0\]/, JSON.stringify(bad));
+  for (const bad of [1, true, null, ['coda/run@1']]) assert.match(check([bad]), /protocolImplementations\[0\] 须为对象：不是协议名时须为 \{ kind, commands \}/, JSON.stringify(bad));
+  const thing = { kind: 'coda/run@1', commands };
+  for (const twice of [['coda/run@1', 'coda/run@1'], ['coda/run@1', thing], [thing, 'coda/run@1'], [thing, { ...thing, commands: { other: 'bin/cancel.sh' } }]])
+    assert.equal(check(twice), 'contributes.protocolImplementations：不能重复：coda/run@1');
 });

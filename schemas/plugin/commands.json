@@ -8,9 +8,9 @@
     "type": "object",
     "properties": {
       "name": {
-        "description": "命令名：小写字母、数字和「-」，以字母开头，不能是 Coda 自己的 coda-run、coda-event、coda-resources",
+        "description": "命令名：小写字母、数字和「-」，以字母开头，不能是 Coda 自己的 coda",
         "$ref": "common.json#/$defs/id",
-        "not": {"enum": ["coda-run", "coda-event", "coda-resources"]}
+        "not": {"const": "coda"}
       },
       "command": {"$ref": "common.json#/$defs/command"}
     },
