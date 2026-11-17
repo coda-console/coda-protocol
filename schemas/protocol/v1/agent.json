@@ -87,5 +87,9 @@
         "additionalProperties": false
       }
     }
+  },
+  "permissions": {
+    "read": {"title": "查看机器上装着哪些 Agent，以及它们的模型与模式", "trial": true, "read": true},
+    "spawn": {"title": "用 Agent 开一个新会话并交给它任务", "trial": true, "operations": ["spawn"]}
   }
 }

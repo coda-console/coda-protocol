@@ -71,5 +71,9 @@
       "input": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "maxProperties": 0, "additionalProperties": false},
       "result": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "maxProperties": 0, "additionalProperties": false}
     }
+  },
+  "permissions": {
+    "read": {"title": "查看运行的状态与结果", "trial": true, "read": true},
+    "cancel": {"title": "取消正在进行的运行", "trial": true, "operations": ["cancel"]}
   }
 }

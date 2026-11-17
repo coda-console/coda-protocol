@@ -4,7 +4,7 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 - **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v2/<文件>`）。`plugin.json` 是整份清单，只列通用键（`configuration`、`extensionPoints`、`extensions`、`services`、`setup`、`environment`、`path`、`endpoints`、`views`、`protocols`、`protocolImplementations`）；`setting.json` 是一项设置的声明。其余键由 Coda 的贡献点登记表或某个插件的扩展点声明：Coda 自己的（`agents`、`composerModes`、`modelProviders` 等）的 schema 仍放在这里作公开数据（如 `agents.json`、`composer-modes.json`），由登记它的 provider 引用；扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
-- **协议定义与调用**（`schemas/protocol/`、`protocol.mjs`、`docs/protocol.md`）：协议是 `命名空间/名字@大版本` + spec/status 的 JSON Schema + 操作；插件在 `contributes.protocols` 里定义自己命名空间下的协议，在 `contributes.protocolImplementations` 里声明实现哪些协议。调用是 `{ record, operation, input, requestId, parent, awaited }`，回答是 `{ result }` 或 `{ run }`；`coda/run@1`、`coda/executor@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1` 是六个核心协议。
+- **协议定义与调用**（`schemas/protocol/`、`protocol.mjs`、`docs/protocol.md`）：协议是 `命名空间/名字@大版本` + spec/status 的 JSON Schema + 操作；插件在 `contributes.protocols` 里定义自己命名空间下的协议，在 `contributes.protocolImplementations` 里声明实现哪些协议；定义可写 `permissions` 把操作与记录读写分成权限组，插件在清单根的 `uses` 里按组申请。调用是 `{ record, operation, input, requestId, parent, awaited }`，回答是 `{ result }` 或 `{ run }`；`coda/run@1`、`coda/executor@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1` 是六个核心协议。
 - **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是 Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
 - **Agent 接入扩展**（`schemas/agent/`、`agent.mjs`、`docs/agent-protocol.md`）：Coda 怎样用 ACP 接 Agent，以及 Coda 加的扩展（会话指令、插话、`_coda/wait`、执行失败、工具调用的审核、配置探测）。
 
@@ -127,7 +127,7 @@ agentValueProblem('review.json', review, '工具的审核');
 ## 协议定义与核心协议
 
 从 3.0.0 起，协议是 `命名空间/名字@大版本` + 记录格式（spec、status 的 JSON Schema）+ 操作，见[协议正文](docs/protocol.md)。
-插件用 `contributes.protocols` 定义自己命名空间下的协议，用 `contributes.protocolImplementations` 声明实现哪些协议；
+插件用 `contributes.protocols` 定义自己命名空间下的协议，用 `contributes.protocolImplementations` 声明实现哪些协议，用根上的 `uses` 申请别的协议的权限组；
 命名空间 `coda` 保留给核心协议。
 
 - **`coda/run@1`**：被调用方自己的运行记录。spec 记录调用的记录、操作、输入、请求 ID、父引用和是否被等待；status 是 `working`、`input-required`、`completed`、`failed`、`canceled`，后三个是终态。`completed`/`failed` 必带 `result`，`failed` 的 `result` 约定为 `{ code, message }`（`code: "unknown"` 表示结局不明），`canceled` 可带取消前的话和留下的东西；另有可选的 `progress` 和等输入时的 `awaiting`。操作是 `cancel`。
@@ -157,7 +157,7 @@ Coda 与检查包都钉一个确切版本。对第三方的兼容承诺只覆盖
 三道检查分别守住：
 
 - `scripts/stable-grows.mjs <基线>`：两份数据的旧条目及其取值必须全部保留，有新增时对应文件的 revision 必须增大，不能倒退。基线可为 git 提交、解包目录或 `npm:latest`。PR 和目标分支比较，发布前下载并解包 npm latest 比较；基线还没有 stable 文件时通过。
-- `test/stable.test.mjs`：53 条路径仍在 schema 中可达，承诺的取值仍被接受。使用固定样本选择条件分支，支持 `$ref`、`allOf`、`anyOf`、`if/then/else`、`not`、`properties`、`items`、`additionalProperties` 及布尔 schema；未知写法失败，不推测其含义。`agents`、`commands`、`skills` 从各自的业务 schema 起步。
+- `test/stable.test.mjs`：54 条路径仍在 schema 中可达，承诺的取值仍被接受。使用固定样本选择条件分支，支持 `$ref`、`allOf`、`anyOf`、`if/then/else`、`not`、`properties`、`items`、`additionalProperties` 及布尔 schema；未知写法失败，不推测其含义。`agents`、`commands`、`skills` 从各自的业务 schema 起步。
 - `test/third-party.test.mjs`：两版 pi、一版 resource-manager 原文与 company 合成样本，分别跑整份清单和每个贡献键的校验，防止样本用到的约束被收紧。不检查磁盘文件与页面桥行为。这个仓库只守页面接口清单只增不减；页面接口的实现在 Coda 的客户端里，这里不核对。
 
 增加稳定面一项时，先补 schema 或页面实现，再把路径、取值或页面条目加进对应 JSON；每加一项，该文件 revision 加一。补充能覆盖新路径和条件分支的测试样本，运行三道检查，并更新次版本与 CHANGELOG。

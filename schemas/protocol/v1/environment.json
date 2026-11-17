@@ -101,5 +101,8 @@
         "additionalProperties": false
       }
     }
+  },
+  "permissions": {
+    "read": {"title": "浏览并读取外部环境里的目录与文件", "trial": true, "read": true, "operations": ["list", "read"]}
   }
 }

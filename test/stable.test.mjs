@@ -12,7 +12,7 @@ const resource = read('./fixtures/stable/sealiu1997-coda_plugins_resource_manage
 const agent = structuredClone(pi.contributes.agents[0]);
 Object.assign(agent.modes, { unset: '默认', auto: '自动', full: '完全' });
 Object.assign(agent.icon, { dark: 'dark.pdf', template: true });
-const witnesses = [pi, company, resource, { contributes: { agents: [agent] } }];
+const witnesses = [pi, company, resource, { contributes: { agents: [agent] } }, { uses: { 'coda/thread@1': ['location'] } }];
 const ajv = newAjv({ strict: false });
 for (const schema of Object.values(SCHEMAS)) ajv.addSchema(schema);
 // Only the syntax encountered on these paths is understood. Unknown syntax must stop the check.

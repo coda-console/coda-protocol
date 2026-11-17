@@ -271,5 +271,9 @@
         "maxProperties": 0
       }
     }
+  },
+  "permissions": {
+    "read": {"title": "读取外部会话的标题、参与者与消息", "trial": true, "read": true, "operations": ["read"]},
+    "post": {"title": "以你的身份往外部会话里发消息", "trial": true, "operations": ["post"]}
   }
 }
