@@ -272,6 +272,9 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   for (const accepts of [['audio'], { audio: true }, { audio: { maxDuration: 0 } }, { audio: { maxDuration: '60' } },
     { audio: { maxSize: 1 } }, { image: {} }, { video: {} }, { file: {} }, { text: {} }, { thinking: {} }])
     assert.equal(status({ participants, accepts }), false, JSON.stringify(accepts));
+  // notify is an optional boolean: only true asks the observer to alert the user.
+  for (const notify of [true, false]) assert.equal(status({ participants, notify }), true, JSON.stringify(notify));
+  for (const notify of ['true', 1, null, {}]) assert.equal(status({ participants, notify }), false, JSON.stringify(notify));
 
   for (const input of [{}, { limit: 20 }, { after: 'c1', limit: 1 }, { before: 'c9' }, { before: 'c9', limit: 100 }])
     assert.equal(read.input(input), true, JSON.stringify(input));
