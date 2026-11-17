@@ -72,6 +72,7 @@
       },
       "state": {"enum": ["active", "unreachable"]},
       "reason": {"type": "string", "maxLength": 4096, "description": "状态说明，可选"},
+      "notify": {"type": "boolean", "description": "新消息是否提醒用户：写 true 才提醒（推到手机、电脑弹横幅），不写或 false 不提醒。由 Provider 按记录决定，可随设置变化，所以放在 status"},
       "accepts": {
         "type": "object",
         "description": "post 除文字以外还收哪些媒体 part，键是 part 的 type，值是这一类型的限制；不写就是只收文字。能力可能随状态变化，所以放在 status",

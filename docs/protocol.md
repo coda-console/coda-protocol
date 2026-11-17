@@ -311,6 +311,7 @@ status：
 | `reason` | 可选，状态说明 |
 | `activity` | 可选，`{ participant, text }`：参与者正在做什么 |
 | `accepts` | 可选，`post` 除文字以外还收哪些媒体 part，见下 |
+| `notify` | 可选，布尔：`true` 表示这条记录来了新消息要提醒用户，见下 |
 
 `activity.participant` 须是 `status.participants` 中某一项的 `id`；Provider 负责保证这个对应关系。`text` 是 1 到 200 个字符的单行文字（不含换行符），如「正在搜索代码」。
 像聊天软件的「正在输入」：Provider 不提供就不写，对方停下时删掉整个 `activity`。它不是消息，不进 `read`，不推进 `head`。
@@ -330,6 +331,9 @@ status：
 ```json
 {"participants": [], "accepts": {"audio": {"maxDuration": 60}}}
 ```
+
+`notify: true` 表示这条记录来了新消息要提醒用户：观察方（Coda）在 `head` 越过用户的已读位置时推到手机、在电脑上弹横幅，读到 `head` 后撤掉。不写或写 `false` 就不提醒，这是缺省，所以不认识这个字段的旧 Provider 不会开始提醒。
+写不写由 Provider 按记录决定，比如只给用户在设置里选中的群写 `true`；设置改了就改 status，所以它放在 status 而不在 spec。提醒只说「有新消息」，不带消息正文。
 
 观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。`read` 与 `draft` 是立即结果，`read` 是 `safe` 的，`draft` 是 `idempotent` 的；`post` 开运行：
 
