@@ -10,7 +10,7 @@
     "if": {"type": "string"},
     "then": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"},
     "else": {
-      "description": "按命令实现这个协议的部分操作：kind 是协议名，commands 的键是操作名，值是插件目录里的文件",
+      "description": "不是协议名时须为 { kind, commands }，按命令实现这个协议的部分操作：kind 是协议名，commands 的键是操作名，值是插件目录里的文件",
       "type": "object",
       "properties": {
         "kind": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"},

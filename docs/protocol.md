@@ -191,8 +191,8 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 
 ```json
 "protocolImplementations": [
-  "coda/run@1",
-  {"kind": "my-plugin/task@1", "commands": {"cancel": "bin/cancel.sh"}}
+  "my-plugin/task@1",
+  {"kind": "coda/run@1", "commands": {"cancel": "bin/cancel.sh"}}
 ]
 ```
 
