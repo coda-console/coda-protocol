@@ -10,7 +10,8 @@
 // as Kubernetes extends its OpenAPI with `x-kubernetes-*`:
 // - `x-unique-by`: [name, { part } or { key, nested }] — in an array, each named property of its objects is unique among the
 //   items having it, and so is `part`'s first group of each of its texts (a directory's last name), and `key` among the
-//   items and those in their `nested` arrays, at every depth (a task's answers and those offered on holding one);
+//   items and those in their `nested` arrays, at every depth (a task's answers and those offered on holding one), and with
+//   `text: true` a text item counts as the value of `key` itself (an item written as a name or as an object with it);
 // - `x-max-contains`: { match, max } — of an object's values, at most `max` satisfy `match` (`maxContains` of an object);
 // - `x-ref`: { pointer, part?, key?, split?, match? } — the value (or `part`'s first group of it), or each nonempty token
 //   separated by `split`, names a key of the object, or an element (with `key`, that property of an element)
@@ -60,7 +61,8 @@ const META = {
   'x-max-contains': { type: 'object', properties: { match: SCHEMA_VALUE, max: { type: 'integer', minimum: 0 } }, required: ['match', 'max'], additionalProperties: false },
   'x-unique-by': { type: 'array', minItems: 1, items: { anyOf: [{ type: 'string' },
     { type: 'object', properties: { part: { type: 'string' } }, required: ['part'], additionalProperties: false },
-    { type: 'object', properties: { key: { type: 'string' }, nested: { type: 'string' } }, required: ['key', 'nested'], additionalProperties: false }] } },
+    { type: 'object', properties: { key: { type: 'string' }, nested: { type: 'string' } }, required: ['key', 'nested'], additionalProperties: false },
+    { type: 'object', properties: { key: { type: 'string' }, text: { const: true } }, required: ['key', 'text'], additionalProperties: false }] } },
   'x-ref': { type: 'object', properties: { pointer: { type: 'string', pattern: '^(?:\\d+(?:/.*)?|/.*)$' }, part: { type: 'string' }, key: { type: 'string' }, split: { type: 'string' }, match: SCHEMA_VALUE },
     required: ['pointer'], additionalProperties: false },
   'x-placeholders': { type: 'object', properties: { names: { type: 'array', items: { type: 'string' } }, config: SCHEMA_VALUE }, additionalProperties: false },
@@ -111,10 +113,11 @@ function keywords(ajv) {
         return found;
       };
       return function unique(items) {
-        for (const { key, part, nested } of by) {
+        for (const { key, part, nested, text } of by) {
           const seen = new Set();
           for (const item of every(items, nested)) {
             const value = part ? (typeof item === 'string' ? part.exec(item)?.[1] : undefined)
+              : text && typeof item === 'string' ? item
               : item && typeof item === 'object' && Object.hasOwn(item, key) ? item[key] : undefined;
             if (value === undefined) continue;
             const said = JSON.stringify(value);

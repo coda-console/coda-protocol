@@ -187,7 +187,19 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 }
 ```
 
-`contributes.protocols` 是插件拥有的定义，每份都按定义文档 schema 校验；定义里的命名空间必须等于插件 ID。`contributes.protocolImplementations` 是插件实现的协议名列表，可以包含别的命名空间下的协议（包括 `coda/...`），不重复。
+`contributes.protocols` 是插件拥有的定义，每份都按定义文档 schema 校验；定义里的命名空间必须等于插件 ID。`contributes.protocolImplementations` 是插件实现的协议列表，可以包含别的命名空间下的协议（包括 `coda/...`），最多 100 项。每项有两种写法：
+
+```json
+"protocolImplementations": [
+  "coda/run@1",
+  {"kind": "my-plugin/task@1", "commands": {"cancel": "bin/cancel.sh"}}
+]
+```
+
+- 协议名（文本）：这个协议的全部操作都由模块实现。
+- `{ "kind": "<协议名>", "commands": { "<操作名>": "<文件>" } }`：`commands` 至少一项，键是操作名（格式同定义里 `operations` 的键，这个操作在不在协议定义里由 Coda 装载时查），值是插件目录里的文件（相对路径，不离开插件目录）。`commands` 里列出的操作由这个文件实现，**没列在 `commands` 里的操作由模块实现**。对象里不能有 `kind`、`commands` 之外的键。命令怎么写、怎么跑由 Coda 的文档讲，这里不重述。
+
+同一个协议在数组里只能出现一次，写成文本还是对象都算。
 
 `manifestProblem` 校验清单的外壳与通用键（这两个键在其中）；别的键由 Coda 的贡献点登记表或某个插件的扩展点声明，按声明方的 schema 校验，本包不管它们的形状。命名空间约束需要插件 ID，单独用：
 
