@@ -7,6 +7,8 @@
 - 这是在 6.7.0 之上的次版本。依据 README「版本」一节：清单的通用键放宽写法、旧写法照旧通过，升次版本（Coda 宿主设计 coda#2749 第 4、5 节与 6.7 节）。
 - `contributes.protocolImplementations` 的每一项除了协议名（文本，这个协议的全部操作由模块实现），也可以是对象 `{ kind, commands }`：`kind` 是协议名；`commands` 至少一项，键是操作名（只按定义里 `operations` 键名的格式校验，在不在定义里由 Coda 装载时查），值是插件目录里的文件（`x-file`）；没列在 `commands` 里的操作由模块实现；不允许别的键。上限仍是 100 项。
 - 同一个协议在数组里只能出现一次，文本加对象、两个对象也算重复（原来的 `uniqueItems` 管不到混写）。为此 `x-unique-by` 加写法 `{ key, text: true }`：文本项按它自己的值、对象项按 `key` 属性的值一并查重；`docs/protocol.md` 同步写清两种写法。已有的纯文本写法不受影响。
+- `contributes.commands` 的保留名单改了：宿主 H5 把 `coda-run`、`coda-event`、`coda-resources` 并成一个 `coda`、旧三个名字已删（coda#2749 6.7 节第 3 条）。现在插件的命令不能叫 `coda`；`coda-run`、`coda-event`、`coda-resources` 不再保留，可以用。`schemas/plugin/commands.json` 的 `name` 描述同步。
+- 版本判断：不升主版本，仍是 6.8.0。`contributes.commands[].name` 虽在稳定面，但稳定面条目没有登记取值（`values`），承诺的只是「这个键存在、可写命令名」；保留名是 Coda 自己占用的命令名，插件写 `coda` 会盖掉宿主工具，本就不是被承诺的用法。三个旧名放开是放宽，只多接受；新增的 `coda` 只会拒掉一个从未被承诺、也没有已知插件在用的名字（样本里没有），三道检查都不受影响。
 
 ## 6.7.0 — 2026-11-17
 
