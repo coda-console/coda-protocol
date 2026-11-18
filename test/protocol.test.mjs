@@ -441,6 +441,35 @@ test('an operation sits in at most one permission group; core groups follow the 
     assert.equal(typeof definitionProblem(grouped(permissions)), 'string', JSON.stringify(permissions));
 });
 
+test('streams are declared per definition and permission groups cover them like operations', () => {
+  const ops = { start: { input: {}, run: true } };
+  const streams = { log: { description: '一个步骤的日志', input: { type: 'object', properties: { job: { type: 'string' } }, required: ['job'] } }, diff: { input: true } };
+  const def = permissions => ({ ...own, operations: ops, streams, permissions });
+  for (const permissions of [
+    undefined,
+    { logs: { title: '读取日志', streams: ['log', 'diff'] } },
+    { logs: { title: '读取日志', streams: ['log'] }, diffs: { title: '读取变更', streams: ['diff'] } },
+    { all: { title: '全部', operations: ['start'], streams: ['log'], read: true }, diffs: { title: '读取变更', trial: true, streams: ['diff'] } },
+  ]) assert.equal(definitionProblem(def(permissions)), null, JSON.stringify(permissions));
+  assert.equal(definitionProblem({ ...own, operations: {}, streams, permissions: { logs: { title: '读取日志', streams: ['log'] } } }), null);
+  assert.equal(definitionProblem({ ...own, operations: ops }), null);
+  assert.equal(definitionProblem({ ...own, operations: ops, streams: {} }), null);
+
+  assert.match(definitionProblem(def({ a: { title: 'A', streams: ['log', 'none'] } })), /^协议定义\.permissions\.a\.streams：没有流「none」$/);
+  assert.match(definitionProblem({ ...own, operations: ops, permissions: { a: { title: 'A', streams: ['log'] } } }), /^协议定义\.permissions\.a\.streams：没有流「log」$/);
+  assert.match(definitionProblem(def({ a: { title: 'A', streams: ['log'] }, b: { title: 'B', streams: ['diff', 'log'] } })),
+    /^协议定义\.permissions\.b\.streams：流「log」已经属于权限组「a」，一个流只能属于一组$/);
+  assert.match(definitionProblem(def({ a: { title: 'A', streams: ['log'] }, b: { title: 'B', streams: [] } })), /^协议定义\.permissions\.b：至少管一样东西/);
+  // a stream and an operation may share a name; each is owned on its own
+  assert.equal(definitionProblem({ ...own, operations: { log: { input: {}, result: {} } }, streams, permissions: { a: { title: 'A', operations: ['log'], streams: ['log'] } } }), null);
+
+  for (const bad of [{ log: {} }, { log: { input: 1 } }, { log: { input: {}, extra: 1 } }, { Log: { input: {} } }, { log: { description: '', input: {} } }, [], null])
+    assert.equal(typeof definitionProblem({ ...own, operations: ops, streams: bad }), 'string', JSON.stringify(bad));
+  assert.match(definitionProblem({ ...own, operations: ops, streams: { log: { input: { type: 'nope' } } } }), /^协议定义\.streams\.log\.input：不是可用的 JSON Schema/);
+  for (const permissions of [{ a: { title: 'A', streams: ['log', 'log'] } }, { a: { title: 'A', streams: ['Log'] } }, { a: { title: 'A', streams: 'log' } }])
+    assert.equal(typeof definitionProblem(def(permissions)), 'string', JSON.stringify(permissions));
+});
+
 test('a manifest\'s uses maps versioned protocol names to non-empty lists of distinct group names', () => {
   for (const uses of [{}, { 'coda/thread@1': ['location'] }, { 'coda/session@1': ['read', 'post'], 'my-plugin/task@2': ['go'] }])
     assert.equal(manifestProblem({ id: 'my-plugin', uses }), null, JSON.stringify(uses));
