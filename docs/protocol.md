@@ -74,6 +74,7 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `spec` | 记录的 spec 的 JSON Schema，必填 |
 | `status` | 记录的 status 的 JSON Schema，必填 |
 | `operations` | 操作名 → `{ description?, input, result, safe?, idempotent?, timeout? }` 或 `{ description?, input, run: true, timeout? }`，必填；不定义操作写 `{}` |
+| `permissions` | 权限组名 → `{ title, trial?, operations?, read? }`，可选（见「权限组」） |
 
 `spec`、`status`、`input`、`result` 都是 JSON Schema draft 2020-12，只引用自己文档里的 `#/$defs/...`，不引用别的文件。`input` 必有。操作的输出二选一：
 
@@ -173,6 +174,40 @@ invocationRequestProblem(request);   // null 或说明
 invocationResponseProblem(response); // 恰好有 result 或 run 之一
 ```
 
+### 权限组
+
+一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的能力分成组，插件在清单的 `uses` 里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
+
+| 字段 | 含义 |
+| --- | --- |
+| `title` | 必填，给用户看的一句话，说这组让插件能做什么，如「读取会话的标题与状态」 |
+| `trial` | 可选，布尔，这组是否试行；只影响展示，不影响能否调用 |
+| `operations` | 可选，不重复的操作名数组，归这组管的操作 |
+| `read` | 可选，布尔，管不管读这个协议的记录（get、list、watch）。写记录只许实现方，不分给插件 |
+
+不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作最多属于一组；组里列的操作都在 `operations` 里；每组至少管一样东西（有操作，或 `read` 为 true）。**不在任何组里的操作不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
+
+```json
+"permissions": {
+  "read": {"title": "读取任务的标题与状态", "read": true, "operations": ["peek"]},
+  "start": {"title": "开始一个任务", "operations": ["start"]}
+}
+```
+
+`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1` 的分组如下，都标 `trial`（还不在稳定面里）。`coda/session@1` 的 `draft` 是客户端输入框的击键流，不分组，不对插件开放：
+
+| 协议 | 组 | 说明 | 管什么 |
+| --- | --- | --- | --- |
+| `coda/run@1` | `read` | 查看运行的状态与结果 | 读记录 |
+| | `cancel` | 取消正在进行的运行 | `cancel` |
+| `coda/agent@1` | `read` | 查看机器上装着哪些 Agent，以及它们的模型与模式 | 读记录 |
+| | `spawn` | 用 Agent 开一个新会话并交给它任务 | `spawn` |
+| `coda/session@1` | `read` | 读取外部会话的标题、参与者与消息 | 读记录、`read` |
+| | `post` | 以你的身份往外部会话里发消息 | `post` |
+| `coda/environment@1` | `read` | 浏览并读取外部环境里的目录与文件 | 读记录、`list`、`read` |
+
+插件申请权限写在清单根的 `uses`（见「插件清单」）。
+
 ## 插件清单
 
 ```json
@@ -200,6 +235,17 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 - `{ "kind": "<协议名>", "commands": { "<操作名>": "<文件>" } }`：`commands` 至少一项，键是操作名（格式同定义里 `operations` 的键，这个操作在不在协议定义里由 Coda 装载时查），值是插件目录里的文件（相对路径，不离开插件目录）。`commands` 里列出的操作由这个文件实现，**没列在 `commands` 里的操作由模块实现**。对象里不能有 `kind`、`commands` 之外的键。命令怎么写、怎么跑由 Coda 的文档讲，这里不重述。
 
 同一个协议在数组里只能出现一次，写成文本还是对象都算。
+
+插件用到别的协议的权限，写在清单根的 `uses`，不放进 `contributes`（Coda 把不认识的 `contributes` 键当扩展点，旧版本会因此拒装）。键是带大版本的协议名，值是权限组名的数组，至少一项、不重复：
+
+```json
+{
+  "id": "my-plugin",
+  "uses": {"coda/session@1": ["read"], "coda/environment@1": ["read"]}
+}
+```
+
+协议名与组名只查写法；协议和组在不在目录里，由 Coda 校验。实现一个协议不用在 `uses` 里申请它。
 
 `manifestProblem` 校验清单的外壳与通用键（这两个键在其中）；别的键由 Coda 的贡献点登记表或某个插件的扩展点声明，按声明方的 schema 校验，本包不管它们的形状。命名空间约束需要插件 ID，单独用：
 

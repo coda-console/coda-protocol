@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/protocol/v1/definition.json",
   "title": "协议定义",
-  "description": "一个协议的名字、记录格式与操作。名字是「命名空间/名字@大版本」；spec、status 与每个操作的输入、结果都是 JSON Schema（draft 2020-12），只引用定义自身的 $defs。操作要么立刻返回结果（result），要么返回运行引用（run: true）；只读的立即结果可标 safe: true，可改状态但重发做同一件事的立即结果可标 idempotent: true。操作可写 timeout 给出默认期限。",
+  "description": "一个协议的名字、记录格式与操作。名字是「命名空间/名字@大版本」；spec、status 与每个操作的输入、结果都是 JSON Schema（draft 2020-12），只引用定义自身的 $defs。操作要么立刻返回结果（result），要么返回运行引用（run: true）；只读的立即结果可标 safe: true，可改状态但重发做同一件事的立即结果可标 idempotent: true。操作可写 timeout 给出默认期限。可写 permissions 把操作与记录的读取分成权限组，供插件在清单里按组申请。",
   "type": "object",
   "properties": {
     "name": {"$ref": "#/$defs/name"},
@@ -17,6 +17,13 @@
       "maxProperties": 50,
       "propertyNames": {"$ref": "#/$defs/operationName"},
       "additionalProperties": {"$ref": "#/$defs/operation"}
+    },
+    "permissions": {
+      "description": "权限组：组名 → 一组对插件开放的能力。插件在清单的 uses 里按组申请，没申请的调用被宿主拒绝。每个操作最多属于一组，组里列的操作都存在，每组至少管一样东西（有操作，或 read 为真）；这三条由 definitionProblem 查。不在任何组里的操作不对插件开放，只有 Coda 自己和它的客户端调；不写 permissions 就是整个协议都不分组",
+      "type": "object",
+      "maxProperties": 50,
+      "propertyNames": {"$ref": "#/$defs/operationName"},
+      "additionalProperties": {"$ref": "#/$defs/permissionGroup"}
     }
   },
   "required": ["name", "spec", "status", "operations"],
@@ -34,7 +41,7 @@
       "pattern": "^[a-z][a-z0-9-]{0,62}$"
     },
     "operationName": {
-      "description": "操作名：小写字母开头，只用小写字母、数字和「-」，不超过 64 个字符",
+      "description": "操作名，也是权限组名（协议定义的 permissions 的键、清单 uses 里的组名）：小写字母开头，只用小写字母、数字和「-」，不超过 64 个字符",
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{0,63}$"
     },
@@ -44,6 +51,18 @@
     },
     "title": {"description": "给人看的名字", "type": "string", "maxLength": 100, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
     "description": {"description": "一句话说明", "type": "string", "maxLength": 1000, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
+    "permissionGroup": {
+      "description": "一个权限组：title 是给用户看的一句话，说这组让插件能做什么；trial 标这组是试行的；operations 是归这组管的操作；read 管不管读这个协议的记录（get、list、watch）；写记录只许实现方，不分给插件",
+      "type": "object",
+      "properties": {
+        "title": {"$ref": "#/$defs/title"},
+        "trial": {"type": "boolean", "description": "是否试行：只影响展示，不影响能否调用"},
+        "operations": {"type": "array", "maxItems": 50, "uniqueItems": true, "items": {"$ref": "#/$defs/operationName"}, "description": "归这组管的操作名，不重复"},
+        "read": {"type": "boolean", "description": "管不管读这个协议的记录（get、list、watch）"}
+      },
+      "required": ["title"],
+      "additionalProperties": false
+    },
     "operation": {
       "description": "操作：input 必有；result 是立即结果的 schema，或写 run: true 表示返回运行引用。两者恰写一个。safe: true、idempotent: true 只能与 result 一起写，两者不同时写（safe 已含 idempotent）。",
       "type": "object",

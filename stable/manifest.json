@@ -1,5 +1,5 @@
 {
-  "revision": 1,
+  "revision": 2,
   "entries": [
     {
       "path": "name"
@@ -27,6 +27,9 @@
     },
     {
       "path": "main"
+    },
+    {
+      "path": "uses.*[]"
     },
     {
       "path": "contributes.agents[].id"

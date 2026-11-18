@@ -74,6 +74,22 @@ function schemaProblem(schema, where) {
   }
 }
 
+// Permission groups, when written: every group names real operations and covers something, every operation sits in at most
+// one group. An operation in no group is not open to plugins.
+function permissionsProblem({ operations, permissions }, where) {
+  if (permissions === undefined) return null;
+  const owner = new Map();
+  for (const [group, { operations: listed = [], read }] of Object.entries(permissions)) {
+    for (const operation of listed) {
+      if (!Object.hasOwn(operations, operation)) return `${where}.permissions.${group}.operations：没有操作「${operation}」`;
+      if (owner.has(operation)) return `${where}.permissions.${group}.operations：操作「${operation}」已经属于权限组「${owner.get(operation)}」，一个操作只能属于一组`;
+      owner.set(operation, group);
+    }
+    if (!listed.length && read !== true) return `${where}.permissions.${group}：至少管一样东西：写 operations，或 read 为 true`;
+  }
+  return null;
+}
+
 // `namespace`: the plugin ID a manifest owns definitions under; omitted for core definitions and standalone checks.
 export function definitionProblem(definition, { namespace = null, where = '协议定义' } = {}) {
   if (!definitionCheck(definition))
@@ -83,6 +99,8 @@ export function definitionProblem(definition, { namespace = null, where = '协�
   if (!parsed) return `${where}.name：${NAME_PROBLEM}`;
   if (namespace !== null && parsed.namespace !== namespace)
     return `${where}.name：命名空间须为「${namespace}」，不能在自己的命名空间之外定义协议`;
+  const grouping = permissionsProblem(definition, where);
+  if (grouping) return grouping;
   const parts = [['spec', definition.spec], ['status', definition.status]];
   for (const [operation, value] of Object.entries(definition.operations)) {
     parts.push([`operations.${operation}.input`, value.input]);

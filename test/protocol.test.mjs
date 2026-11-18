@@ -15,7 +15,8 @@ import {
 } from '../protocol.mjs';
 
 const reference = (kind = 'coda/run@1', id = 'run-1') => ({ kind, id });
-const own = { ...RUN_PROTOCOL, name: 'my-plugin/thing@1' };
+const { permissions: _, ...runDefinition } = RUN_PROTOCOL;
+const own = { ...runDefinition, name: 'my-plugin/thing@1' };
 
 test('protocol names are parsed, formatted and validated as namespace/name@major', () => {
   const parsed = parseProtocolName('my-plugin/tool-2@10');
@@ -408,4 +409,43 @@ test('a protocol is implemented by the module (a name) or in part by commands (a
   const thing = { kind: 'coda/run@1', commands };
   for (const twice of [['coda/run@1', 'coda/run@1'], ['coda/run@1', thing], [thing, 'coda/run@1'], [thing, { ...thing, commands: { other: 'bin/cancel.sh' } }]])
     assert.equal(check(twice), 'contributes.protocolImplementations：不能重复：coda/run@1');
+});
+
+test('an operation sits in at most one permission group; core groups follow the rule', () => {
+  const ops = { start: { input: {}, run: true }, peek: { input: {}, result: {}, safe: true } };
+  const grouped = permissions => ({ ...own, operations: ops, permissions });
+  for (const permissions of [
+    { go: { title: '开始任务', operations: ['start', 'peek'] } },
+    { read: { title: '读取任务', read: true, operations: ['peek'] }, start: { title: '开始任务', trial: true, operations: ['start'] } },
+    { read: { title: '读取任务', read: true, operations: ['start', 'peek'] } },
+  ]) assert.equal(definitionProblem(grouped(permissions)), null, JSON.stringify(permissions));
+  assert.equal(definitionProblem({ ...own, operations: {}, permissions: { read: { title: '读取任务', read: true } } }), null);
+  assert.equal(definitionProblem({ ...own, operations: ops }), null);
+  const groups = ({ permissions }) => Object.fromEntries(Object.entries(permissions).map(([name, { title, ...rest }]) => [name, rest]));
+  assert.deepEqual(groups(RUN_PROTOCOL), { read: { trial: true, read: true }, cancel: { trial: true, operations: ['cancel'] } });
+  assert.deepEqual(groups(AGENT_PROTOCOL), { read: { trial: true, read: true }, spawn: { trial: true, operations: ['spawn'] } });
+  assert.deepEqual(groups(SESSION_PROTOCOL), { read: { trial: true, read: true, operations: ['read'] }, post: { trial: true, operations: ['post'] } });
+  assert.deepEqual(groups(ENVIRONMENT_PROTOCOL), { read: { trial: true, read: true, operations: ['list', 'read'] } });
+  assert.ok(!Object.values(SESSION_PROTOCOL.permissions).some(group => group.operations?.includes('draft')));
+  assert.equal(definitionProblem(grouped({ read: { title: '读取任务', operations: ['peek'] } })), null);
+
+  assert.match(definitionProblem(grouped({ all: { title: '全部', operations: ['start', 'peek', 'stop'] } })), /^协议定义\.permissions\.all\.operations：没有操作「stop」$/);
+  assert.match(definitionProblem(grouped({ a: { title: 'A', operations: ['start', 'peek'] }, b: { title: 'B', operations: ['peek'] } })),
+    /^协议定义\.permissions\.b\.operations：操作「peek」已经属于权限组「a」/);
+  for (const empty of [{ title: '空' }, { title: '空', read: false }, { title: '空', operations: [] }])
+    assert.match(definitionProblem(grouped({ a: { title: 'A', operations: ['start', 'peek'] }, b: empty })), /^协议定义\.permissions\.b：至少管一样东西/, JSON.stringify(empty));
+  for (const permissions of [[], null, { A: { title: 'A', operations: ['start', 'peek'] } }, { a: { operations: ['start', 'peek'] } },
+    { a: { title: '', operations: ['start', 'peek'] } }, { a: { title: 'A', operations: ['start', 'start', 'peek'] } },
+    { a: { title: 'A', operations: ['start', 'peek'], future: true } }, { a: { title: 'A', operations: ['start', 'peek'], read: 'yes' } }, { a: { title: 'A', operations: ['start', 'peek'], write: true } },
+    { a: { title: 'A', operations: ['start', 'peek'], trial: 1 } }, { a: { title: 'A', operations: ['Start'] } }])
+    assert.equal(typeof definitionProblem(grouped(permissions)), 'string', JSON.stringify(permissions));
+});
+
+test('a manifest\'s uses maps versioned protocol names to non-empty lists of distinct group names', () => {
+  for (const uses of [{}, { 'coda/thread@1': ['location'] }, { 'coda/session@1': ['read', 'post'], 'my-plugin/task@2': ['go'] }])
+    assert.equal(manifestProblem({ id: 'my-plugin', uses }), null, JSON.stringify(uses));
+  for (const uses of [{ 'coda/thread@1': [] }, { 'coda/thread@1': ['read', 'read'] }, { 'coda/thread@1': ['Read'] }, { 'coda/thread@1': [1] },
+    { 'coda/thread@1': 'read' }, { 'coda/thread': ['read'] }, { 'Coda/thread@1': ['read'] }, { threads: ['read'] }, ['coda/thread@1'], null])
+    assert.match(manifestProblem({ id: 'my-plugin', uses }), /uses/, JSON.stringify(uses));
+  assert.equal(manifestProblem({ id: 'my-plugin', contributes: { uses: ['whatever'] } }), null);
 });

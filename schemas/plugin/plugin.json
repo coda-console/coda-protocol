@@ -29,6 +29,19 @@
     "main": {"description": "插件宿主运行的模块：插件目录里的 .js 或 .mjs 文件", "type": "string", "pattern": "\\.m?js$", "x-file": {"type": "file"}},
     "activationEvents": {"description": "宿主什么时候加载 main：onStartupFinished（后端一启动），不重复", "type": "array", "items": {"enum": ["onStartupFinished"]}, "uniqueItems": true},
     "extensionDependencies": {"description": "需要先装的插件的 ID，不重复", "type": "array", "items": {"$ref": "common.json#/$defs/id"}, "uniqueItems": true},
+    "uses": {
+      "description": "插件用到的别的协议的权限：协议名（带大版本，如 coda/thread@1）→ 权限组名的数组，至少一项、不重复。没声明的调用被宿主拒绝。放在清单根上而不是 contributes 里：Coda 把 contributes 里不认识的键当扩展点，旧版本会因此拒装。组在不在该协议的定义里由 Coda 对照目录查，这里只管形状",
+      "type": "object",
+      "maxProperties": 100,
+      "propertyNames": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"},
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 50,
+        "uniqueItems": true,
+        "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/operationName"}
+      }
+    },
     "contributes": {
       "description": "插件带来的东西：每个键一种类型。这里只列通用键；其余键由 Coda 的贡献点登记表或某个插件的扩展点声明",
       "type": "object",
