@@ -79,13 +79,13 @@ function schemaProblem(schema, where) {
 function permissionsProblem({ operations, permissions }, where) {
   if (permissions === undefined) return null;
   const owner = new Map();
-  for (const [group, { operations: listed = [], read, write }] of Object.entries(permissions)) {
+  for (const [group, { operations: listed = [], read }] of Object.entries(permissions)) {
     for (const operation of listed) {
       if (!Object.hasOwn(operations, operation)) return `${where}.permissions.${group}.operations：没有操作「${operation}」`;
       if (owner.has(operation)) return `${where}.permissions.${group}.operations：操作「${operation}」已经属于权限组「${owner.get(operation)}」，一个操作只能属于一组`;
       owner.set(operation, group);
     }
-    if (!listed.length && read !== true && write !== true) return `${where}.permissions.${group}：至少管一样东西：写 operations，或 read、write 为 true`;
+    if (!listed.length && read !== true) return `${where}.permissions.${group}：至少管一样东西：写 operations，或 read 为 true`;
   }
   return null;
 }

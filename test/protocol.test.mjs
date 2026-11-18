@@ -418,7 +418,6 @@ test('an operation sits in at most one permission group; core groups follow the 
     { go: { title: '开始任务', operations: ['start', 'peek'] } },
     { read: { title: '读取任务', read: true, operations: ['peek'] }, start: { title: '开始任务', trial: true, operations: ['start'] } },
     { read: { title: '读取任务', read: true, operations: ['start', 'peek'] } },
-    { write: { title: '改任务', write: true, operations: ['start', 'peek'] } },
   ]) assert.equal(definitionProblem(grouped(permissions)), null, JSON.stringify(permissions));
   assert.equal(definitionProblem({ ...own, operations: {}, permissions: { read: { title: '读取任务', read: true } } }), null);
   assert.equal(definitionProblem({ ...own, operations: ops }), null);
@@ -433,11 +432,11 @@ test('an operation sits in at most one permission group; core groups follow the 
   assert.match(definitionProblem(grouped({ all: { title: '全部', operations: ['start', 'peek', 'stop'] } })), /^协议定义\.permissions\.all\.operations：没有操作「stop」$/);
   assert.match(definitionProblem(grouped({ a: { title: 'A', operations: ['start', 'peek'] }, b: { title: 'B', operations: ['peek'] } })),
     /^协议定义\.permissions\.b\.operations：操作「peek」已经属于权限组「a」/);
-  for (const empty of [{ title: '空' }, { title: '空', read: false, write: false }, { title: '空', operations: [] }])
+  for (const empty of [{ title: '空' }, { title: '空', read: false }, { title: '空', operations: [] }])
     assert.match(definitionProblem(grouped({ a: { title: 'A', operations: ['start', 'peek'] }, b: empty })), /^协议定义\.permissions\.b：至少管一样东西/, JSON.stringify(empty));
   for (const permissions of [[], null, { A: { title: 'A', operations: ['start', 'peek'] } }, { a: { operations: ['start', 'peek'] } },
     { a: { title: '', operations: ['start', 'peek'] } }, { a: { title: 'A', operations: ['start', 'start', 'peek'] } },
-    { a: { title: 'A', operations: ['start', 'peek'], future: true } }, { a: { title: 'A', operations: ['start', 'peek'], read: 'yes' } },
+    { a: { title: 'A', operations: ['start', 'peek'], future: true } }, { a: { title: 'A', operations: ['start', 'peek'], read: 'yes' } }, { a: { title: 'A', operations: ['start', 'peek'], write: true } },
     { a: { title: 'A', operations: ['start', 'peek'], trial: 1 } }, { a: { title: 'A', operations: ['Start'] } }])
     assert.equal(typeof definitionProblem(grouped(permissions)), 'string', JSON.stringify(permissions));
 });

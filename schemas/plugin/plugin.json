@@ -39,7 +39,7 @@
         "minItems": 1,
         "maxItems": 50,
         "uniqueItems": true,
-        "items": {"$ref": "common.json#/$defs/name", "description": "权限组名，写法同操作名"}
+        "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/operationName"}
       }
     },
     "contributes": {

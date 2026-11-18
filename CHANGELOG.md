@@ -5,8 +5,8 @@
 ## 6.10.0 — 2026-11-18
 
 - 这是在 6.9.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，新增可选字段升次版本；清单新增可选根键 `uses`，旧清单照旧通过（Coda 宿主设计 coda#2749 H3）。
-- 协议定义加可选的顶层 `permissions`：权限组名（写法同操作名）→ `{ title, trial?, operations?, read?, write? }`，不许别的键。`title` 是给用户看的一句话；`trial` 标试行；`operations` 是归这组管的操作（不重复）；`read`、`write` 管读、写这个协议的记录（读是 get、list、watch，写是 put、delete、replace）。写了 `permissions` 的定义，`definitionProblem` 还查：每个操作最多属于一组；组里列的操作都存在；每组至少管一样东西（有操作，或 `read`、`write` 为 true）。不在任何组里的操作不对插件开放，只有 Coda 自己和它的客户端调；不写的定义照旧合法，整个协议都不对插件开放。
-- 插件清单根加可选的 `uses`：键是带大版本的协议名，值是权限组名的数组，至少一项、不重复。放在根上而不是 `contributes` 里：Coda 把不认识的 `contributes` 键当扩展点，旧版本会因此拒装；根上的未知键旧版本会忽略。本包只管形状，协议和组在不在目录里由 Coda 校验。`stable/manifest.json` 加 `uses.*[]`，`revision` 加到 2。
+- 协议定义加可选的顶层 `permissions`：权限组名（写法同操作名）→ `{ title, trial?, operations?, read? }`，不许别的键。`title` 是给用户看的一句话；`trial` 标试行；`operations` 是归这组管的操作（不重复）；`read` 管读这个协议的记录（get、list、watch）；写记录只许实现方，不分给插件，所以没有 `write`。写了 `permissions` 的定义，`definitionProblem` 还查：每个操作最多属于一组；组里列的操作都存在；每组至少管一样东西（有操作，或 `read` 为 true）。不在任何组里的操作不对插件开放，只有 Coda 自己和它的客户端调；不写的定义照旧合法，整个协议都不对插件开放。
+- 插件清单根加可选的 `uses`：键是带大版本的协议名，值是权限组名的数组，至少一项、不重复；组名与操作名共用 `definition.json` 的 `operationName`。放在根上而不是 `contributes` 里：Coda 把不认识的 `contributes` 键当扩展点，旧版本会因此拒装；根上的未知键旧版本会忽略。本包只管形状，协议和组在不在目录里由 Coda 校验。`stable/manifest.json` 加 `uses.*[]`，`revision` 加到 2。
 - `coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1` 写上权限组，全部标 `trial: true`（它们都不在 `stable/` 的稳定面里）：`coda/run@1` 的 `read`、`cancel`；`coda/agent@1` 的 `read`、`spawn`；`coda/session@1` 的 `read`、`post`（`draft` 是客户端输入框的击键流，不分组，不对插件开放）；`coda/environment@1` 的 `read`。分组与说明见 `docs/protocol.md`「权限组」。`coda/card@1` 不动（`coda/executor@1` 已在 6.9.0 删除）。
 - 定义的 `permissions` 不入稳定面：协议定义本来就是内部面，`stable/` 里没有任何定义的字段；只有清单的 `uses` 是第三方会写的正式键。
 

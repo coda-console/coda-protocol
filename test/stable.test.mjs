@@ -2,19 +2,22 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { SCHEMAS, newAjv } from '../validate.mjs';
+import { PROTOCOL_DEFINITION } from '../protocol.mjs';
 
 const read = path => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 const stable = read('../stable/manifest.json');
 const pi = read('./fixtures/stable/sealiu1997-coda_plugins_pi_agent@c968f99/package.json');
 const company = read('./fixtures/stable/company-synthetic/package.json');
 const resource = read('./fixtures/stable/sealiu1997-coda_plugins_resource_manager@b18fbaf/package.json');
-// Witnesses select the actual if/then/else branches. Extra witnesses cover the five promised Agent fields.
+// Witnesses select the actual if/then/else branches. Extra witnesses cover the five promised Agent fields and the manifest's `uses`.
 const agent = structuredClone(pi.contributes.agents[0]);
 Object.assign(agent.modes, { unset: '默认', auto: '自动', full: '完全' });
 Object.assign(agent.icon, { dark: 'dark.pdf', template: true });
 const witnesses = [pi, company, resource, { contributes: { agents: [agent] } }, { uses: { 'coda/thread@1': ['location'] } }];
 const ajv = newAjv({ strict: false });
-for (const schema of Object.values(SCHEMAS)) ajv.addSchema(schema);
+// Manifest schemas also reference the protocol definition's $defs (group names).
+const documents = [...Object.values(SCHEMAS), PROTOCOL_DEFINITION];
+for (const schema of documents) ajv.addSchema(schema);
 // Only the syntax encountered on these paths is understood. Unknown syntax must stop the check.
 const known = new Set('$schema $id $defs title description type properties required additionalProperties propertyNames items allOf anyOf if then else not $ref unevaluatedProperties enum const pattern minLength maxLength minimum maximum minItems maxItems uniqueItems minProperties maxProperties x-file x-ref x-unique-by x-max-contains x-placeholders'.split(' '));
 function syntax(schema, document) {
@@ -34,7 +37,7 @@ function expand(schema, document, value) {
   const nodes = [{ schema, document }];
   if (schema.$ref) {
     const url = new URL(schema.$ref, document.$id), [base, pointer = ''] = url.href.split('#');
-    const target = Object.values(SCHEMAS).find(item => item.$id === base);
+    const target = documents.find(item => item.$id === base);
     assert.ok(target, `不支持的 $ref：${url}`);
     const resolved = pointer ? pointer.slice(1).split('/').reduce((node, key) => node[key.replaceAll('~1', '/').replaceAll('~0', '~')], target) : target;
     nodes.push(...expand(resolved, target, value));

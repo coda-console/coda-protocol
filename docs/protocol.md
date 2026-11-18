@@ -74,7 +74,7 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `spec` | 记录的 spec 的 JSON Schema，必填 |
 | `status` | 记录的 status 的 JSON Schema，必填 |
 | `operations` | 操作名 → `{ description?, input, result, safe?, idempotent?, timeout? }` 或 `{ description?, input, run: true, timeout? }`，必填；不定义操作写 `{}` |
-| `permissions` | 权限组名 → `{ title, trial?, operations?, read?, write? }`，可选（见「权限组」） |
+| `permissions` | 权限组名 → `{ title, trial?, operations?, read? }`，可选（见「权限组」） |
 
 `spec`、`status`、`input`、`result` 都是 JSON Schema draft 2020-12，只引用自己文档里的 `#/$defs/...`，不引用别的文件。`input` 必有。操作的输出二选一：
 
@@ -176,16 +176,16 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 
 ### 权限组
 
-一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的能力分成组，插件在清单的 `uses` 里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名。每组：
+一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的能力分成组，插件在清单的 `uses` 里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
 
 | 字段 | 含义 |
 | --- | --- |
 | `title` | 必填，给用户看的一句话，说这组让插件能做什么，如「读取会话的标题与状态」 |
 | `trial` | 可选，布尔，这组是否试行；只影响展示，不影响能否调用 |
 | `operations` | 可选，不重复的操作名数组，归这组管的操作 |
-| `read`、`write` | 可选，布尔，管不管读、写这个协议的记录：读是 get、list、watch，写是 put、delete、replace |
+| `read` | 可选，布尔，管不管读这个协议的记录（get、list、watch）。写记录只许实现方，不分给插件 |
 
-不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作最多属于一组；组里列的操作都在 `operations` 里；每组至少管一样东西（有操作，或 `read`、`write` 为 true）。**不在任何组里的操作不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
+不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作最多属于一组；组里列的操作都在 `operations` 里；每组至少管一样东西（有操作，或 `read` 为 true）。**不在任何组里的操作不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
 
 ```json
 "permissions": {
