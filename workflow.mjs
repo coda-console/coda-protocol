@@ -37,9 +37,10 @@ export const CODA_OPTIONS = options;
 export const CODA_ACTIONS = Object.fromEntries(Object.entries(actions.actions).map(([name, action]) => [name, action.params]));
 // The parameters an action must be given, by its name; an action with none is not listed.
 const REQUIRED_PARAMS = Object.fromEntries(Object.entries(actions.actions).filter(([, action]) => action.required).map(([name, action]) => [name, action.required]));
-// What an action's parameters must keep to besides being named: the others one needs (`requires`, by parameter), and the
-// values a parameter written as plain text may take (`enum`); an action with neither is not listed.
-const PARAM_RULES = Object.fromEntries(Object.entries(actions.actions).filter(([, action]) => action.requires || action.enum).map(([name, action]) => [name, action]));
+// What an action's parameters must keep to besides being named: the others one needs (`requires`, by parameter), exactly
+// one of which to write (`oneOf`), and the values (`enum`) or the form (`pattern`) a parameter written as plain text may
+// take; an action with none of them is not listed.
+const PARAM_RULES = Object.fromEntries(Object.entries(actions.actions).filter(([, action]) => action.requires || action.oneOf || action.enum || action.pattern).map(([name, action]) => [name, action]));
 // The events Coda sends (dialect.json says what each is).
 export const CODA_EVENTS = Object.keys(dialect.events);
 export const { lifecycleStart: SESSION_OPENED, lifecycleFacts: SESSION_FACTS, dispatch: DISPATCH_EVENT, cancel: CANCEL_EVENT } = dialect.eventRoles;
@@ -310,6 +311,14 @@ export async function readWorkflow(source, file = 'workflow') {
     for (const [name, needs] of Object.entries(PARAM_RULES[task.action]?.requires ?? {}))
       if (given.some(p => p.name === name) && needs.some(need => !given.some(p => p.name === need)))
         return { problem: `${task.id}：coda:action ${task.action} 写了参数 ${name} 就须写参数 ${needs.join('、')}` };
+    const oneOf = PARAM_RULES[task.action]?.oneOf;
+    if (oneOf && given.filter(p => oneOf.includes(p.name)).length !== 1)
+      return { problem: `${task.id}：coda:action ${task.action} 的参数 ${oneOf.join('、')} 须恰写一个` };
+    for (const [name, { regex, hint }] of Object.entries(PARAM_RULES[task.action]?.pattern ?? {})) {
+      const value = given.find(p => p.name === name)?.value;
+      if (value !== undefined && !isExpression(value) && !value.includes('{{') && !new RegExp(regex, 'u').test(value))
+        return { problem: `${task.id}：coda:action ${task.action} 的参数 ${name} 须为 ${hint}` };
+    }
     for (const [name, values] of Object.entries(PARAM_RULES[task.action]?.enum ?? {})) {
       const value = given.find(p => p.name === name)?.value;
       if (value !== undefined && !isExpression(value) && !value.includes('{{') && !values.includes(value))

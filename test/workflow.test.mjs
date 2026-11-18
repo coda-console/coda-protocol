@@ -110,6 +110,24 @@ test('send-session resumes an input of the session: how needs resumes and is ori
   assert.equal(await workflowProblem(task(text + param('resumes', 'm1') + param('how', 'again')), 'w'), 'send：coda:action send-session 的参数 how 只能是 original、verify');
 });
 
+test('hold-group takes a group by its name or a pool by select, exactly one; plain-text select is key=value pairs', async () => {
+  const task = params => workflow(`<startEvent id="start" />
+    <sequenceFlow id="f" sourceRef="start" targetRef="hold" />
+    <serviceTask id="hold" coda:action="hold-group"><extensionElements>${params}</extensionElements></serviceTask>`);
+  const param = (name, value) => `<coda:param name="${name}" value="${value}" />`;
+  for (const params of [param('group', 'device:xiaomi'), param('group', 'host') + param('capacity', '2'), param('select', 'platform=android'),
+    param('select', 'platform=ios,model=duo') + param('borrow', 'no'), param('select', 'model=Mi 10 Pro'), param('select', 'platform=android,model=Mi 10 Pro'),
+    param('select', `${'😀'.repeat(100)}=${'😀'.repeat(100)}`), param('select', '=inputs.select'), param('select', 'platform={{inputs.platform}}'), param('group', '=inputs.group')])
+    assert.equal(await workflowProblem(task(params), 'w'), null, params);
+  const exactlyOne = 'hold：coda:action hold-group 的参数 group、select 须恰写一个';
+  assert.equal(await workflowProblem(task(param('group', 'host') + param('select', 'platform=android')), 'w'), exactlyOne);
+  assert.equal(await workflowProblem(task(param('capacity', '2')), 'w'), exactlyOne);
+  assert.equal(await workflowProblem(task(''), 'w'), exactlyOne);
+  const form = 'hold：coda:action hold-group 的参数 select 须为 键=值，多个用逗号隔开，值的首尾不能是空白，如 platform=android,model=Mi 10 Pro';
+  for (const select of ['android', 'platform=', 'platform=android,', ',platform=android', 'platform=android,model', 'platform = android', 'a=b=c', 'model= Mi', 'model=Mi ', `${'😀'.repeat(101)}=x`, `x=${'😀'.repeat(101)}`, ''])
+    assert.equal(await workflowProblem(task(param('select', select)), 'w'), form, select);
+});
+
 test('check-setting and apply-setting take a plugin setting\'s change; check-setting also the machines suggested, apply-setting the approving task', async () => {
   const task = (action, params) => workflow(`<startEvent id="start" />
     <sequenceFlow id="f" sourceRef="start" targetRef="step" />
@@ -156,7 +174,7 @@ test('a card approving a setting on several machines: check-setting\'s machines 
 
 test('the names workflows share are the dialect\'s: the events Coda sends, and the actions with their parameters', () => {
   assert.deepEqual(CODA_EVENTS, [SESSION_OPENED, SESSION_FACTS, DISPATCH_EVENT, CANCEL_EVENT]);
-  assert.deepEqual(CODA_ACTIONS['hold-group'], ['group', 'capacity', 'borrow', 'exclusive']);
+  assert.deepEqual(CODA_ACTIONS['hold-group'], ['group', 'select', 'capacity', 'borrow', 'exclusive']);
 });
 
 // Each coda: value is checked against its schema (values.json), and what is wrong is said where it is, as Coda says it.

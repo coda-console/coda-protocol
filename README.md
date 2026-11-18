@@ -40,7 +40,7 @@ import { contributionProblem, manifestProblem, pointProblem, valueProblem, TYPES
 // 整份清单的外壳与通用键；给出插件目录时，连同它点名的文件一起查（x-file）。合乎类型返回 null，否则是一句说明：哪里、schema 怎么说。
 const manifest = JSON.parse(readFileSync('plugin/package.json', 'utf8'));
 const problem = manifestProblem(manifest, 'plugin');
-// 不是通用键的一个键，按声明它的一方给的 schema，放在整份清单里查：指针从清单的根算（groups 的 capacity 指向本插件的设置）。
+// 不是通用键的一个键，按声明它的一方给的 schema，放在整份清单里查：指针从清单的根算（modelProviders 的 ${config:…} 指向本插件的设置）。
 contributionProblem(SCHEMAS['agents.json'], manifest, 'agents', 'plugin');
 // 某个类型里的一部分，如输入框模式声明的参数。
 valueProblem('composer-modes.json#/$defs/parameters', parameters, '插件给出的参数');
