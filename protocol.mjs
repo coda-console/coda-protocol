@@ -74,18 +74,22 @@ function schemaProblem(schema, where) {
   }
 }
 
-// Permission groups, when written: every group names real operations and covers something, every operation sits in at most
-// one group. An operation in no group is not open to plugins.
-function permissionsProblem({ operations, permissions }, where) {
+// Permission groups, when written: every group names real operations and streams and covers something, every operation and
+// stream sits in at most one group. An operation or stream in no group is not open to plugins.
+function permissionsProblem({ operations, streams = {}, permissions }, where) {
   if (permissions === undefined) return null;
-  const owner = new Map();
-  for (const [group, { operations: listed = [], read }] of Object.entries(permissions)) {
-    for (const operation of listed) {
-      if (!Object.hasOwn(operations, operation)) return `${where}.permissions.${group}.operations：没有操作「${operation}」`;
-      if (owner.has(operation)) return `${where}.permissions.${group}.operations：操作「${operation}」已经属于权限组「${owner.get(operation)}」，一个操作只能属于一组`;
-      owner.set(operation, group);
+  const owner = { operations: new Map(), streams: new Map() };
+  const things = { operations: ['操作', operations], streams: ['流', streams] };
+  for (const [group, entry] of Object.entries(permissions)) {
+    for (const key of ['operations', 'streams']) {
+      const [label, defined] = things[key];
+      for (const name of entry[key] ?? []) {
+        if (!Object.hasOwn(defined, name)) return `${where}.permissions.${group}.${key}：没有${label}「${name}」`;
+        if (owner[key].has(name)) return `${where}.permissions.${group}.${key}：${label}「${name}」已经属于权限组「${owner[key].get(name)}」，一个${label}只能属于一组`;
+        owner[key].set(name, group);
+      }
     }
-    if (!listed.length && read !== true) return `${where}.permissions.${group}：至少管一样东西：写 operations，或 read 为 true`;
+    if (!entry.operations?.length && !entry.streams?.length && entry.read !== true) return `${where}.permissions.${group}：至少管一样东西：写 operations 或 streams，或 read 为 true`;
   }
   return null;
 }
@@ -106,6 +110,7 @@ export function definitionProblem(definition, { namespace = null, where = '协�
     parts.push([`operations.${operation}.input`, value.input]);
     if (value.result !== undefined) parts.push([`operations.${operation}.result`, value.result]);
   }
+  for (const [stream, value] of Object.entries(definition.streams ?? {})) parts.push([`streams.${stream}.input`, value.input]);
   for (const [key, schema] of parts) {
     const problem = schemaProblem(schema, `${where}.${key}`);
     if (problem) return problem;
