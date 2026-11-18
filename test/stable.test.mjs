@@ -9,11 +9,11 @@ const stable = read('../stable/manifest.json');
 const pi = read('./fixtures/stable/sealiu1997-coda_plugins_pi_agent@c968f99/package.json');
 const company = read('./fixtures/stable/company-synthetic/package.json');
 const resource = read('./fixtures/stable/sealiu1997-coda_plugins_resource_manager@b18fbaf/package.json');
-// Witnesses select the actual if/then/else branches. Extra witnesses cover the five promised Agent fields and the manifest's `uses`.
+// Witnesses select the actual if/then/else branches. Extra witnesses cover the five promised Agent fields and the manifest's `uses` and `engines`.
 const agent = structuredClone(pi.contributes.agents[0]);
 Object.assign(agent.modes, { unset: '默认', auto: '自动', full: '完全' });
 Object.assign(agent.icon, { dark: 'dark.pdf', template: true });
-const witnesses = [pi, company, resource, { contributes: { agents: [agent] } }, { uses: { 'coda/thread@1': ['location'] } }];
+const witnesses = [pi, company, resource, { contributes: { agents: [agent] } }, { uses: { 'coda/thread@1': ['location'] }, engines: { coda: 1, node: '>=24' } }];
 const ajv = newAjv({ strict: false });
 // Manifest schemas also reference the protocol definition's $defs (group names).
 const documents = [...Object.values(SCHEMAS), PROTOCOL_DEFINITION];

@@ -274,6 +274,14 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 
 协议名与组名只查写法；协议和组在不在目录里，由 Coda 校验。实现一个协议不用在 `uses` 里申请它。
 
+清单根上的 `engines.coda` 写插件要的最低 Coda API Level，正整数（`0`、负数、小数、字符串都被拒）；不写视为不限。`engines` 里的其余键（如 `node`）不管：
+
+```json
+{"id": "my-plugin", "engines": {"coda": 3}}
+```
+
+这里只查形状；Coda 当前的 API Level 与兼容判定由 Coda 实现。
+
 `manifestProblem` 校验清单的外壳与通用键（这两个键在其中）；别的键由 Coda 的贡献点登记表或某个插件的扩展点声明，按声明方的 schema 校验，本包不管它们的形状。命名空间约束需要插件 ID，单独用：
 
 ```js
