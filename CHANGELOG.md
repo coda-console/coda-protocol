@@ -2,6 +2,11 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.9.0 — 2026-11-18
+
+- 这是在 6.8.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，删改升次版本，先例见 6.4.0（删去 `coda/run@1` 的 `answer`）。
+- 不兼容：删掉 `coda/executor@1`（执行器子系统退役：步骤只在本机跑，这种记录已经没有读者；Coda 宿主设计 coda#2749 第 11 节）。删去 `schemas/protocol/v1/executor.json` 与导出 `EXECUTOR_PROTOCOL`，`CORE_PROTOCOLS` 由六项变五项（`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1`），README 与 `docs/protocol.md` 的介绍和测试同步。别的协议没有引用它。流程里的 `coda:runsOn` 与插件清单不受影响。
+
 ## 6.8.0 — 2026-11-17
 
 - 这是在 6.7.0 之上的次版本。依据 README「版本」一节：清单的通用键放宽写法、旧写法照旧通过，升次版本（Coda 宿主设计 coda#2749 第 4、5 节与 6.7 节）。

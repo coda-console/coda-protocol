@@ -8,7 +8,7 @@ import Ajv from 'ajv/dist/2020.js';
 import { agentMessageProblem } from '../agent.mjs';
 import { manifestProblem } from '../validate.mjs';
 import {
-  AGENT_PROTOCOL, CARD_PROTOCOL, CORE_PROTOCOLS, ENVIRONMENT_PROTOCOL, EXECUTOR_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
+  AGENT_PROTOCOL, CARD_PROTOCOL, CORE_PROTOCOLS, ENVIRONMENT_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
   SESSION_PROTOCOL,
   definitionProblem, formatProtocolName, invocationRequestProblem, invocationResponseProblem,
   ownedProtocolsProblem, parseProtocolName, protocolNameProblem, protocolShortName, runStatusProblem,
@@ -68,11 +68,9 @@ test('short names are deterministic, DNS-safe and keep every canonical name apar
 test('core definitions validate, and definitions reject malformed names, operations and schemas', () => {
   for (const protocol of Object.values(CORE_PROTOCOLS)) assert.equal(definitionProblem(protocol), null, protocol.name);
   assert.deepEqual(Object.keys(CORE_PROTOCOLS),
-    ['coda/run@1', 'coda/executor@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1', 'coda/card@1']);
+    ['coda/run@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1', 'coda/card@1']);
   assert.equal(definitionProblem(own), null);
   assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel']);
-  assert.deepEqual(EXECUTOR_PROTOCOL.operations, {});
-  assert.equal(Object.hasOwn(EXECUTOR_PROTOCOL, 'target'), false);
   assert.equal(AGENT_PROTOCOL.operations.spawn.run, true);
   const safe = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
     Object.entries(protocol.operations).filter(([, operation]) => operation.safe).map(([name]) => `${protocol.name} ${name}`));

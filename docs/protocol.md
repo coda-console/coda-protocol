@@ -6,7 +6,7 @@
 
 - 协议定义文档的 JSON Schema 与校验：`schemas/protocol/v1/definition.json`、`@coda-console/protocol/protocol`；
 - 统一调用信封：`schemas/protocol/v1/request.json`、`response.json`；
-- 六个核心协议：`coda/run@1`、`coda/executor@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1`；
+- 五个核心协议：`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1`；
 - 插件清单里的 `contributes.protocols` 与 `contributes.protocolImplementations`。
 
 `executor` 与 `execution` 两个旧对象协议和 `@coda-console/protocol/executor` 在 3.0.0 删除。
@@ -254,19 +254,6 @@ status：
     "awaited": true
   },
   "status": {"state": "working", "progress": "准备中"}
-}
-```
-
-## coda/executor@1
-
-一台机器上的执行环境。记录格式取自 3.0.0 之前的 `executor`，版本改由协议名表达，spec 不再写 `protocolVersion`：spec 是 `enabled`、`capacity`、`labels` 和可选的 `title`；status 是探测到的标签、能力、容量与占用、`accepting`、观察时间和 `executionFeatures`。空 status `{}` 表示尚未观察到。
-
-本协议没有操作：执行环境由持有它的机器自己维护，调用方不能经协议把一份工作交给它。脚本步骤的 `coda:runsOn` 只是对本机执行环境的要求，不符合就一开始失败，不会把步骤交给别台。
-
-```json
-{
-  "spec": {"enabled": true, "capacity": {"slots": 2}, "labels": ["build-lab"], "title": "Mac mini"},
-  "status": {}
 }
 ```
 
