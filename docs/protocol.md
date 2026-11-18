@@ -74,7 +74,8 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `spec` | 记录的 spec 的 JSON Schema，必填 |
 | `status` | 记录的 status 的 JSON Schema，必填 |
 | `operations` | 操作名 → `{ description?, input, result, safe?, idempotent?, timeout? }` 或 `{ description?, input, run: true, timeout? }`，必填；不定义操作写 `{}` |
-| `permissions` | 权限组名 → `{ title, trial?, operations?, read? }`，可选（见「权限组」） |
+| `streams` | 流名 → `{ description?, input }`，可选（见「只读记录流」） |
+| `permissions` | 权限组名 → `{ title, trial?, operations?, streams?, read? }`，可选（见「权限组」） |
 
 `spec`、`status`、`input`、`result` 都是 JSON Schema draft 2020-12，只引用自己文档里的 `#/$defs/...`，不引用别的文件。`input` 必有。操作的输出二选一：
 
@@ -174,18 +175,44 @@ invocationRequestProblem(request);   // null 或说明
 invocationResponseProblem(response); // 恰好有 result 或 run 之一
 ```
 
+### 只读记录流
+
+流是协议记录上的第三种入口，和查询、操作并列：按记录 `{ kind, id }` 寻址、只读、返回字节流（而不是一个 JSON 结果）。定义用顶层 `streams` 声明，键是流名（写法同操作名：小写字母开头，只用小写字母、数字和「-」，至多 64 个字符，至多 50 条），值是：
+
+| 字段 | 含义 |
+| --- | --- |
+| `description` | 可选，一句话说明 |
+| `input` | 必填，参数的 JSON Schema（draft 2020-12，和操作的 `input` 同一写法，`definitionProblem` 查它能编译） |
+
+参数都来自查询串，取值都是字符串，所以 `input` 里的属性按字符串写约束。流名可以和操作名相同，两者各管各的。定义里不写 `streams` 就是没有流。本包只管声明的形状；怎样寻址、怎样出字节是宿主的事。
+
+```json
+"streams": {
+  "log": {
+    "description": "一个步骤的日志，可从字节偏移取起",
+    "input": {
+      "type": "object",
+      "properties": {"job": {"type": "string"}, "after": {"type": "string", "pattern": "^[0-9]+$"}},
+      "required": ["job"],
+      "additionalProperties": false
+    }
+  }
+}
+```
+
 ### 权限组
 
-一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的能力分成组，插件在清单的 `uses` 里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
+一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的操作、流与记录的读取分成组，插件在清单的 `uses` 里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
 
 | 字段 | 含义 |
 | --- | --- |
 | `title` | 必填，给用户看的一句话，说这组让插件能做什么，如「读取会话的标题与状态」 |
 | `trial` | 可选，布尔，这组是否试行；只影响展示，不影响能否调用 |
 | `operations` | 可选，不重复的操作名数组，归这组管的操作 |
+| `streams` | 可选，不重复的流名数组，归这组管的流 |
 | `read` | 可选，布尔，管不管读这个协议的记录（get、list、watch）。写记录只许实现方，不分给插件 |
 
-不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作最多属于一组；组里列的操作都在 `operations` 里；每组至少管一样东西（有操作，或 `read` 为 true）。**不在任何组里的操作不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
+不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作、每条流最多属于一组；组里列的操作都在 `operations` 里，列的流都在 `streams` 里；每组至少管一样东西（有操作、有流，或 `read` 为 true）。**不在任何组里的操作和流不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
 
 ```json
 "permissions": {
