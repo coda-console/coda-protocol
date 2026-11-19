@@ -11,7 +11,7 @@ import {
   AGENT_PROTOCOL, CARD_PROTOCOL, CORE_PROTOCOLS, ENVIRONMENT_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
   SESSION_PROTOCOL,
   definitionProblem, formatProtocolName, invocationRequestProblem, invocationResponseProblem,
-  ownedProtocolsProblem, parseProtocolName, protocolNameProblem, protocolShortName, runStatusProblem,
+  ownedProtocolsProblem, parseProtocolName, protocolHasRecords, protocolNameProblem, protocolShortName, runStatusProblem,
 } from '../protocol.mjs';
 
 const reference = (kind = 'coda/run@1', id = 'run-1') => ({ kind, id });
@@ -468,6 +468,76 @@ test('streams are declared per definition and permission groups cover them like 
   assert.match(definitionProblem({ ...own, operations: ops, streams: { log: { input: { type: 'nope' } } } }), /^协议定义\.streams\.log\.input：不是可用的 JSON Schema/);
   for (const permissions of [{ a: { title: 'A', streams: ['log', 'log'] } }, { a: { title: 'A', streams: ['Log'] } }, { a: { title: 'A', streams: 'log' } }])
     assert.equal(typeof definitionProblem(def(permissions)), 'string', JSON.stringify(permissions));
+});
+
+test('events are declared per definition; a protocol of events only has no records, and permission groups cover events alone', () => {
+  const pr = { description: '一个 PR 关闭了', payload: { type: 'object', properties: { number: { type: 'integer' } }, required: ['number'] }, starts: false, ends: true };
+  const events = { 'pull_request.opened': { payload: { type: 'object' } }, 'pull_request.closed': pr, 'push.received': { payload: true } };
+  const only = { name: 'my-plugin/pulls@1', events };
+  const withGroups = permissions => ({ ...only, permissions });
+  for (const definition of [only, { ...only, title: 'PR', permissions: { pulls: { title: '收到 PR 的通知', trial: true, events: ['pull_request.opened', 'pull_request.closed'] },
+    pushes: { title: '收到推送', events: ['push.received'] } } }, { ...own, events }, { ...own, events, permissions: { pulls: { title: 'PR', events: ['pull_request.closed'] },
+    all: { title: '全部', operations: ['cancel'], read: true } } }]) assert.equal(definitionProblem(definition, { namespace: 'my-plugin' }), null, JSON.stringify(definition));
+  // spec, status and operations are written together unless there are events; without events all three are still required
+  for (const key of ['spec', 'status', 'operations']) {
+    const { [key]: _gone, ...rest } = own;
+    assert.equal(typeof definitionProblem(rest), 'string', key);
+    if (key !== 'operations') assert.equal(typeof definitionProblem({ ...rest, events }), 'string', key);
+    else assert.equal(definitionProblem({ ...rest, events }), null);
+  }
+  assert.equal(typeof definitionProblem({ name: 'my-plugin/pulls@1' }), 'string');
+  assert.equal(typeof definitionProblem({ name: 'my-plugin/pulls@1', events: {} }), 'string');
+  assert.equal(protocolHasRecords(only), false);
+  assert.equal(protocolHasRecords({ ...only, operations: {} }), false);
+  assert.equal(protocolHasRecords({ ...only, spec: {}, status: {} }), true);
+  assert.equal(protocolHasRecords(own), true);
+
+  // the name: dotted words of lower-case letters, digits and "_", at most 100 characters
+  for (const name of ['a.b', 'pull_request.closed', 'a1.b_2.c', `a.${'b'.repeat(98)}`, 'sessions.opened', 'workflows.done'])
+    assert.equal(definitionProblem({ ...only, events: { [name]: { payload: {} } } }), null, name);
+  for (const name of ['a', 'a.', '.a', 'a..b', 'A.b', 'a.B', '1a.b', 'a.b-c', 'a b.c', `a.${'b'.repeat(99)}`, ''])
+    assert.equal(typeof definitionProblem({ ...only, events: { [name]: { payload: {} } } }), 'string', name);
+  // Coda's own domains belong to coda/ alone
+  for (const name of ['workflow.dispatch', 'session.opened', 'user.answered']) {
+    assert.match(definitionProblem({ ...only, events: { [name]: { payload: {} } } }), new RegExp(`^协议定义\\.events\\.${name.replace('.', '\\.')}：事件名的域不能是`), name);
+    assert.equal(definitionProblem({ ...only, name: 'coda/thread@1', events: { [name]: { payload: {} } } }), null, name);
+  }
+  // the event: payload required; starts and ends are booleans; no other key
+  for (const bad of [{}, { payload: 1 }, { payload: {}, starts: 'no' }, { payload: {}, ends: 1 }, { payload: {}, extra: 1 }, { payload: {}, description: '' }, 1, null])
+    assert.equal(typeof definitionProblem({ ...only, events: { 'a.b': bad } }), 'string', JSON.stringify(bad));
+  for (const bad of [[], null, 'a.b']) assert.equal(typeof definitionProblem({ ...only, events: bad }), 'string', JSON.stringify(bad));
+  assert.equal(typeof definitionProblem({ ...only, events: Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`a.b${i}`, { payload: {} }])) }), 'string');
+  assert.match(definitionProblem({ ...only, events: { 'a.b': { payload: { type: 'nope' } } } }), /^协议定义\.events\.a\.b\.payload：不是可用的 JSON Schema/);
+
+  // the payload leaves the top-level `coda` to the host
+  assert.match(definitionProblem({ ...only, events: { 'a.b': { payload: { type: 'object', properties: { coda: {} } } } } }), /^协议定义\.events\.a\.b\.payload：顶层不能定义 coda/);
+  assert.equal(definitionProblem({ ...only, events: { 'a.b': { payload: { type: 'object', properties: { data: { type: 'object', properties: { coda: {} } } } } } } }), null);
+
+  // groups: the events exist, one event in at most one group, and a group of events holds only events
+  assert.match(definitionProblem(withGroups({ a: { title: 'A', events: ['pull_request.opened', 'none.here'] } })), /^协议定义\.permissions\.a\.events：没有事件「none\.here」$/);
+  assert.match(definitionProblem(withGroups({ a: { title: 'A', events: ['pull_request.opened'] }, b: { title: 'B', events: ['pull_request.closed', 'pull_request.opened'] } })),
+    /^协议定义\.permissions\.b\.events：事件「pull_request\.opened」已经属于权限组「a」，一个事件只能属于一组$/);
+  for (const mixed of [{ operations: ['cancel'] }, { streams: ['log'] }, { read: true }, { operations: [] }, { streams: [] }, { read: false }])
+    assert.match(definitionProblem({ ...own, streams: { log: { input: {} } }, events, permissions: { a: { title: 'A', events: ['pull_request.opened'], ...mixed } } }),
+      /^协议定义\.permissions\.a：有 events 的组只放事件/, JSON.stringify(mixed));
+  for (const bad of [{ events: [] }, { events: [], read: true }]) assert.equal(typeof definitionProblem(withGroups({ a: { title: 'A', ...bad } })), 'string', JSON.stringify(bad));
+  assert.equal(typeof definitionProblem({ ...own, events, permissions: { a: { title: 'A', events: [], read: true } } }), 'string');
+
+  // without records (no spec, status) there is nothing to address by record: no operations, streams or reads
+  const { spec, status, ...bare } = { ...own, events };
+  assert.equal(definitionProblem({ ...bare, operations: {} }), null);
+  assert.equal(definitionProblem({ ...bare, operations: {}, streams: {} }), null);
+  assert.match(definitionProblem({ ...bare }), /^协议定义\.operations：没有记录的协议/);
+  assert.match(definitionProblem({ ...bare, operations: { go: { input: {}, run: true } } }), /^协议定义\.operations：没有记录的协议/);
+  assert.match(definitionProblem({ ...bare, operations: {}, streams: { log: { input: {} } } }), /^协议定义\.streams：没有记录的协议/);
+  assert.match(definitionProblem({ ...bare, operations: {}, permissions: { a: { title: 'A', read: true } } }), /^协议定义\.permissions\.a\.read：没有记录的协议/);
+  assert.equal(definitionProblem({ ...bare, spec, status, operations: { go: { input: {}, run: true } }, streams: { log: { input: {} } }, permissions: { a: { title: 'A', read: true } } }), null);
+  for (const permissions of [{ a: { title: 'A', events: ['pull_request.opened', 'pull_request.opened'] } }, { a: { title: 'A', events: ['Pull'] } }, { a: { title: 'A', events: 'pull_request.opened' } }])
+    assert.equal(typeof definitionProblem(withGroups(permissions)), 'string', JSON.stringify(permissions));
+  // an event in no group is not open to plugins, and is still valid
+  assert.equal(definitionProblem(withGroups({ a: { title: 'A', events: ['pull_request.opened'] } })), null);
+  assert.match(definitionProblem({ ...only, permissions: { a: { title: 'A', events: ['x.y'] } } }), /^协议定义\.permissions\.a\.events：没有事件「x\.y」$/);
+  assert.match(definitionProblem({ ...own, permissions: { a: { title: 'A', events: ['x.y'] } } }), /^协议定义\.permissions\.a\.events：没有事件「x\.y」$/);
 });
 
 test('a manifest\'s uses maps versioned protocol names to non-empty lists of distinct group names', () => {

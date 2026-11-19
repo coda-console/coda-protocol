@@ -2,6 +2,14 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.13.0 — 2026-11-19
+
+- 这是在 6.12.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，新增可选字段升次版本；`contributes.events` 是试行面，不在 `stable/` 里，删它不动稳定面（先例见 6.12.0 删 `contributes.groups`），`stable-grows` 与 `test/stable.test.mjs` 不受影响（Coda 宿主设计 coda#2749 H6）。
+- 协议定义加可选的顶层 `events`：事件名 → `{ description?, payload, starts?, ends? }`，不许别的键，至少一条、至多 50 条。事件名是点分的全名（沿用原 `contributes.events` 的写法：「域.名」，小写字母、数字和「_」，以字母开头，至少两段，至多 100 个字符），`coda/` 以外的协议不能用 `workflow`、`session`、`user` 做域。`payload` 是载荷的 JSON Schema，顶层不能定义 `coda`（留给宿主）；`starts: false` 表示不开新流程、只交给已在跟这个主体的运行，`ends: true` 表示这个事件结束它的主体。事件的版本就是协议的大版本。`definitionProblem` 还查每个事件的 `payload` 能编译。
+- 权限组加可选的 `events: [事件名…]`（不重复）。`definitionProblem`：组里列的事件必须在 `events` 里；每个事件最多属于一组；有 `events` 的组只放事件：`events` 至少一项，`operations`、`streams`、`read` 这几个键不能出现，按键在不在判断，写成 `[]` 或 `false` 也不行；「每组至少管一样东西」把 `events` 算进去。不在任何组里的事件不对插件开放。
+- 只有事件的协议：写了 `events` 的定义可以不写 `spec`、`status`、`operations`；`spec` 与 `status` 要么都写要么都不写。没写 `events` 的定义照旧三者必填。没有记录（没写 `spec`、`status`）的协议不能有非空的 `operations`、非空的 `streams`，也不能有 `read: true` 的组，这些都按记录寻址；要就须同时写 `spec` 和 `status`。`protocol.mjs` 导出 `protocolHasRecords(definition)`：有 `spec` 才有记录，Coda 据此不把只有事件的协议列成记录种类。
+- 不兼容：删掉 `contributes.events`：删去 `schemas/plugin/events.json`。事件改写在协议定义里。`extension-points.json` 里保留键名单的 `events` 留着，第三方仍不能把它当扩展点的键。清单里再写 `contributes.events` 的结果与别的不认识的键一样：不查形状，`manifestProblem` 通过。
+
 ## 6.12.0 — 2026-11-18
 
 - 这是在 6.11.0 之上的次版本。依据 README「版本」一节：`contributes.groups` 与流程方言都是内部面，删改、新增可选参数升次版本。`stable/manifest.json` 里没有 `groups`，删它不动稳定面，`stable-grows` 与 `test/stable.test.mjs` 不受影响。
