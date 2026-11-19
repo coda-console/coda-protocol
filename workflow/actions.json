@@ -1,5 +1,5 @@
 {
-  "description": "coda:action：serviceTask 上写它，就是 Coda 在后端里做的一步，不写脚本。参数写成 <coda:param name value>，只认 params 列出的，required 列出的必须写；requires 写了某参数就必须同时写它列出的参数；enum 限定某参数写成文字（不是表达式、不含 {{ … }}）时的取值",
+  "description": "coda:action：serviceTask 上写它，就是 Coda 在后端里做的一步，不写脚本。参数写成 <coda:param name value>，只认 params 列出的，required 列出的必须写；requires 写了某参数就必须同时写它列出的参数；oneOf 列出的参数恰写一个；enum 限定某参数写成文字（不是表达式、不含 {{ … }}）时的取值；pattern 限定某参数写成文字时的写法",
   "actions": {
     "publish-stage": {"params": ["stage", "detail"],
       "description": "发布运行主体的会话此刻在流程里的阶段（stage）和放在状态旁的说明（detail），两者都空就是清掉；只用于由会话事件启动的运行"},
@@ -9,8 +9,10 @@
       "description": "停掉运行主体的会话托管的 Agent 进程，下次发消息时透明恢复；result 是 stopped、absent 或 busy"},
     "compact-session": {"params": [],
       "description": "请运行主体的会话的 Agent 压缩上下文（_coda/session/compact，见 docs/agent-protocol.md），从不失败：没压缩就写明原因"},
-    "hold-group": {"params": ["group", "capacity", "borrow", "exclusive"],
-      "description": "为这一步所在的那一段排进并发组 group，离开这一段或运行结束才放开；borrow 为 only 只借不排、no 从不借，exclusive 为 true 占满整组"},
+    "hold-group": {"params": ["group", "select", "capacity", "borrow", "exclusive"],
+      "oneOf": ["group", "select"],
+      "pattern": {"select": {"regex": "^[^\\s=,]{1,100}=[^\\s=,](?:[^=,]{0,98}[^\\s=,])?(,[^\\s=,]{1,100}=[^\\s=,](?:[^=,]{0,98}[^\\s=,])?)*$", "hint": "键=值，多个用逗号隔开，值的首尾不能是空白，如 platform=android,model=Mi 10 Pro"}},
+      "description": "为这一步所在的那一段排进并发组，离开这一段或运行结束才放开：group 点名一个组；select 按池子借，是逗号分隔的 键=值，全部与组记录的 attributes 相等才算匹配（如 platform=android），从匹配的组里挑一个排；group、select 恰写一个，输出 group 是实际排到的那个组的名字；borrow 为 only 只借不排、no 从不借，exclusive 为 true 占满整组"},
     "run-workflows": {"params": ["hook", "only", "commit", "inputs"], "required": ["hook"],
       "description": "在 commit（默认本次运行的）上启动项目里加入挂点 hook 的全部流程（项目自己的和启用插件的），only（流程名的 JSON 数组或逗号分隔）只启动其中这几个；各给它声明了的 inputs（JSON 对象），等它们都结束；有一个失败就失败"},
     "hook-joiners": {"params": ["hook", "commit"],
