@@ -2,6 +2,11 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.13.0 — 2026-11-19
+
+- 这是在 6.12.0 之上的次版本（6.12.0 由 H9-B 在途，版本号暂排其后，合并时跟上 main 再顺延）。依据 README「版本」一节：清单新增可选根键，旧清单照旧通过；这一键进稳定面，`stable/manifest.json` 加 `engines.coda`，`revision` 加到 3（Coda 宿主设计 H7-A，第 10 题）。
+- 插件清单根加可选的 `engines.coda`：插件要的最低 Coda API Level，正整数；不写视为不限。写了 `0`、负数、小数或字符串，`manifestProblem` 报 `engines.coda`。`engines` 里的其余键（如 `node`）照旧不管，不报错。本包只管形状；API Level 的常量、快照与兼容判定由 Coda 实现。
+
 ## 6.12.0 — 2026-11-18
 
 - 这是在 6.11.0 之上的次版本。依据 README「版本」一节：`contributes.groups` 与流程方言都是内部面，删改、新增可选参数升次版本。`stable/manifest.json` 里没有 `groups`，删它不动稳定面，`stable-grows` 与 `test/stable.test.mjs` 不受影响。

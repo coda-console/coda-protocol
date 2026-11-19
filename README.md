@@ -89,6 +89,8 @@ optionsProblem([{ id: 'release', name: '发布正式版', default: false, inputs
 
 插件清单可以声明 `"coda": { "channels": ["preview"] }`，限定只在预览版后端安装和更新。允许的通道是 `stable`（正式版）和 `preview`（预览版）；数组非空、不重复。不写 `channels` 的插件不限制通道。
 
+清单根上的 `engines.coda` 是插件要的最低 Coda API Level，正整数；不写视为不限。`engines` 里的其余键（如 `node`）照旧不管。这个键在稳定面里，本包只管形状，数字对应哪一版 Coda 由 Coda 定。
+
 宿主按每台目标后端自己的安装记录判断，不按 Mac / iPhone 客户端版本判断；没有通道记录的后端不满足显式限制。商店和直接从 npm、Git 安装执行同一限制。这是 Coda 的安装约束，不改变 npm 包的公开性，也不能约束不认识该字段的旧宿主。
 
 ## 输入框模式
@@ -156,7 +158,7 @@ Coda 与检查包都钉一个确切版本。对第三方的兼容承诺只覆盖
 三道检查分别守住：
 
 - `scripts/stable-grows.mjs <基线>`：两份数据的旧条目及其取值必须全部保留，有新增时对应文件的 revision 必须增大，不能倒退。基线可为 git 提交、解包目录或 `npm:latest`。PR 和目标分支比较，发布前下载并解包 npm latest 比较；基线还没有 stable 文件时通过。
-- `test/stable.test.mjs`：54 条路径仍在 schema 中可达，承诺的取值仍被接受。使用固定样本选择条件分支，支持 `$ref`、`allOf`、`anyOf`、`if/then/else`、`not`、`properties`、`items`、`additionalProperties` 及布尔 schema；未知写法失败，不推测其含义。`agents`、`commands`、`skills` 从各自的业务 schema 起步。
+- `test/stable.test.mjs`：55 条路径仍在 schema 中可达，承诺的取值仍被接受。使用固定样本选择条件分支，支持 `$ref`、`allOf`、`anyOf`、`if/then/else`、`not`、`properties`、`items`、`additionalProperties` 及布尔 schema；未知写法失败，不推测其含义。`agents`、`commands`、`skills` 从各自的业务 schema 起步。
 - `test/third-party.test.mjs`：两版 pi、一版 resource-manager 原文与 company 合成样本，分别跑整份清单和每个贡献键的校验，防止样本用到的约束被收紧。不检查磁盘文件与页面桥行为。这个仓库只守页面接口清单只增不减；页面接口的实现在 Coda 的客户端里，这里不核对。
 
 增加稳定面一项时，先补 schema 或页面实现，再把路径、取值或页面条目加进对应 JSON；每加一项，该文件 revision 加一。补充能覆盖新路径和条件分支的测试样本，运行三道检查，并更新次版本与 CHANGELOG。
