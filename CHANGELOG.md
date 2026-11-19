@@ -2,6 +2,13 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.15.0 — 2026-11-19
+
+- 这是在 6.14.0 之上的次版本（页面绑定需求二，协议包成员）。依据 README「版本」一节：`contributes.endpoints`、`records`、`self` 都不在 `stable/manifest.json`，是内部面，新增可选键、删内部键升次版本；`stable-grows` 与 `test/stable.test.mjs` 不受影响。H6 的协议成员（6.14.0）先合，本成员顺延为 6.15.0。
+- 清单 `contributes` 加可选的 `records`：数组，每种记录一项 `{ kind, command, every? }`，不许别的键，至多 20 项，按 `kind` 去重。`kind` 是协议名（复用 `definition.json` 的 `name`）；`command` 是插件目录里的文件（`x-file`，写法同 `protocolImplementations` 的 `commands`）；`every` 可选，写法与 Coda 资源面板的 `maxAge` 同一套（ISO 8601 风格：周 `W`、天 `D`、时 `H`、分 `M`、秒 `S`，只有秒能带小数点，不收年、月，如 `PT5M`、`PT90S`、`P1W1D`），以后资源面板迁成记录时 `maxAge` 就对应 `every`。`every` 不短于 `PT1M` 的下限 schema 表达不了，由 Coda 判，schema 只查时长的写法。`kind` 是不是这个插件 `protocolImplementations` 里的种类，也由 Coda 装载时查。
+- 清单 `contributes` 加可选的 `self`：对象，名字（复用 `operationName`）→ 插件目录里的文件（`x-file`），至多 50 个。
+- 不兼容：删掉 `contributes.endpoints`：删去 `schemas/plugin/endpoints.json` 与 `plugin.json` 里的引用。`extension-points.json` 里保留键名单的 `endpoints` 留着，第三方仍不能把它当扩展点的键；保留名单另加 `records`、`self`。清单里再写 `contributes.endpoints` 的结果与别的不认识的键一样：不查形状，`manifestProblem` 通过；旧清单判不判兼容由 Coda 定。
+
 ## 6.14.0 — 2026-11-19
 
 - 这是在 6.13.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，新增可选字段升次版本；`contributes.events` 是试行面，不在 `stable/` 里，删它不动稳定面（先例见 6.12.0 删 `contributes.groups`），`stable-grows` 与 `test/stable.test.mjs` 不受影响（Coda 宿主设计 coda#2749 H6）。

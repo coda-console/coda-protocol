@@ -38,7 +38,9 @@
             "executors",
             "protocols",
             "protocolImplementations",
-            "composerModes"
+            "composerModes",
+            "records",
+            "self"
           ]
         }
       },

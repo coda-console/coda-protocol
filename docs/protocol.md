@@ -7,7 +7,7 @@
 - 协议定义文档的 JSON Schema 与校验：`schemas/protocol/v1/definition.json`、`@coda-console/protocol/protocol`；
 - 统一调用信封：`schemas/protocol/v1/request.json`、`response.json`；
 - 五个核心协议：`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1`；
-- 插件清单里的 `contributes.protocols` 与 `contributes.protocolImplementations`。
+- 插件清单里的 `contributes.protocols`、`contributes.protocolImplementations`、`contributes.records` 与 `contributes.self`。
 
 `executor` 与 `execution` 两个旧对象协议和 `@coda-console/protocol/executor` 在 3.0.0 删除。
 
@@ -292,6 +292,25 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 - `{ "kind": "<协议名>", "commands": { "<操作名>": "<文件>" } }`：`commands` 至少一项，键是操作名（格式同定义里 `operations` 的键，这个操作在不在协议定义里由 Coda 装载时查），值是插件目录里的文件（相对路径，不离开插件目录）。`commands` 里列出的操作由这个文件实现，**没列在 `commands` 里的操作由模块实现**。对象里不能有 `kind`、`commands` 之外的键。命令怎么写、怎么跑由 Coda 的文档讲，这里不重述。
 
 同一个协议在数组里只能出现一次，写成文本还是对象都算。
+
+`contributes.records` 声明哪些种类的记录由命令给出，每种一项，至多 20 项：
+
+```json
+"records": [
+  {"kind": "my-plugin/task@1", "command": "bin/tasks.sh", "every": "PT5M"}
+]
+```
+
+- `kind`：协议名；同一种类只能出现一次。须是这个插件 `protocolImplementations` 里的种类，由 Coda 装载时查。
+- `command`：插件目录里的文件（相对路径，不离开插件目录），写法同 `commands`。
+- `every`：可选，定时重跑的间隔，ISO 8601 风格：周 `W`、天 `D`、时 `H`、分 `M`、秒 `S`（如 `PT5M`、`PT90S`、`P1W1D`），只有秒能带小数点，不收年、月；不短于 `PT1M`；不写就不定时。下限 schema 表达不了，由 Coda 判。
+- 不许别的键。命令怎么跑、打印什么由 Coda 的文档讲，这里不重述。
+
+`contributes.self` 声明由命令回答的「只给自己用的查询」：名字（格式同操作名）→ 插件目录里的文件（相对路径，不离开插件目录），至多 50 个。
+
+```json
+"self": {"operation": "bin/self-operation.sh"}
+```
 
 插件用到别的协议的权限，写在清单根的 `uses`，不放进 `contributes`（Coda 把不认识的 `contributes` 键当扩展点，旧版本会因此拒装）。键是带大版本的协议名，值是权限组名的数组，至少一项、不重复：
 
