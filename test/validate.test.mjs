@@ -85,7 +85,7 @@ test('the manifest\'s schema names only the general types; those of Coda\'s poin
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
     ['agents.json', 'capabilities.json', 'commands.json', 'common.json', 'composer-modes.json', 'events.json',
-      'git-credentials.json', 'groups.json', 'instructions.json', 'mcp-servers.json', 'model-providers.json', 'plugin.json',
+      'git-credentials.json', 'instructions.json', 'mcp-servers.json', 'model-providers.json', 'plugin.json',
       'repositories.json', 'setting.json', 'skills.json']);
   for (const [file, schema] of Object.entries(SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/plugin/v2/${file}`);
 });
@@ -100,9 +100,15 @@ test('a key of no general type passes the manifest\'s schema, whatever its shape
   const dir = directory({ 'icon.svg': '<svg/>' });
   assert.match(contributionProblem(SCHEMAS['agents.json'], manifest, 'agents', dir), /^contributes\.agents\[0\]\.icon\.light：插件目录里没有 icon\.pdf/);
   // A pointer from the manifest's root finds the plugin's settings, as it does not in the value alone.
-  const groups = { contributes: { configuration: settings, groups: [{ name: 'kit', capacity: 'kit.count' }] } };
-  assert.equal(contributionProblem(SCHEMAS['groups.json'], groups, 'groups'), null);
-  assert.match(pointProblem(SCHEMAS['groups.json'], groups.contributes.groups, 'contributes.groups'), /capacity/);
+  const providers = { contributes: { configuration: settings, modelProviders: [{ id: 'p', title: 'P', api: 'openai-completions', url: 'https://p', key: '${config:kit.key}' }] } };
+  assert.equal(contributionProblem(SCHEMAS['model-providers.json'], providers, 'modelProviders'), null);
+  assert.match(pointProblem(SCHEMAS['model-providers.json'], providers.contributes.modelProviders, 'contributes.modelProviders'), /key/);
+});
+
+test('contributes.groups is no longer Coda\'s: it is a key of no type, whatever its shape, and passes as any other', () => {
+  for (const groups of [[{ name: 'host', capacity: 'host.capacity' }], {}, 'host'])
+    assert.equal(checked({ name: 'kit', contributes: { configuration: settings, groups } }), null);
+  assert.equal(Object.hasOwn(SCHEMAS, 'groups.json'), false);
 });
 
 test('a manifest of the types it names is right; one key of no type, or of none Coda reads, is said where it is', () => {
@@ -191,9 +197,6 @@ test('x-max-contains: at most so many of an object\'s values are such', () => {
 });
 
 test('x-ref: a name of something elsewhere in the manifest, of the kind asked, by where it is from the root or from the value', () => {
-  const groups = capacity => ({ contributes: { configuration: settings, groups: [{ name: 'kit', capacity }] } });
-  assert.equal(checked(groups('kit.count')), null);
-  for (const capacity of ['kit.size', 'kit.none']) assert.equal(checked(groups(capacity)), 'contributes.groups[0].capacity：capacity 是本插件声明的一项整数设置');
   // Relative: a row's required columns are its own.
   const row = required => ({ contributes: { configuration: { properties: { 'kit.rows': { type: 'object', additionalProperties: { type: 'object', properties: { url: { type: 'string' } }, required } } } } } });
   assert.equal(checked(row(['url'])), null);

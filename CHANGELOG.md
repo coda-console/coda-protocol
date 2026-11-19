@@ -2,6 +2,12 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.12.0 — 2026-11-18
+
+- 这是在 6.11.0 之上的次版本。依据 README「版本」一节：`contributes.groups` 与流程方言都是内部面，删改、新增可选参数升次版本。`stable/manifest.json` 里没有 `groups`，删它不动稳定面，`stable-grows` 与 `test/stable.test.mjs` 不受影响。
+- 流程方言：`hold-group` 加参数 `select`，按池子借：逗号分隔的 `键=值`，全部与组记录的 `attributes` 相等才算匹配，只匹配 `attributes`，如 `platform=android`、`platform=ios,model=duo`；`group`、`select` 恰写一个，两个都写或都不写，读流程就拒（`group、select 须恰写一个`）。`select` 写成纯文本时读流程就按 `键=值(,键=值)*` 查（键是 1–100 个不含空白、「=」「,」的字符；值是 1–100 个不含「=」「,」的字符，中间可有空格如 `model=Mi 10 Pro`，首尾不能是空白；长度按字符计，补充平面字符算一个），写成表达式或含 `{{ … }}` 时留到运行时。输出 `group` 是实际排到的那个组的名字。脚本步骤上的 `coda:group` 不加选择器。`workflow/actions.json` 的动作定义因此多了 `oneOf`（列出的参数恰写一个）与 `pattern`（参数写成文字时的写法）。
+- 不兼容：删掉 `contributes.groups`：删去 `schemas/plugin/groups.json`。名额不再由插件在清单里声明，改由插件写 `coda/group@1` 记录，容量取记录的 `capacity`（不写为 1）。`extension-points.json` 里保留键名单的 `groups` 留着，第三方仍不能把它当扩展点的键。清单里再写 `contributes.groups` 的结果与别的不认识的键一样：不查形状，`manifestProblem` 通过。README 里 `contributionProblem` 的示例改用 `modelProviders`。
+
 ## 6.11.0 — 2026-11-18
 
 - 这是在 6.10.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，新增可选字段升次版本；`stable/` 不动，`stable/manifest.json` 与 `stable/view.json` 没有任何协议定义的字段，清单与页面接口都没变，旧清单、旧定义照旧通过（Coda 宿主设计 coda#2749 第 12 节，只读记录流）。
