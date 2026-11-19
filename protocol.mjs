@@ -74,14 +74,15 @@ function schemaProblem(schema, where) {
   }
 }
 
-// Permission groups, when written: every group names real operations and streams and covers something, every operation and
-// stream sits in at most one group. An operation or stream in no group is not open to plugins.
-function permissionsProblem({ operations, streams = {}, permissions }, where) {
+// Permission groups, when written: every group names real operations, streams and events and covers something, every
+// operation, stream and event sits in at most one group. One that is in no group is not open to plugins. A group with events
+// holds only events: subscribing to the group is subscribing to all of them.
+function permissionsProblem({ operations = {}, streams = {}, events = {}, permissions }, where) {
   if (permissions === undefined) return null;
-  const owner = { operations: new Map(), streams: new Map() };
-  const things = { operations: ['操作', operations], streams: ['流', streams] };
+  const owner = { operations: new Map(), streams: new Map(), events: new Map() };
+  const things = { operations: ['操作', operations], streams: ['流', streams], events: ['事件', events] };
   for (const [group, entry] of Object.entries(permissions)) {
-    for (const key of ['operations', 'streams']) {
+    for (const key of ['operations', 'streams', 'events']) {
       const [label, defined] = things[key];
       for (const name of entry[key] ?? []) {
         if (!Object.hasOwn(defined, name)) return `${where}.permissions.${group}.${key}：没有${label}「${name}」`;
@@ -89,9 +90,40 @@ function permissionsProblem({ operations, streams = {}, permissions }, where) {
         owner[key].set(name, group);
       }
     }
-    if (!entry.operations?.length && !entry.streams?.length && entry.read !== true) return `${where}.permissions.${group}：至少管一样东西：写 operations 或 streams，或 read 为 true`;
+    if (entry.events !== undefined && ['operations', 'streams', 'read'].some(key => Object.hasOwn(entry, key)))
+      return `${where}.permissions.${group}：有 events 的组只放事件，不能再写 operations、streams、read`;
+    if (!entry.operations?.length && !entry.streams?.length && !entry.events?.length && entry.read !== true)
+      return `${where}.permissions.${group}：至少管一样东西：写 operations、streams 或 events，或 read 为 true`;
   }
   return null;
+}
+
+// Events: a protocol outside `coda/` may not use Coda's own event domains, and a payload leaves the top-level `coda` to the host.
+const CODA_EVENT_DOMAINS = ['workflow', 'session', 'user'];
+function eventsProblem({ events = {} }, namespace, where) {
+  for (const [name, { payload }] of Object.entries(events)) {
+    if (namespace !== 'coda' && CODA_EVENT_DOMAINS.includes(name.slice(0, name.indexOf('.'))))
+      return `${where}.events.${name}：事件名的域不能是 ${CODA_EVENT_DOMAINS.join('、')}，那是 Coda 自己的`;
+    if (payload !== null && typeof payload === 'object' && Object.hasOwn(payload.properties ?? {}, 'coda'))
+      return `${where}.events.${name}.payload：顶层不能定义 coda，那是留给宿主的`;
+  }
+  return null;
+}
+
+// A definition with no `spec` has no records (a protocol of events only): it is no record kind. Operations, streams and
+// reads are addressed by record, so such a protocol has none.
+export function protocolHasRecords(definition) {
+  return definition.spec !== undefined;
+}
+
+function recordsProblem(definition, where) {
+  if (protocolHasRecords(definition)) return null;
+  const { operations = {}, streams = {}, permissions = {} } = definition;
+  const without = '没有记录的协议（没写 spec、status）不能有';
+  if (Object.keys(operations).length) return `${where}.operations：${without}操作，要定义操作须同时写 spec 和 status`;
+  if (Object.keys(streams).length) return `${where}.streams：${without}流，要定义流须同时写 spec 和 status`;
+  const reading = Object.entries(permissions).find(([, group]) => group.read === true);
+  return reading ? `${where}.permissions.${reading[0]}.read：${without}读记录的权限，要它须同时写 spec 和 status` : null;
 }
 
 // `namespace`: the plugin ID a manifest owns definitions under; omitted for core definitions and standalone checks.
@@ -103,14 +135,19 @@ export function definitionProblem(definition, { namespace = null, where = '协�
   if (!parsed) return `${where}.name：${NAME_PROBLEM}`;
   if (namespace !== null && parsed.namespace !== namespace)
     return `${where}.name：命名空间须为「${namespace}」，不能在自己的命名空间之外定义协议`;
+  const eventing = eventsProblem(definition, parsed.namespace, where);
+  if (eventing) return eventing;
+  const recording = recordsProblem(definition, where);
+  if (recording) return recording;
   const grouping = permissionsProblem(definition, where);
   if (grouping) return grouping;
-  const parts = [['spec', definition.spec], ['status', definition.status]];
-  for (const [operation, value] of Object.entries(definition.operations)) {
+  const parts = protocolHasRecords(definition) ? [['spec', definition.spec], ['status', definition.status]] : [];
+  for (const [operation, value] of Object.entries(definition.operations ?? {})) {
     parts.push([`operations.${operation}.input`, value.input]);
     if (value.result !== undefined) parts.push([`operations.${operation}.result`, value.result]);
   }
   for (const [stream, value] of Object.entries(definition.streams ?? {})) parts.push([`streams.${stream}.input`, value.input]);
+  for (const [event, value] of Object.entries(definition.events ?? {})) parts.push([`events.${event}.payload`, value.payload]);
   for (const [key, schema] of parts) {
     const problem = schemaProblem(schema, `${where}.${key}`);
     if (problem) return problem;
