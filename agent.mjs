@@ -13,6 +13,27 @@ export const AGENT_SCHEMAS = Object.fromEntries(readdirSync(dir).filter(file => 
 const schemas = Object.values(AGENT_SCHEMAS), ajv = newAjv({ ownProperties: true });
 valueKeywords(ajv, {});
 ajv.addFormat('date-parse', value => Number.isFinite(Date.parse(value)));
+// Entries of one model are merged by adding the four core counts; each sum must stay a safe integer.
+const CORE_COUNTS = ['inputTokens', 'outputTokens', 'cachedReadTokens', 'cachedWriteTokens'];
+ajv.addKeyword({
+  keyword: 'x-sum-max', type: 'array', schemaType: 'number', errors: true,
+  compile(limit, parentSchema) {
+    return function sum(entries) {
+      const totals = new Map();
+      for (const entry of entries) {
+        if (typeof entry?.model !== 'string') continue;
+        const counts = totals.get(entry.model) ?? totals.set(entry.model, {}).get(entry.model);
+        for (const name of CORE_COUNTS) {
+          const count = entry[name];
+          if (!Number.isInteger(count)) continue;
+          counts[name] = (counts[name] ?? 0) + count;
+          if (counts[name] > limit) { sum.errors = [{ keyword: 'x-sum-max', params: { limit }, parentSchema, message: '合计过大' }]; return false; }
+        }
+      }
+      return true;
+    };
+  },
+});
 for (const schema of schemas) ajv.addSchema(schema);
 
 // A reference is relative to schemas/agent/, optionally with a JSON Pointer fragment.

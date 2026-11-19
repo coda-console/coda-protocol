@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/prompt-usage.json",
+  "type": "object",
+  "description": "usage 须为对象，并至少带一个非 null 的 inputTokens、outputTokens、cachedReadTokens、cachedWriteTokens 或一份 breakdown；只记本轮增量",
+  "$defs": {
+    "count": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "token 计数须为 0 到 9007199254740991 的整数，或省略、null 表示未报告"
+    },
+    "model": {
+      "type": "string",
+      "pattern": "^(?!\\s+$)[^\\u0000]+$",
+      "x-length": 200,
+      "description": "model 须为 1 到 200 个 UTF-16 字符、不含 NUL、不全是空白的模型 ID"
+    },
+    "counts": {
+      "properties": {
+        "inputTokens": {
+          "$ref": "#/$defs/count"
+        },
+        "outputTokens": {
+          "$ref": "#/$defs/count"
+        },
+        "cachedReadTokens": {
+          "$ref": "#/$defs/count"
+        },
+        "cachedWriteTokens": {
+          "$ref": "#/$defs/count"
+        },
+        "totalTokens": {
+          "$ref": "#/$defs/count"
+        },
+        "thoughtTokens": {
+          "$ref": "#/$defs/count"
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "description": "breakdown 的每一项须为对象，带 model 和至少一个非 null 的 inputTokens、outputTokens、cachedReadTokens 或 cachedWriteTokens",
+      "allOf": [
+        {
+          "$ref": "#/$defs/counts"
+        }
+      ],
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/model"
+        }
+      },
+      "required": [
+        "model"
+      ],
+      "anyOf": [
+        {
+          "properties": {
+            "inputTokens": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "inputTokens"
+          ]
+        },
+        {
+          "properties": {
+            "outputTokens": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "outputTokens"
+          ]
+        },
+        {
+          "properties": {
+            "cachedReadTokens": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "cachedReadTokens"
+          ]
+        },
+        {
+          "properties": {
+            "cachedWriteTokens": {
+              "not": {
+                "type": "null"
+              }
+            }
+          },
+          "required": [
+            "cachedWriteTokens"
+          ]
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/counts"
+    }
+  ],
+  "properties": {
+    "breakdown": {
+      "type": "array",
+      "minItems": 1,
+      "description": "breakdown 须为至少一项的数组，同一 model 的 inputTokens、outputTokens、cachedReadTokens、cachedWriteTokens 各自合计不超过 9007199254740991",
+      "items": {
+        "$ref": "#/$defs/entry"
+      },
+      "x-sum-max": 9007199254740991
+    }
+  },
+  "anyOf": [
+    {
+      "required": [
+        "breakdown"
+      ]
+    },
+    {
+      "properties": {
+        "inputTokens": {
+          "not": {
+            "type": "null"
+          }
+        }
+      },
+      "required": [
+        "inputTokens"
+      ]
+    },
+    {
+      "properties": {
+        "outputTokens": {
+          "not": {
+            "type": "null"
+          }
+        }
+      },
+      "required": [
+        "outputTokens"
+      ]
+    },
+    {
+      "properties": {
+        "cachedReadTokens": {
+          "not": {
+            "type": "null"
+          }
+        }
+      },
+      "required": [
+        "cachedReadTokens"
+      ]
+    },
+    {
+      "properties": {
+        "cachedWriteTokens": {
+          "not": {
+            "type": "null"
+          }
+        }
+      },
+      "required": [
+        "cachedWriteTokens"
+      ]
+    }
+  ]
+}

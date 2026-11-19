@@ -2,6 +2,13 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.16.0 — 2026-11-20
+
+- 这是在 6.15.0 之上的次版本。依据 README「版本」一节：Agent 接入协议是内部面，新增 schema 与文档小节升次版本；`stable/` 不动，`stable-grows` 与 `test/stable.test.mjs` 不受影响（每轮 Token 用量采集，coda#1824）。
+- 新增 `schemas/agent/prompt-usage.json`：`session/prompt` 成功答复顶层 `result.usage` 的形状。`inputTokens`（未缓存输入）、`outputTokens`、`cachedReadTokens`、`cachedWriteTokens`、`totalTokens`、`thoughtTokens` 都是 0 到 9007199254740991 的整数，缺失或 `null` 即未报告；顶层须至少有一个非 `null` 的前四项计数，或带 `breakdown`；只有 `totalTokens`、`thoughtTokens` 不算。可选 `breakdown` 非空，每项须有 `model`（1 到 200 个 UTF-16 字符，用 `x-length` 按 `string.length` 计，不含 NUL，不全是空白）和至少一个非 `null` 的前四项计数；同一 `model` 的多项按四个核心计数（`inputTokens`、`outputTokens`、`cachedReadTokens`、`cachedWriteTokens`）分别相加，各自合计不得超过 9007199254740991，`totalTokens`、`thoughtTokens` 与其他键不参与（`agent.mjs` 的 `x-sum-max` 关键字检查）。未知键照旧允许。`agentValueProblem('prompt-usage.json', …)` 即可校验，`AGENT_SCHEMAS` 自动收录。
+- `docs/agent-protocol.md` 加「每轮的用量」一节，写明位置（`result.usage`，不放 `_meta`）、`inputTokens` 不含缓存、只报本轮增量、`breakdown` 为分模型的唯一来源，同一模型分项的合并规则与安全整数上限，顶层汇总只供支持本约定、不处理 `breakdown` 的读取方使用（与 ACP 实验版按累计口径的 `usage` 不互通），以及不许带提示词、路径、代码和费用。
+- `session/prompt` 仍由 ACP SDK 校验，不进 `AGENT_METHODS`；`usage.json`（`usage_update._meta.coda`）、`messages.json`、清单 schema 与 `stable/` 都没动。
+
 ## 6.15.0 — 2026-11-19
 
 - 这是在 6.14.0 之上的次版本（页面绑定需求二，协议包成员）。依据 README「版本」一节：`contributes.endpoints`、`records`、`self` 都不在 `stable/manifest.json`，是内部面，新增可选键、删内部键升次版本；`stable-grows` 与 `test/stable.test.mjs` 不受影响。H6 的协议成员（6.14.0）先合，本成员顺延为 6.15.0。

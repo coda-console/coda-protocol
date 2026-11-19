@@ -1,7 +1,7 @@
 # Agent 接入协议
 
 Coda 用 [ACP](https://agentclientprotocol.com)（Agent Client Protocol）接 Agent，把[会话指令](#会话指令)交给 Agent（ACP 的 `systemPrompt`；不收它的由 Coda 在第一轮送入），
-可选支持[插话](#插话)（`_session/steering`），另收 Agent 活动报告（`_coda/wait`）、入口[没适配的东西](#没适配的东西)（`_coda/unrecognized`）、[执行失败事实](#执行失败)（ACP 错误数据里的 `_meta.coda.failure`）和[工具调用的审核](#工具调用的审核)（`_meta.coda.review`）。本文是这份协议的唯一正文，写给要让一个 Agent（比如 Cursor 的）接入 Coda 的人：照它实现，
+可选支持[插话](#插话)（`_session/steering`），另收 Agent 活动报告（`_coda/wait`）、入口[没适配的东西](#没适配的东西)（`_coda/unrecognized`）、[执行失败事实](#执行失败)（ACP 错误数据里的 `_meta.coda.failure`）、[工具调用的审核](#工具调用的审核)（`_meta.coda.review`）和[每轮的用量](#每轮的用量)（`session/prompt` 答复的 `usage`）。本文是这份协议的唯一正文，写给要让一个 Agent（比如 Cursor 的）接入 Coda 的人：照它实现，
 Coda 就知道这个 Agent 在一轮之外还在做什么，如实显示、不回收它的进程，把它处理这些东西时的输出、审批和提问放进正确的一轮，
 并在这次调用结清时把结果只交回一次。产品上这些规则的来由见会话行为契约（Coda 的 docs/session-contracts.md）与完成唤醒契约（Coda 的 docs/subagent-design.md「完成唤醒契约」）。
 
@@ -28,6 +28,7 @@ ACP 的消息、内容块、会话指令和能力由 ACP SDK 校验，这里只�
 | `error.data._meta.coda.failure` | [failure.json](../schemas/agent/failure.json) |
 | 工具更新的 `_meta.coda.review` | [review.json](../schemas/agent/review.json)；已知风险值见 `$defs/risk` |
 | 用量更新的 `_meta.coda` | [usage.json](../schemas/agent/usage.json) |
+| `session/prompt` 答复的 `usage` | [prompt-usage.json](../schemas/agent/prompt-usage.json) |
 | 配置选项的 `_meta.coda.default` | [default.json](../schemas/agent/default.json)（传入 `_meta.coda` 对象） |
 | 模型、模式、配置项及其选项的 `_meta.coda.shortName` | [display.json](../schemas/agent/display.json)（传入 `_meta.coda` 对象） |
 
@@ -60,7 +61,7 @@ Coda 是 ACP 的客户端。每个会话的 Agent 进程由一个会话托管进
 | --- | --- | --- |
 | `initialize` | Coda → Agent | 握手。`clientCapabilities` 带 `elicitation.form`、`elicitation.url`、`session.compaction`、`session.configOptions.boolean`、`_meta.coda.waits`（见[能力协商](#能力协商)）、`_meta.coda.unrecognized`（见[没适配的东西](#没适配的东西)）与 `_meta.coda.remote`（见[远端入口](#远端入口)） |
 | `session/new`、`session/load` | Coda → Agent | 新建或恢复原生会话，会话 ID 由 Agent 给；Agent 声明 `loadSession` 才会被要求恢复。Agent 声明了才带 `systemPrompt`（[会话指令](#会话指令)）。带 `_meta.coda.probe: true` 时改为连接内虚拟会话，见[配置探测](#配置探测)。结果里要报出当前模型（见下）。恢复期间重放的历史 Coda 不收（它有自己的），只收命令与标题 |
-| `session/prompt` | Coda → Agent | 一轮：Coda 送出用户的消息或它自己合成的输入（子会话结果等），Agent 回复 `stopReason` 即本轮结束 |
+| `session/prompt` | Coda → Agent | 一轮：Coda 送出用户的消息或它自己合成的输入（子会话结果等），Agent 回复 `stopReason` 即本轮结束；答复可带本轮的 `usage`，见[每轮的用量](#每轮的用量) |
 | `_session/steering` | Coda → Agent | [插话](#插话)：把用户的消息加进正在进行的一轮；只对声明支持的 Agent 发 |
 | `session/cancel` | Coda → Agent | 停止：本轮在进行时取消本轮；Agent 在一轮之外处理活动（`handling`）时，停止处理 |
 | `_coda/session/compact` | Coda → Agent | [压缩上下文](#压缩上下文)：请 Agent 压缩这个会话的上下文；只对声明支持的 Agent 发，两轮之间也发 |
@@ -296,6 +297,24 @@ Agent 在 `session/update` 的 `usage_update` 里可以带 `_meta.coda`：一个
 - Claude 插件（Agent `claude-sdk`）每轮结束发 `usage_update` 时都带上，自主轮次也带：
   `lastRequestAt`（主线程最后一次请求模型的时刻，提示词缓存从这一刻起算；比一轮结束早一段输出的时间）、`contextTokens`（那次请求带的上下文 token 数）、
   `cacheTtl`（缓存时长，`PT1H` 或 `PT5M`）、`compactedAt`（最近一次压缩的时刻）。
+
+## 每轮的用量
+
+`session/prompt` 答复里 `usage` 的形状见 [prompt-usage.json](../schemas/agent/prompt-usage.json)。
+
+Agent 在 `session/prompt` 成功答复的 `result.usage` 里报这一轮新用掉的 token（增量），Coda 据此按轮、按模型统计用量。`usage` 在 `result` 顶层，不放 `_meta`：`_meta` 留给各客户端的私有扩展，Coda 不解析 `_meta.usage`。
+
+```json
+{"jsonrpc":"2.0","id":7,"result":{"stopReason":"end_turn","usage":{"inputTokens":1200,"outputTokens":480,"cachedReadTokens":53000,"cachedWriteTokens":null,"totalTokens":54680,"thoughtTokens":150,"breakdown":[{"model":"claude-sonnet-5-5","inputTokens":1000,"outputTokens":400,"cachedReadTokens":50000},{"model":"claude-haiku-5-5","inputTokens":200,"outputTokens":80,"cachedReadTokens":3000}]}}}
+```
+
+- 计数都是 0 到 9007199254740991（安全整数上限）的整数；缺失或 `null` 表示没报告，不代表 0。顶层须至少有一个非 `null` 的 `inputTokens`、`outputTokens`、`cachedReadTokens`、`cachedWriteTokens`，或带 `breakdown`；只有 `totalTokens`、`thoughtTokens` 不算。
+- `inputTokens` 是未缓存的输入，不含 `cachedReadTokens`、`cachedWriteTokens`；`outputTokens` 若来源已含思考 token，不再另加 `thoughtTokens`。`totalTokens` 与 `thoughtTokens` 只作同一轮的展示，Coda 不拿 `totalTokens` 求和。
+- 只报本轮增量，绝不传会话累计的总量。失败或没有 `result` 的轮次不计入。
+- `breakdown` 可选，非空数组，每项是 `model`（模型 ID，1 到 200 个 UTF-16 字符，即 JS 的 `string.length`，不含 NUL，不全是空白）加上述计数，且至少有一个非 `null` 的 `inputTokens`、`outputTokens`、`cachedReadTokens`、`cachedWriteTokens`。有 `breakdown` 时它是分模型的唯一来源，Coda 绝不把它与顶层相加。
+- 同一 `model` 可以出现在多项里，Coda 把它们的 `inputTokens`、`outputTokens`、`cachedReadTokens`、`cachedWriteTokens` 分别相加；这四个核心计数同模型的合计各自不得超过 9007199254740991，超过即整份 `usage` 不合法。`totalTokens`、`thoughtTokens` 与其他键不参与合并，也不检查合计。
+- 顶层汇总写不写都行：它供支持本节每轮增量约定、但不处理 `breakdown` 的读取方使用，建议填各模型之和。它不与 ACP 实验版的 `usage`（要求三项同时存在，按累计口径）互通，不要当成通用 ACP 客户端能读的字段。
+- 不许带提示词、文件路径、项目名、代码或费用，只许模型 ID。未知键照旧允许、不改写，Coda 只读本节列出的字段。
 
 ## 工具调用的审核
 
