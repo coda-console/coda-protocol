@@ -68,10 +68,47 @@ test('an agent no longer declares a lifecycle', () => {
     assert.equal(checked({ contributes: { agents: [{ ...agent, lifecycle }] } }), 'contributes.agents[0] 里有不认识的键：lifecycle');
 });
 
-test('an endpoint no longer names a setting it checks', () => {
-  const manifest = endpoint => ({ contributes: { configuration: settings, endpoints: [{ id: 'check', command: 'run', ...endpoint }] } });
-  assert.equal(checked(manifest({})), null);
-  assert.equal(checked(manifest({ checks: 'kit.size' })), 'contributes.endpoints[0] 里有不认识的键：checks');
+test('endpoints is no type of Coda\'s any more: no schema checks it, and the name stays reserved', () => {
+  assert.equal(Object.hasOwn(SCHEMAS, 'endpoints.json'), false);
+  assert.equal(checked({ contributes: { endpoints: [{ id: 'check', command: 'run' }] } }), null);
+  assert.equal(checked({ contributes: { endpoints: 1 } }), null);
+  const reserved = SCHEMAS['extension-points.json'].additionalProperties.properties.contributes.not.enum;
+  for (const key of ['endpoints', 'records', 'self', 'events', 'groups']) assert.ok(reserved.includes(key), key);
+});
+
+test('records: one { kind, command, every? } per kind, at most 20; the command is a file of the plugin, every an ISO 8601 duration', () => {
+  const dir = directory({ 'bin/a.sh': '#!/bin/sh\n', 'bin/b.sh': '#!/bin/sh\n', 'bin/sub/x': '' });
+  const check = records => checked({ contributes: { records } }, dir);
+  const one = { kind: 'my-plugin/account@1', command: 'bin/a.sh' };
+  assert.equal(check([]), null);
+  assert.equal(check([one]), null);
+  for (const every of ['PT1M', 'PT5M', 'PT90S', 'PT30S', 'PT1H30M', 'PT0.5S', 'P1D', 'P1W', 'P1W1D', 'P1DT12H', 'P1W2DT3H4M5.5S'])
+    assert.equal(check([{ ...one, every }]), null, every);
+  assert.equal(check([one, { kind: 'my-plugin/owner@1', command: 'bin/b.sh', every: 'PT1M' }, { kind: 'coda/card@1', command: 'bin/a.sh' }]), null);
+  assert.equal(check(Array.from({ length: 20 }, (_, i) => ({ kind: `my-plugin/t${i}@1`, command: 'bin/a.sh' }))), null);
+  assert.match(check(Array.from({ length: 21 }, (_, i) => ({ kind: `my-plugin/t${i}@1`, command: 'bin/a.sh' }))), /records/);
+  for (const bad of [
+    {}, { kind: one.kind }, { command: one.command }, { ...one, extra: 1 }, { ...one, kind: 'My/account@1' }, { ...one, kind: 'my-plugin/account' },
+    { ...one, kind: 1 }, { ...one, command: 1 }, { ...one, command: '' }, { ...one, command: '../a.sh' }, { ...one, command: '/bin/a.sh' },
+    { ...one, command: 'bin/none.sh' }, { ...one, command: 'bin/sub' },
+    ...['', 'PT1.5H', 'P1Y', 'P1M', 'P1Y2M', '5M', 'P', 'PT', 'PT5', 'P1H', 'PT1D', '1M', 'pt5m', 'PT-5M', 'PT5M ', 5, null, true].map(every => ({ ...one, every })),
+  ]) assert.match(check([bad]), /records\[0\]/, JSON.stringify(bad));
+  for (const bad of [1, true, null, 'my-plugin/account@1']) assert.match(check([bad]), /records\[0\]/, JSON.stringify(bad));
+  assert.equal(check([one, { ...one, command: 'bin/b.sh' }]), 'contributes.records：kind 不能重复：my-plugin/account@1');
+  for (const bad of [{}, 'x', 1, null]) assert.match(check(bad), /records/, JSON.stringify(bad));
+});
+
+test('self: names of the plugin\'s own queries → a file of the plugin, at most 50', () => {
+  const dir = directory({ 'bin/q.sh': '#!/bin/sh\n', 'bin/sub/x': '' });
+  const check = self => checked({ contributes: { self } }, dir);
+  assert.equal(check({}), null);
+  assert.equal(check({ operation: 'bin/q.sh', 'a-1': 'bin/q.sh', b: 'bin/q.sh' }), null);
+  assert.equal(check(Object.fromEntries(Array.from({ length: 50 }, (_, i) => [`q${i}`, 'bin/q.sh']))), null);
+  assert.match(check(Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`q${i}`, 'bin/q.sh']))), /self/);
+  for (const bad of [{ Operation: 'bin/q.sh' }, { '1q': 'bin/q.sh' }, { 'a b': 'bin/q.sh' }, { '': 'bin/q.sh' },
+    { q: 1 }, { q: null }, { q: '' }, { q: '../q.sh' }, { q: '/bin/q.sh' }, { q: 'bin/none.sh' }, { q: 'bin/sub' }, { q: { command: 'bin/q.sh' } }])
+    assert.match(check(bad), /self/, JSON.stringify(bad));
+  for (const bad of [[], 'bin/q.sh', 1, null]) assert.match(check(bad), /self/, JSON.stringify(bad));
 });
 
 test('executors is no type of Coda\'s: no schema checks it', () => {
@@ -80,8 +117,8 @@ test('executors is no type of Coda\'s: no schema checks it', () => {
 });
 
 test('the manifest\'s schema names only the general types; those of Coda\'s points are kept beside them, by file', () => {
-  assert.deepEqual(TYPES, ['configuration', 'extensionPoints', 'extensions', 'services', 'setup', 'environment', 'path', 'endpoints', 'views',
-    'protocols', 'protocolImplementations']);
+  assert.deepEqual(TYPES, ['configuration', 'extensionPoints', 'extensions', 'services', 'setup', 'environment', 'path', 'views',
+    'protocols', 'protocolImplementations', 'records', 'self']);
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
     ['agents.json', 'capabilities.json', 'commands.json', 'common.json', 'composer-modes.json', 'events.json',

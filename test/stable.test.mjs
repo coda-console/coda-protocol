@@ -96,3 +96,7 @@ for (const { path, values } of stable.entries) {
       assert.ok(found.some(nodes => nodes.every(({ schema, document }) => check(schema, document, value))), `${path} 不再接受 ${value}`);
   });
 }
+
+test('third-party samples do not use contributes.endpoints, which Coda no longer has', () => {
+  for (const sample of [pi, company, resource]) assert.equal(Object.hasOwn(sample.contributes ?? {}, 'endpoints'), false);
+});

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/plugin/v2/records.json",
+  "title": "contributes.records：由命令给出的记录",
+  "description": "每种记录一项 { kind, command, every? }：kind 是协议名，须是这个插件 protocolImplementations 里的种类（装载时由 Coda 查），同一种类只能出现一次；command 是插件目录里的文件（写法同 protocolImplementations 的 commands），Coda 以插件身份运行它，打印的全集是这种记录的全部记录；every 是定时重跑的间隔，写法与资源面板的 maxAge 相同（ISO 8601 风格：周 W、天 D、时 H、分 M、秒 S，只有秒能带小数点，不收年、月），不短于 PT1M（下限 schema 表达不了，由 Coda 判），不写就不定时。",
+  "type": "array",
+  "maxItems": 20,
+  "x-unique-by": ["kind"],
+  "items": {
+    "type": "object",
+    "properties": {
+      "kind": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"},
+      "command": {"description": "插件目录里的文件（相对路径，不离开插件目录）", "type": "string", "x-file": {"type": "file"}},
+      "every": {
+        "description": "ISO 8601 风格的时长，如 PT5M、P1W1D：周 W、天 D、时 H、分 M、秒 S，只有秒能带小数点，不收年、月；不短于 PT1M，下限由 Coda 判",
+        "type": "string",
+        "pattern": "^P(?!$)(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?$"
+      }
+    },
+    "required": ["kind", "command"],
+    "additionalProperties": false
+  }
+}
