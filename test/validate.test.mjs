@@ -121,7 +121,7 @@ test('the manifest\'s schema names only the general types; those of Coda\'s poin
     'protocols', 'protocolImplementations', 'records', 'self']);
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
-    ['agents.json', 'capabilities.json', 'commands.json', 'common.json', 'composer-modes.json', 'events.json',
+    ['agents.json', 'capabilities.json', 'commands.json', 'common.json', 'composer-modes.json',
       'git-credentials.json', 'instructions.json', 'mcp-servers.json', 'model-providers.json', 'plugin.json',
       'repositories.json', 'setting.json', 'skills.json']);
   for (const [file, schema] of Object.entries(SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/plugin/v2/${file}`);
@@ -146,6 +146,13 @@ test('contributes.groups is no longer Coda\'s: it is a key of no type, whatever 
   for (const groups of [[{ name: 'host', capacity: 'host.capacity' }], {}, 'host'])
     assert.equal(checked({ name: 'kit', contributes: { configuration: settings, groups } }), null);
   assert.equal(Object.hasOwn(SCHEMAS, 'groups.json'), false);
+});
+
+test('contributes.events is no longer Coda\'s: it is a key of no type, whatever its shape, and passes as any other', () => {
+  for (const events of [[{ name: 'pull_request.closed', starts: false, ends: true }], {}, 'host', [{ name: 'Workflow.x' }]])
+    assert.equal(checked({ name: 'kit', contributes: { configuration: settings, events } }), null);
+  assert.equal(Object.hasOwn(SCHEMAS, 'events.json'), false);
+  assert.equal(manifestProblem({ name: 'kit', contributes: { extensionPoints: { feed: { description: '订阅', contributes: 'events' } } } }) === null, false);
 });
 
 test('a manifest of the types it names is right; one key of no type, or of none Coda reads, is said where it is', () => {

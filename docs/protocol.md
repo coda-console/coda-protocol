@@ -71,11 +71,12 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `title` | 给人看的名字，可选 |
 | `description` | 一句话说明，可选 |
 | `plural` | 复数名（见「复数名」），可选；不写就是短名 |
-| `spec` | 记录的 spec 的 JSON Schema，必填 |
-| `status` | 记录的 status 的 JSON Schema，必填 |
-| `operations` | 操作名 → `{ description?, input, result, safe?, idempotent?, timeout? }` 或 `{ description?, input, run: true, timeout? }`，必填；不定义操作写 `{}` |
+| `spec` | 记录的 spec 的 JSON Schema；没写 `events` 时必填，与 `status` 一起写 |
+| `status` | 记录的 status 的 JSON Schema；没写 `events` 时必填，与 `spec` 一起写 |
+| `operations` | 操作名 → `{ description?, input, result, safe?, idempotent?, timeout? }` 或 `{ description?, input, run: true, timeout? }`；没写 `events` 时必填，不定义操作写 `{}` |
 | `streams` | 流名 → `{ description?, input }`，可选（见「只读记录流」） |
-| `permissions` | 权限组名 → `{ title, trial?, operations?, streams?, read? }`，可选（见「权限组」） |
+| `events` | 事件名 → `{ description?, payload, starts?, ends? }`，可选（见「事件」） |
+| `permissions` | 权限组名 → `{ title, trial?, operations?, streams?, events?, read? }`，可选（见「权限组」） |
 
 `spec`、`status`、`input`、`result` 都是 JSON Schema draft 2020-12，只引用自己文档里的 `#/$defs/...`，不引用别的文件。`input` 必有。操作的输出二选一：
 
@@ -200,9 +201,37 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 }
 ```
 
+### 事件
+
+定义用顶层 `events` 声明协议的事件，键是事件名，值是：
+
+| 字段 | 含义 |
+| --- | --- |
+| `description` | 可选，一句话说明 |
+| `payload` | 必填，载荷的 JSON Schema（draft 2020-12，`definitionProblem` 查它能编译）；顶层不能定义 `coda`，那是留给宿主的 |
+| `starts` | 可选，布尔，默认 `true`；`false` 表示这个事件不开新流程，只交给已在跟这个主体的运行 |
+| `ends` | 可选，布尔；`true` 表示这个事件结束它的主体（如 PR 关闭） |
+
+事件名是点分的全名：「域.名」，小写字母、数字和「_」，以字母开头，至多 100 个字符，至少两段，如 `pull_request.closed`；至多 50 条。`coda/` 以外的协议不能用 `workflow`、`session`、`user` 做域，那是 Coda 自己的。事件的版本就是所在协议的大版本，没有另外的版本号。事件名在本机是否唯一、谁能发、怎样投递是宿主的事，本包只管声明的形状。
+
+只有事件的协议：写了 `events` 的定义可以不写 `spec`、`status`、`operations`，那样的协议没有记录；`spec` 与 `status` 要么都写，要么都不写。判断一份定义有没有记录用 `protocolHasRecords(definition)`（有 `spec` 就有记录），宿主据此不把只有事件的协议列成记录种类。操作、流、读记录都按记录寻址，所以没有记录的协议不能有非空的 `operations`、非空的 `streams`，也不能有 `read: true` 的组（`definitionProblem` 查）；要这些就必须同时写 `spec` 和 `status`。没写 `events` 的定义，`spec`、`status`、`operations` 仍必填。
+
+```json
+{
+  "name": "my-plugin/pulls@1",
+  "events": {
+    "pull_request.opened": {"payload": {"type": "object", "properties": {"number": {"type": "integer"}}, "required": ["number"]}},
+    "pull_request.closed": {"payload": {"type": "object"}, "starts": false, "ends": true}
+  },
+  "permissions": {
+    "notify": {"title": "收到 PR 的打开与关闭通知", "trial": true, "events": ["pull_request.opened", "pull_request.closed"]}
+  }
+}
+```
+
 ### 权限组
 
-一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的操作、流与记录的读取分成组，插件在清单的 `uses` 里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
+一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的操作、流、事件与记录的读取分成组，插件在清单的 `uses` 里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
 
 | 字段 | 含义 |
 | --- | --- |
@@ -210,9 +239,10 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 | `trial` | 可选，布尔，这组是否试行；只影响展示，不影响能否调用 |
 | `operations` | 可选，不重复的操作名数组，归这组管的操作 |
 | `streams` | 可选，不重复的流名数组，归这组管的流 |
+| `events` | 可选，至少一项、不重复的事件名数组，归这组管的事件；插件在 `uses` 里写了这组，就是订了组里全部事件 |
 | `read` | 可选，布尔，管不管读这个协议的记录（get、list、watch）。写记录只许实现方，不分给插件 |
 
-不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作、每条流最多属于一组；组里列的操作都在 `operations` 里，列的流都在 `streams` 里；每组至少管一样东西（有操作、有流，或 `read` 为 true）。**不在任何组里的操作和流不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
+不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作、每条流、每个事件最多属于一组；组里列的操作都在 `operations` 里，列的流都在 `streams` 里，列的事件都在 `events` 里；每组至少管一样东西（有操作、有流、有事件，或 `read` 为 true）；有 `events` 的组只放事件：`events` 至少一项，且不能再出现 `operations`、`streams`、`read` 这几个键，写成 `[]` 或 `false` 也不行。**不在任何组里的操作、流和事件不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
 
 ```json
 "permissions": {
