@@ -226,6 +226,36 @@ test('steering validates only the Coda convention; ACP still owns prompt content
   assert.equal(valueProblem('steering.json#/$defs/capabilities', { steering: { supported: 1 } }), '值.steering.supported：supported 须为 true 或 false');
 });
 
+test('prompt usage is a per-turn increment with non-negative integer counts', () => {
+  const check = value => valueProblem('prompt-usage.json', value), model = 'claude-sonnet-5-5';
+  assert.ok(Object.hasOwn(AGENT_SCHEMAS, 'prompt-usage.json'));
+  assert.ok(!Object.hasOwn(AGENT_METHODS, 'session/prompt'));
+  for (const value of [{ inputTokens: 0 }, { cachedWriteTokens: 9007199254740991 }, { inputTokens: 1, outputTokens: null, cachedReadTokens: null },
+    { outputTokens: 2, totalTokens: 5, thoughtTokens: 1 }, { inputTokens: 1, extra: true },
+    { breakdown: [{ model, outputTokens: 0 }] }, { breakdown: [{ model, totalTokens: 3, inputTokens: 3 }, { model: 'x'.repeat(198) + '😀', outputTokens: 1, thoughtTokens: 1 }], inputTokens: null },
+    { breakdown: [{ model, inputTokens: 9007199254740991 }, { model: 'other', inputTokens: 1 }, { model, outputTokens: 1 }, { model, inputTokens: 0 }] },
+    { inputTokens: 3, breakdown: [{ model, inputTokens: 1, cachedReadTokens: null }, { model: 'gpt 5', inputTokens: 2 }] }]) assert.equal(check(value), null, JSON.stringify(value));
+  const none = '值.breakdown：usage 须为对象，并至少带一个非 null 的 inputTokens、outputTokens、cachedReadTokens、cachedWriteTokens 或一份 breakdown；只记本轮增量';
+  for (const value of [{}, { inputTokens: null, outputTokens: null, cachedReadTokens: null, cachedWriteTokens: null }, { totalTokens: 3 }, { thoughtTokens: 3 }]) assert.equal(check(value), none, JSON.stringify(value));
+  for (const value of [null, [], 1, 'x']) assert.equal(check(value), none.replace('.breakdown', ''), JSON.stringify(value));
+  const count = 'token 计数须为 0 到 9007199254740991 的整数，或省略、null 表示未报告';
+  for (const bad of [-1, 1.5, 9007199254740992, '1', true, [], {}]) {
+    assert.equal(check({ inputTokens: bad }), `值.inputTokens：${count}`);
+    assert.equal(check({ breakdown: [{ model, inputTokens: 1, totalTokens: bad }] }), `值.breakdown[0].totalTokens：${count}`);
+  }
+  const merged = '值.breakdown：breakdown 须为至少一项的数组，同一 model 的 inputTokens、outputTokens、cachedReadTokens、cachedWriteTokens 各自合计不超过 9007199254740991';
+  assert.equal(check({ breakdown: [{ model, inputTokens: 9007199254740991 }, { model, inputTokens: 1 }] }), merged);
+  assert.equal(check({ breakdown: [{ model, outputTokens: 1 }, { model: 'other', outputTokens: 9007199254740991 }, { model, inputTokens: 9007199254740991 }, { model, outputTokens: 9007199254740991 }] }), merged);
+  assert.equal(check({ breakdown: [{ model, cachedWriteTokens: 9007199254740991 }, { model, cachedReadTokens: 1, cachedWriteTokens: 1 }] }), merged);
+  assert.equal(check({ breakdown: [{ model, inputTokens: 1, totalTokens: 9007199254740991, thoughtTokens: 9007199254740991, extra: 9007199254740991 }, { model, inputTokens: 1, totalTokens: 1, thoughtTokens: 1, extra: 1 }] }), null);
+  assert.equal(check({ breakdown: [] }), merged);
+  assert.equal(check({ breakdown: {} }), merged);
+  const entry = '带 model 和至少一个非 null 的 inputTokens、outputTokens、cachedReadTokens 或 cachedWriteTokens';
+  for (const item of [{ model }, { model, inputTokens: null }, { model, totalTokens: 3 }, { model, thoughtTokens: 3 }, { model, inputTokens: null, totalTokens: 3, thoughtTokens: 3 }, 1, null, 'x']) assert.ok(check({ breakdown: [item] }).endsWith(entry), JSON.stringify(item));
+  assert.ok(check({ breakdown: [{ inputTokens: 1 }] }).startsWith('值.breakdown[0].model：'));
+  for (const bad of ['', ' ', ' \t\n', 'a\u0000', 'x'.repeat(201), 'x'.repeat(199) + '😀', null, 1]) assert.ok(check({ breakdown: [{ model: bad, inputTokens: 1 }] }).startsWith('值.breakdown[0].model：'), JSON.stringify(bad));
+});
+
 test('usage is an opaque JSON object, bounded by serialized UTF-8 bytes', () => {
   const check = value => valueProblem('usage.json', value), bad = '值：须为不超过 4096 字节的 JSON 对象';
   for (const value of [null, [], '{}', false, 1, { a: '界'.repeat(1400) }, { a: Infinity }, { a: 1n }]) assert.equal(check(value), bad);
@@ -277,6 +307,7 @@ test('documentation wire examples remain valid for the extension parts', () => {
     if (capabilities) { assert.equal(agentCapabilitiesProblem(capabilities), null); checked++; }
     const failure = message.error?.data?._meta?.coda?.failure;
     if (failure) { assert.equal(valueProblem('failure.json', failure), null); checked++; }
+    if (message.result?.usage) { assert.equal(valueProblem('prompt-usage.json', message.result.usage), null); checked++; }
     const update = message.params?.update;
     if (update?._meta?.coda) { assert.equal(valueProblem(update.sessionUpdate === 'usage_update' ? 'usage.json' : 'review.json', update.sessionUpdate === 'usage_update' ? update._meta.coda : update._meta.coda.review), null); checked++; }
   }
