@@ -6,7 +6,7 @@
 
 - 协议定义文档的 JSON Schema 与校验：`schemas/protocol/v1/definition.json`、`@coda-console/protocol/protocol`；
 - 统一调用信封：`schemas/protocol/v1/request.json`、`response.json`；
-- 五个核心协议：`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1`；
+- 六个核心协议：`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1`、`coda/resource@1`；
 - 插件清单里的 `contributes.protocols`、`contributes.protocolImplementations`、`contributes.records` 与 `contributes.self`。
 
 `executor` 与 `execution` 两个旧对象协议和 `@coda-console/protocol/executor` 在 3.0.0 删除。
@@ -251,7 +251,7 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 }
 ```
 
-`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1` 的分组如下，都标 `trial`（还不在稳定面里）。`coda/session@1` 的 `draft` 是客户端输入框的击键流，不分组，不对插件开放：
+`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/resource@1` 的分组如下，都标 `trial`（还不在稳定面里）。`coda/session@1` 的 `draft` 是客户端输入框的击键流，不分组，不对插件开放：
 
 | 协议 | 组 | 说明 | 管什么 |
 | --- | --- | --- | --- |
@@ -262,6 +262,8 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 | `coda/session@1` | `read` | 读取外部会话的标题、参与者与消息 | 读记录、`read` |
 | | `post` | 以你的身份往外部会话里发消息 | `post` |
 | `coda/environment@1` | `read` | 浏览并读取外部环境里的目录与文件 | 读记录、`list`、`read` |
+| `coda/resource@1` | `read` | 查看资源类型与它们的读数 | 读记录 |
+| | `act` | 做资源上的动作、登录和安装 | `act`、`sign-in`、`install` |
 
 插件申请权限写在清单根的 `uses`（见「插件清单」）。
 
@@ -603,6 +605,49 @@ status 是 `{ state: "available"|"unreachable", reason? }`。
 {
   "spec": {"title": "云主机", "actions": ["read"]},
   "status": {"state": "available"}
+}
+```
+
+## coda/resource@1
+
+插件持有的一种资源类型在一台机器上的现状，复数名是 `resource-types`。一条记录是一台机器上一个插件的一个资源类型，`key` 是类型 ID；记录由插件的记录命令写，资源页只读记录、调操作。整条记录编码后不超过 64 KiB，schema 不另设字节上限，由 Coda 在写入时查。`status` 是 `{}`，不用。
+
+spec：
+
+| 字段 | 含义 |
+| --- | --- |
+| `type` | 必填，类型 ID，和 `key` 相同（读别家记录的页面拿不到 `key`）；schema 比不了两者，由 Coda 查 |
+| `title` | 必填，类型名，一行，至多 40 字 |
+| `resources` | 必填，至多 50 项；没登录的类型写空数组 |
+| `signIn` | 可选，`{ installed, installable, input?, note? }`：没写就是不能从 Coda 登录；`installed` 是登录用的程序装好了没有，`installable` 是有没有 `install` 命令，`input` 只认 `authorizationCode`（登录页给出授权码要贴回来），`note` 是登录前的一句话，至多 200 字 |
+
+`resources` 每项 `{ name?, identity?, values, error?, buttons }`：`name`（至多 80 字）与非空 `values` 至少有一样；`identity` 至多 200 字，只用来比较；`error` 一行，至多 80 字。
+
+- `values` 至多 8 项，每项 `{ label?, value?, fraction?, time? }`：`value`（至多 80 字）与数值 `fraction`（0–1）至少有一样；`time` 是 ISO 8601 时间。
+- `buttons` 至多 8 项，每项 `{ label, action | view | url, args?, confirm?, disabled? }`，`action`、`view`、`url` 三选一：`action` 调 `act` 操作，`view` 打开本插件的视图，`url` 只认 https（至多 2000 字），不带 `args` 与 `confirm`。`args` 是 JSON 对象，序列化后至多 4096 字节；JSON Schema 说不了字节数，schema 不查，由宿主在写记录和收 `act` 调用时检查。`action`、`view` 有没有对应的动作与视图 schema 查不了：不认识的动作由 `act` 失败，不认识的视图由页面打开时失败。
+
+三个操作都是立即结果 `{}`，不分 `safe`：
+
+| 操作 | 输入 | 期限 | 说明 |
+| --- | --- | --- | --- |
+| `act` | `{ action, args }` | 10 分钟 | 做按钮上的动作，由插件的命令按 `action` 分派；`args` 必填，没有参数的按钮传 `{}` |
+| `sign-in` | `{}` | 15 分钟 | 进度 `{ url, code? }` 报登录链接（和设备码）；`signIn.input` 为 `authorizationCode` 时提问 `{ input: "authorizationCode" }`，回答 `{ code }` |
+| `install` | `{}` | 10 分钟 | 装上登录要用的程序 |
+
+```json
+{
+  "key": "claude",
+  "spec": {
+    "type": "claude",
+    "title": "Claude",
+    "resources": [{
+      "name": "leavan",
+      "values": [{"label": "5 小时", "value": "80%", "fraction": 0.8, "time": "2026-11-20T08:00:00.000Z"}],
+      "buttons": [{"label": "移除", "action": "remove", "args": {"id": "a1"}, "confirm": "确定移除？"}]
+    }],
+    "signIn": {"installed": true, "installable": false, "input": "authorizationCode"}
+  },
+  "status": {}
 }
 ```
 

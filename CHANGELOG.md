@@ -2,6 +2,10 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.17.0 — 2026-11-20
+
+- 这是在 6.16.0 之上的次版本。依据 README「版本」一节：核心协议是内部面，新增协议升次版本；`stable/` 不动。新增核心协议 `coda/resource@1`（`schemas/protocol/v1/resource.json`，导出 `RESOURCE_PROTOCOL`，加入 `CORE_PROTOCOLS`，复数名 `resource-types`），插件用命令写这种记录，见 Coda 文档「资源」。
+
 ## 6.16.0 — 2026-11-20
 
 - 这是在 6.15.0 之上的次版本。依据 README「版本」一节：Agent 接入协议是内部面，新增 schema 与文档小节升次版本；`stable/` 不动，`stable-grows` 与 `test/stable.test.mjs` 不受影响（每轮 Token 用量采集，coda#1824）。

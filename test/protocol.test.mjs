@@ -8,7 +8,7 @@ import Ajv from 'ajv/dist/2020.js';
 import { agentMessageProblem } from '../agent.mjs';
 import { manifestProblem } from '../validate.mjs';
 import {
-  AGENT_PROTOCOL, CARD_PROTOCOL, CORE_PROTOCOLS, ENVIRONMENT_PROTOCOL, RUN_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
+  AGENT_PROTOCOL, CARD_PROTOCOL, CORE_PROTOCOLS, ENVIRONMENT_PROTOCOL, RUN_PROTOCOL, RESOURCE_PROTOCOL, RUN_STATES, RUN_TERMINAL_STATES,
   SESSION_PROTOCOL,
   definitionProblem, formatProtocolName, invocationRequestProblem, invocationResponseProblem,
   ownedProtocolsProblem, parseProtocolName, protocolHasRecords, protocolNameProblem, protocolShortName, runStatusProblem,
@@ -69,7 +69,7 @@ test('short names are deterministic, DNS-safe and keep every canonical name apar
 test('core definitions validate, and definitions reject malformed names, operations and schemas', () => {
   for (const protocol of Object.values(CORE_PROTOCOLS)) assert.equal(definitionProblem(protocol), null, protocol.name);
   assert.deepEqual(Object.keys(CORE_PROTOCOLS),
-    ['coda/run@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1', 'coda/card@1']);
+    ['coda/run@1', 'coda/agent@1', 'coda/session@1', 'coda/environment@1', 'coda/card@1', 'coda/resource@1']);
   assert.equal(definitionProblem(own), null);
   assert.deepEqual(Object.keys(RUN_PROTOCOL.operations), ['cancel']);
   assert.equal(AGENT_PROTOCOL.operations.spawn.run, true);
@@ -114,11 +114,12 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.equal(definitionProblem(own, { namespace: 'my-plugin' }), null);
 });
 
-test('core protocols are addressed by plurals of their own: coda/agent@1 by agents, coda/card@1 by cards, the rest by their short names', () => {
+test('core protocols are addressed by plurals of their own: coda/agent@1 by agents, coda/card@1 by cards, coda/resource@1 by resource-types, the rest by their short names', () => {
   const plurals = Object.values(CORE_PROTOCOLS).map(protocol => protocol.plural ?? protocolShortName(protocol.name));
   assert.equal(new Set(plurals).size, plurals.length, plurals.join(', '));
   assert.equal(AGENT_PROTOCOL.plural, 'agents');
   assert.equal(CARD_PROTOCOL.plural, 'cards');
+  assert.equal(RESOURCE_PROTOCOL.plural, 'resource-types');
 });
 
 test('a plugin owns definitions only in its own namespace', () => {
@@ -388,6 +389,114 @@ test('card records follow coda/card@1 and have no operations', () => {
     assert.equal(status(value), false, JSON.stringify(value));
 });
 
+test('core protocols compile in a strict Ajv with no extra keywords or formats, as the host does', () => {
+  for (const protocol of Object.values(CORE_PROTOCOLS)) {
+    const ajv = new Ajv({ logger: { log() {}, error: message => { throw new Error(message); }, warn: message => { throw new Error(message); } } });
+    const schemas = [protocol.spec, protocol.status, ...Object.values(protocol.operations).flatMap(({ input, result }) => [input, result])];
+    for (const schema of schemas.filter(Boolean)) assert.doesNotThrow(() => ajv.compile(schema), protocol.name);
+  }
+});
+
+test('resource records follow coda/resource@1: one plugin type on one machine, with its limits', () => {
+  const ajv = new Ajv({ strict: false });
+  const { spec, status, operations: { act, 'sign-in': signIn, install } } = (protocol => ({
+    spec: ajv.compile(protocol.spec), status: ajv.compile(protocol.status),
+    operations: Object.fromEntries(Object.entries(protocol.operations).map(([name, operation]) =>
+      [name, { input: ajv.compile(operation.input), result: ajv.compile(operation.result) }])),
+  }))(RESOURCE_PROTOCOL);
+  assert.deepEqual(Object.keys(RESOURCE_PROTOCOL.operations), ['act', 'sign-in', 'install']);
+  assert.deepEqual(Object.values(RESOURCE_PROTOCOL.operations).map(operation => operation.timeout), [600000, 900000, 600000]);
+
+  const button = { label: '移除', action: 'remove', args: { id: 'a1' }, confirm: '确定移除？', disabled: false };
+  const value = { label: '5 小时', value: '80%', fraction: 0.8, time: '2026-11-20T08:00:00.000Z' };
+  const resource = { name: 'leavan', identity: 'acct-1', values: [value], error: '登录过期', buttons: [button] };
+  const record = { type: 'claude', title: 'Claude', resources: [resource] };
+  const at = (base, path, change) => {
+    const copy = structuredClone(base), parent = path.slice(0, -1).reduce((node, key) => node[key], copy);
+    if (change === undefined) delete parent[path.at(-1)]; else parent[path.at(-1)] = change;
+    return copy;
+  };
+  const good = [
+    record,
+    { type: 'github', title: 'GitHub', resources: [] },
+    { ...record, signIn: { installed: false, installable: true } },
+    { ...record, signIn: { installed: true, installable: false, input: 'authorizationCode', note: '浏览器里登录\n再把码贴回来' } },
+    { ...record, resources: [{ values: [{ value: '3' }], buttons: [] }, { name: '账号', values: [], buttons: [] }] },
+    { ...record, resources: [{ name: 'a', values: [{ fraction: 0 }, { fraction: 1 }, { value: 'x', time: '2026-11-20' }], buttons: [] }] },
+    at(record, ['resources', 0, 'buttons'], [{ label: '视图', view: 'accounts', args: {} }, { label: '官网', url: 'https://example.com/a?b=1' }, { label: '禁用', action: 'x', disabled: true }]),
+    at(record, ['title'], '字'.repeat(40)),
+    at(record, ['resources', 0, 'buttons'], [{ label: 'x', url: `https://e.com/${'a'.repeat(1986)}` }]),
+  ];
+  for (const sample of good) assert.equal(spec(sample), true, JSON.stringify(sample));
+
+  const full = (count, make) => Array.from({ length: count }, make);
+  const bad = [
+    ['缺 type', at(record, ['type'])],
+    ['type 不合名字', at(record, ['type'], 'Claude')],
+    ['缺 title', at(record, ['title'])],
+    ['title 41 字', at(record, ['title'], '字'.repeat(41))],
+    ['title 多行', at(record, ['title'], '一\n二')],
+    ['缺 resources', at(record, ['resources'])],
+    ['resources 51 项', at(record, ['resources'], full(51, () => resource))],
+    ['多余的键', { ...record, future: true }],
+    ['旧键 actions', at(record, ['resources', 0, 'actions'], [])],
+    ['缺 values', at(record, ['resources', 0, 'values'])],
+    ['缺 buttons', at(record, ['resources', 0, 'buttons'])],
+    ['没有 name 也没有 values', { ...record, resources: [{ values: [], buttons: [] }] }],
+    ['values 9 项', at(record, ['resources', 0, 'values'], full(9, () => value))],
+    ['buttons 9 项', at(record, ['resources', 0, 'buttons'], full(9, () => button))],
+    ['name 81 字', at(record, ['resources', 0, 'name'], 'a'.repeat(81))],
+    ['identity 201 字', at(record, ['resources', 0, 'identity'], 'a'.repeat(201))],
+    ['error 81 字', at(record, ['resources', 0, 'error'], 'a'.repeat(81))],
+    ['读数没有 value 也没有 fraction', at(record, ['resources', 0, 'values', 0], { label: 'x', time: '2026-11-20' })],
+    ['fraction 超过 1', at(record, ['resources', 0, 'values', 0, 'fraction'], 1.01)],
+    ['fraction 小于 0', at(record, ['resources', 0, 'values', 0, 'fraction'], -0.1)],
+    ['fraction 是 null', at(record, ['resources', 0, 'values', 0, 'fraction'], null)],
+    ['time 不是 ISO 8601', at(record, ['resources', 0, 'values', 0, 'time'], '明天')],
+    ['按钮没有 label', at(record, ['resources', 0, 'buttons', 0, 'label'])],
+    ['按钮什么都不做', { ...record, resources: [{ ...resource, buttons: [{ label: '空' }] }] }],
+    ['按钮 action 与 view', at(record, ['resources', 0, 'buttons', 0, 'view'], 'accounts')],
+    ['按钮 action 与 url', at(record, ['resources', 0, 'buttons', 0, 'url'], 'https://example.com')],
+    ['按钮 action 与 url，没有 args', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', action: 'a', url: 'https://example.com' }] }] }],
+    ['按钮 action、view 与 url', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', action: 'a', view: 'v', url: 'https://example.com' }] }] }],
+    ['按钮 view 与 url', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', view: 'a', url: 'https://example.com' }] }] }],
+    ['url 是 http', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', url: 'http://example.com' }] }] }],
+    ['url 是 javascript', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', url: 'javascript:alert(1)' }] }] }],
+    ['url 带空白', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', url: 'https://exa mple.com' }] }] }],
+    ['url 2001 字', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', url: `https://e.com/${'a'.repeat(1987)}` }] }] }],
+    ['url 带 args', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', url: 'https://example.com', args: {} }] }] }],
+    ['url 带 confirm', { ...record, resources: [{ ...resource, buttons: [{ label: 'x', url: 'https://example.com', confirm: '真的？' }] }] }],
+    ['args 不是对象', at(record, ['resources', 0, 'buttons', 0, 'args'], [])],
+    ['confirm 201 字', at(record, ['resources', 0, 'buttons', 0, 'confirm'], '问'.repeat(201))],
+    ['按钮 action 不合名字', at(record, ['resources', 0, 'buttons', 0, 'action'], 'Remove')],
+    ['signIn 缺 installed', { ...record, signIn: { installable: true } }],
+    ['signIn 缺 installable', { ...record, signIn: { installed: true } }],
+    ['signIn 是命令的旧写法', { ...record, signIn: { command: 'login.sh', installed: true, installable: false } }],
+    ['signIn 的 installed 不是布尔', { ...record, signIn: { installed: 'yes', installable: false } }],
+    ['signIn 的 input 不认识', { ...record, signIn: { installed: true, installable: false, input: 'password' } }],
+    ['signIn 的 note 201 字', { ...record, signIn: { installed: true, installable: false, note: '问'.repeat(201) } }],
+    ['signIn 是 false', { ...record, signIn: false }],
+  ];
+  for (const [what, sample] of bad) assert.equal(spec(sample), false, what);
+
+  assert.equal(status({}), true);
+  for (const value of [{ state: 'ok' }, []]) assert.equal(status(value), false, JSON.stringify(value));
+
+  for (const input of [{ action: 'select', args: { id: 'a1' } }, { action: 'reset', args: {} }])
+    assert.equal(act.input(input), true, JSON.stringify(input));
+  for (const input of [{}, { action: 'remove' }, { args: {} }, { action: 'Remove', args: {} }, { action: '', args: {} }, { action: 'x', args: [] }, { action: 'x', args: {}, extra: 1 }])
+    assert.equal(act.input(input), false, JSON.stringify(input));
+  for (const operation of [act, signIn, install]) {
+    assert.equal(operation.result({}), true);
+    assert.equal(operation.result({ ok: true }), false);
+  }
+  for (const operation of [signIn, install]) {
+    assert.equal(operation.input({}), true);
+    assert.equal(operation.input({ action: 'x' }), false);
+  }
+  assert.match(RESOURCE_PROTOCOL.operations['sign-in'].description, /\{ url, code\? \}.*\{ input: "authorizationCode" \}.*\{ code \}/);
+});
+
 test('a protocol is implemented by the module (a name) or in part by commands (an object), once', () => {
   const dir = mkdtempSync(join(tmpdir(), 'coda-protocol-'));
   after(() => rmSync(dir, { recursive: true, force: true }));
@@ -426,6 +535,7 @@ test('an operation sits in at most one permission group; core groups follow the 
   assert.deepEqual(groups(AGENT_PROTOCOL), { read: { trial: true, read: true }, spawn: { trial: true, operations: ['spawn'] } });
   assert.deepEqual(groups(SESSION_PROTOCOL), { read: { trial: true, read: true, operations: ['read'] }, post: { trial: true, operations: ['post'] } });
   assert.deepEqual(groups(ENVIRONMENT_PROTOCOL), { read: { trial: true, read: true, operations: ['list', 'read'] } });
+  assert.deepEqual(groups(RESOURCE_PROTOCOL), { read: { trial: true, read: true }, act: { trial: true, operations: ['act', 'sign-in', 'install'] } });
   assert.ok(!Object.values(SESSION_PROTOCOL.permissions).some(group => group.operations?.includes('draft')));
   assert.equal(definitionProblem(grouped({ read: { title: '读取任务', operations: ['peek'] } })), null);
 
