@@ -42,6 +42,12 @@
         "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/operationName"}
       }
     },
+    "engines": {
+      "description": "对宿主的要求，写法同 VS Code 的 engines；Coda 只读 coda，其余键（如 node）是 npm 的，不管",
+      "properties": {
+        "coda": {"description": "要的最低 Coda API Level：正整数；不写视为不限。数字对应哪一版 Coda 由 Coda 定，这里只管形状", "type": "integer", "minimum": 1}
+      }
+    },
     "contributes": {
       "description": "插件带来的东西：每个键一种类型。这里只列通用键；其余键由 Coda 的贡献点登记表或某个插件的扩展点声明",
       "type": "object",

@@ -540,6 +540,15 @@ test('events are declared per definition; a protocol of events only has no recor
   assert.match(definitionProblem({ ...own, permissions: { a: { title: 'A', events: ['x.y'] } } }), /^协议定义\.permissions\.a\.events：没有事件「x\.y」$/);
 });
 
+test('a manifest\'s engines.coda is a positive integer and other engines keys are ignored', () => {
+  for (const engines of [{ coda: 1 }, { coda: 12 }, { coda: 3, node: '>=24' }, { node: '>=24' }, {}, { vscode: '^1.0.0' }])
+    assert.equal(manifestProblem({ id: 'my-plugin', engines }), null, JSON.stringify(engines));
+  for (const engines of [undefined, null, 'node', ['coda']])
+    assert.equal(manifestProblem({ id: 'my-plugin', engines }), null, JSON.stringify(engines));
+  for (const coda of [0, -1, 1.5, '3', null, true])
+    assert.match(manifestProblem({ id: 'my-plugin', engines: { coda } }), /engines\.coda/, JSON.stringify(coda));
+});
+
 test('a manifest\'s uses maps versioned protocol names to non-empty lists of distinct group names', () => {
   for (const uses of [{}, { 'coda/thread@1': ['location'] }, { 'coda/session@1': ['read', 'post'], 'my-plugin/task@2': ['go'] }])
     assert.equal(manifestProblem({ id: 'my-plugin', uses }), null, JSON.stringify(uses));
