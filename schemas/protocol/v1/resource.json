@@ -1,0 +1,138 @@
+{
+  "name": "coda/resource@1",
+  "title": "资源",
+  "description": "插件持有的一种资源类型在一台机器上的现状：一条记录是一台机器上一个插件的一个资源类型，key 是类型 ID。记录由插件的记录命令写，资源页只读记录、调操作；资源上的动作、登录、安装是这条记录上的操作，由插件的命令实现。整条记录（编码后）不超过 64 KiB，由 Coda 在写入时查。",
+  "plural": "resource-types",
+  "spec": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "type": {"$ref": "#/$defs/name", "description": "类型 ID，必须和记录的 key 相同（读别家记录的页面拿不到 key，靠它认类型）；schema 比不了两者，由 Coda 在写入时查"},
+      "title": {"type": "string", "$ref": "#/$defs/line", "maxLength": 40, "description": "类型名，如 Claude、GitHub：资源页上只写它，一行，不超过 40 字"},
+      "resources": {
+        "type": "array",
+        "maxItems": 50,
+        "items": {"$ref": "#/$defs/resource"},
+        "description": "这个类型下的资源，如账号；没登录的类型写空数组"
+      },
+      "signIn": {
+        "type": "object",
+        "description": "能从 Coda 登录：没写就是不能。登录是操作 sign-in，装上是操作 install",
+        "properties": {
+          "installed": {"type": "boolean", "description": "要登录的程序装好了没有"},
+          "installable": {"type": "boolean", "description": "Coda 能不能替它装上，即插件有没有 install 命令"},
+          "input": {"const": "authorizationCode", "description": "登录页给出授权码要贴回来时写 authorizationCode：登录命令会提问 { input: \"authorizationCode\" }"},
+          "note": {"$ref": "#/$defs/question", "description": "登录前给人看的一句话，不超过 200 字，可以分行"}
+        },
+        "required": ["installed", "installable"],
+        "additionalProperties": false
+      }
+    },
+    "required": ["type", "title", "resources"],
+    "additionalProperties": false,
+    "$defs": {
+      "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$", "description": "小写字母、数字和「-」，以字母开头，至多 64 个字符"},
+      "line": {"type": "string", "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$", "description": "一行，不能只有空白"},
+      "question": {"type": "string", "maxLength": 200, "pattern": "^(?=[\\s\\S]*\\S)[^\\u0000]*$", "description": "不超过 200 字，可以分行"},
+      "resource": {
+        "type": "object",
+        "description": "一个资源，如一个账号：name 与非空 values 至少有一样",
+        "properties": {
+          "name": {"type": "string", "$ref": "#/$defs/line", "maxLength": 80, "description": "资源的名字，如账号名"},
+          "identity": {"type": "string", "$ref": "#/$defs/line", "maxLength": 200, "description": "它在外面是谁，如账号的 ID：只用来比较，同一台上相同的合成一行"},
+          "values": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/value"}, "description": "读数，至多 8 个"},
+          "error": {"type": "string", "$ref": "#/$defs/line", "maxLength": 80, "description": "这个资源哪里不对，一行"},
+          "buttons": {"type": "array", "maxItems": 8, "items": {"$ref": "#/$defs/button"}, "description": "按钮，至多 8 个"}
+        },
+        "required": ["values", "buttons"],
+        "anyOf": [
+          {"required": ["name"]},
+          {"properties": {"values": {"type": "array", "minItems": 1}}}
+        ],
+        "additionalProperties": false
+      },
+      "value": {
+        "type": "object",
+        "description": "一个读数：叫什么、读出什么、还剩多少（0–1，不知道就不写，不画成空）、随读数来的时刻（如额度什么时候恢复）；value 与 fraction 至少有一样",
+        "properties": {
+          "label": {"type": "string", "$ref": "#/$defs/line", "maxLength": 80},
+          "value": {"type": "string", "$ref": "#/$defs/line", "maxLength": 80},
+          "fraction": {"type": "number", "minimum": 0, "maximum": 1},
+          "time": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])(T([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d(\\.\\d+)?)?(Z|[+-]([01]\\d|2[0-3]):[0-5]\\d)?)?$",
+            "description": "ISO 8601 时间"
+          }
+        },
+        "anyOf": [{"required": ["value"]}, {"required": ["fraction"]}],
+        "additionalProperties": false
+      },
+      "button": {
+        "type": "object",
+        "description": "一个按钮，action、view、url 三选一：action 是调 act 操作做这个动作；view 是打开本插件的一个视图；url 是在设备上打开一个网页，只认 https，不带 args 与 confirm。action 与 view 有没有对应的动作和视图，schema 查不了：不认识的 action 由 act 失败，不认识的 view 由页面打开时失败",
+        "properties": {
+          "label": {"type": "string", "$ref": "#/$defs/line", "maxLength": 80},
+          "action": {"$ref": "#/$defs/name"},
+          "view": {"$ref": "#/$defs/name"},
+          "url": {"type": "string", "maxLength": 2000, "pattern": "^https://\\S+$"},
+          "args": {"$ref": "#/$defs/args"},
+          "confirm": {"$ref": "#/$defs/question", "description": "执行前问的话"},
+          "disabled": {"type": "boolean"}
+        },
+        "required": ["label"],
+        "oneOf": [
+          {"required": ["action"], "not": {"anyOf": [{"required": ["view"]}, {"required": ["url"]}]}},
+          {"required": ["view"], "not": {"anyOf": [{"required": ["action"]}, {"required": ["url"]}]}},
+          {"required": ["url"], "not": {"anyOf": [{"required": ["action"]}, {"required": ["view"]}, {"required": ["args"]}, {"required": ["confirm"]}]}}
+        ],
+        "additionalProperties": false
+      },
+      "args": {
+        "type": "object",
+        "description": "按钮带给动作或视图的参数：JSON 对象，序列化后不超过 4096 字节。JSON Schema 说不了字节数，由宿主在写记录时检查"
+      }
+    }
+  },
+  "status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "description": "不用，写空对象"
+  },
+  "operations": {
+    "act": {
+      "description": "做按钮上的一个动作：action 是动作名，args 是按钮带的参数（没有就传 {}），由插件的命令分派；不认识的动作让调用失败。期限 10 分钟。",
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+          "args": {
+            "type": "object",
+            "description": "按钮带的参数，没有就传 {}：JSON 对象，序列化后不超过 4096 字节。JSON Schema 说不了字节数，由宿主在收调用时检查"
+          }
+        },
+        "required": ["action", "args"],
+        "additionalProperties": false
+      },
+      "result": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false},
+      "timeout": 600000
+    },
+    "sign-in": {
+      "description": "从 Coda 登录：命令起程序，用进度 { url, code? } 报登录链接（和设备码，有就带）。记录的 signIn.input 为 authorizationCode 时，用户在登录页拿到授权码要贴回来：命令提问 { input: \"authorizationCode\" }，回答是 { code }。期限 15 分钟。",
+      "input": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false},
+      "result": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false},
+      "timeout": 900000
+    },
+    "install": {
+      "description": "装上登录要用的程序；记录的 signIn.installable 为 true 才有。期限 10 分钟。",
+      "input": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false},
+      "result": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false},
+      "timeout": 600000
+    }
+  },
+  "permissions": {
+    "read": {"title": "查看资源类型与它们的读数", "trial": true, "read": true},
+    "act": {"title": "做资源上的动作、登录和安装", "trial": true, "operations": ["act", "sign-in", "install"]}
+  }
+}
