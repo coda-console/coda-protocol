@@ -1,11 +1,9 @@
 // A plugin is right when what it writes is of the types it names: each key of a manifest's `contributes` is a type with a
 // JSON Schema of its own. The manifest's schema names only the general ones (schemas/plugin/,
 // `https://coda.pub/schemas/plugin/v2/…`); every other key is one Coda's registry of contribution points declares, with a
-// schema of its provider's (those of Coda's own still kept here, by file), or one a plugin's extension point declares, for
-// that plugin to read: of the schema that point names, a file of the declaring plugin's (`extensionPoints.<point>.schema`),
-// when it names one. Checking one is checking it against those schemas, nothing else: a field joins a type by joining its
-// schema, never by a rule here. Coda checks a plugin with this module when it reads one, and coda-plugins' contract check
-// does where a plugin is written.
+// schema of its provider's (those of Coda's own still kept here, by file). Checking one is checking it against those
+// schemas, nothing else: a field joins a type by joining its schema, never by a rule here. Coda checks a plugin with this
+// module when it reads one, and coda-plugins' contract check does where a plugin is written.
 // What JSON Schema cannot say of one value alone it says with five keywords, each meaning one thing wherever it is written,
 // as Kubernetes extends its OpenAPI with `x-kubernetes-*`:
 // - `x-unique-by`: [name, { part } or { key, nested }] — in an array, each named property of its objects is unique among the
@@ -54,8 +52,8 @@ const unescape = step => step.replace(/~1/g, '/').replace(/~0/g, '~');
 const escape = step => String(step).replace(/~/g, '~0').replace(/\//g, '~1');
 const fail = (validate, keyword, message, parentSchema) => { validate.errors = [{ keyword, message, params: {}, parentSchema }]; return false; };
 
-// What each keyword is written with, checked where a schema using it is compiled: one written wrong is refused there, as an
-// extension point's schema is (x-file `schema`), not where a value is checked against it.
+// What each keyword is written with, checked where a schema using it is compiled: one written wrong is refused there, as a schema
+// given to `pointProblem` is (x-file `schema`), not where a value is checked against it.
 const SCHEMA_VALUE = { type: ['object', 'boolean'] };
 const META = {
   'x-max-contains': { type: 'object', properties: { match: SCHEMA_VALUE, max: { type: 'integer', minimum: 0 } }, required: ['match', 'max'], additionalProperties: false },
@@ -208,7 +206,7 @@ const validator = file => {
   if (!compiled.has(file)) compiled.set(file, ajv.getSchema(`${BASE}${file}`));
   return compiled.get(file);
 };
-// The schema an extension point declares, compiled once by what it says, under an ID of its own beside these (whatever `$id`
+// The schema `pointProblem` is given, compiled once by what it says, under an ID of its own beside these (whatever `$id`
 // it wrote), so that it builds on them as they build on one another (`common.json#/$defs/line40`): its validator, and the
 // schema as compiled, for what it says of a failing value. One that answers later (`$async`) is refused.
 const points = new Map();
@@ -290,7 +288,7 @@ export function described(error, { roots = true, schemas = [], required = 'objec
 }
 // What is wrong, said once: the first error, by its place and what the schema says of the value there.
 // What a whole type says of itself is too much for a key it lacks or one written twice: those say only what is wrong.
-// `schemas`: those besides these the value was checked against (an extension point's).
+// `schemas`: those besides these the value was checked against (one given to `pointProblem`).
 // `style: 'description'` uses schema wording for every keyword. `required: 'property'` names and describes the
 // missing property; `schemaBase` resolves its references. `leadingDot` retains relative paths with an empty base.
 export function explain(errors, base = '', schemas = [], { style = 'keyword', required = 'object', schemaBase, leadingDot = false } = {}) {
@@ -321,9 +319,8 @@ export function valueProblem(ref, value, where) {
   if (!validate) throw new Error(`没有这个 schema：${ref}`);
   return validate.call({ dir: null }, value) ? null : explain(validate.errors, where);
 }
-// What a plugin writes for another's extension point (`value`, under `where`, as `contributes.panels`), checked against the
-// schema that point declares (the declaring plugin's file, read): null, or what is wrong. `dir`: the writing plugin's
-// directory, for the files it names. The schema sees the value alone: its pointers name places in it.
+// A stand-alone `value` (under `where`, as `contributes.panels`), checked against the `schema` given (an object already
+// read): null, or what is wrong. `dir`: the plugin's directory, for the files the value names. The schema sees the value alone: its pointers name places in it.
 export function pointProblem(schema, value, where, dir = null) {
   const point = declared(schema);
   return point.validate.call({ dir }, value) ? null : explain(point.validate.errors, where, [point.schema]);

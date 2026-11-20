@@ -7,7 +7,7 @@
 - 协议定义文档的 JSON Schema 与校验：`schemas/protocol/v1/definition.json`、`@coda-console/protocol/protocol`；
 - 统一调用信封：`schemas/protocol/v1/request.json`、`response.json`；
 - 六个核心协议：`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1`、`coda/resource@1`；
-- 插件清单里的 `contributes.protocols`、`contributes.protocolImplementations`、`contributes.records` 与 `contributes.self`。
+- 插件清单里的 `contributes.protocols`、`contributes.protocolImplementations` 与 `contributes.records`。
 
 `executor` 与 `execution` 两个旧对象协议和 `@coda-console/protocol/executor` 在 3.0.0 删除。
 
@@ -308,13 +308,7 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 - `every`：可选，定时重跑的间隔，ISO 8601 风格：周 `W`、天 `D`、时 `H`、分 `M`、秒 `S`（如 `PT5M`、`PT90S`、`P1W1D`），只有秒能带小数点，不收年、月；不短于 `PT1M`；不写就不定时。下限 schema 表达不了，由 Coda 判。
 - 不许别的键。命令怎么跑、打印什么由 Coda 的文档讲，这里不重述。
 
-`contributes.self` 声明由命令回答的「只给自己用的查询」：名字（格式同操作名）→ 插件目录里的文件（相对路径，不离开插件目录），至多 50 个。
-
-```json
-"self": {"operation": "bin/self-operation.sh"}
-```
-
-插件用到别的协议的权限，写在清单根的 `uses`，不放进 `contributes`（Coda 把不认识的 `contributes` 键当扩展点，旧版本会因此拒装）。键是带大版本的协议名，值是权限组名的数组，至少一项、不重复：
+插件用到别的协议的权限，写在清单根的 `uses`，不放进 `contributes`（`contributes` 里只有 Coda 认得的键）。键是带大版本的协议名，值是权限组名的数组，至少一项、不重复：
 
 ```json
 {
@@ -333,7 +327,7 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 
 这里只查形状；Coda 当前的 API Level 与兼容判定由 Coda 实现。
 
-`manifestProblem` 校验清单的外壳与通用键（这两个键在其中）；别的键由 Coda 的贡献点登记表或某个插件的扩展点声明，按声明方的 schema 校验，本包不管它们的形状。命名空间约束需要插件 ID，单独用：
+`manifestProblem` 校验清单的外壳与通用键（这两个键在其中）；别的键由 Coda 的贡献点登记表声明，按登记方的 schema 校验，本包不管它们的形状。命名空间约束需要插件 ID，单独用：
 
 ```js
 import { ownedProtocolsProblem } from '@coda-console/protocol/protocol';
