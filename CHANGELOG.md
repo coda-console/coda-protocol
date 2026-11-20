@@ -2,16 +2,6 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
-## 未发布
-
-- 只加不删，不改 `package.json` 的版本号，所以合并之后不会单独发版；随 H9-C 的协议包一起发布（Coda 宿主设计 coda#2749 的「连」与 Blob，任务书 P）。
-- `coda/session@1` 新增跨机 Blob 指针 `{ owner, path, name?, size?, mime? }`（`$defs.blob`，三处 schema 各一份，内容相同）：`owner` 是机器 ID（至多 512 个字符），`path` 是那台机器上产品 API 的路径，不以 `/` 开头、不含 `..`、`?`、`#`、至多 2048 个字符，百分号只接受 `%HH` 形式，`name` 至多 255、`mime` 至多 127。指针序列化后不超过 4 KiB，按 UTF-8 的 `JSON.stringify` 结果计量；字段上限不保证这一点，schema 查不了字节数，由取用指针的宿主在运行时校验。指针只许指向上传区 `uploads/*`、写指针的插件自己的 service、Coda 自己的文件路由，别的插件的服务一律不解析（schema 查形状，指向哪里由宿主解析时查；规则写进 `docs/protocol.md`）。
-- 媒体 part（`read` 的和 `post` 的）新增可选的 `blob`、`preview` 指针；`preview` 现在可以是字符串（旧写法）或指针。旧的 `service`、`path`、字符串 `preview` 保留，说明里标注「将退役，改用 `blob`」；旧的 `preview` 字符串仍须带 `service`，指针形的不要求。`upload` 不变，并与 `blob` 互斥；`thumb` 保留。
-- 头像新增可选的 `avatar.blob`，缓存头像以 `owner` 加 `path` 一起作键；旧的 `{ service, path }` 保留并标注将退役；`blob` 与 `{ service, path }` 至少写一种。
-- `coda/session@1` 新增顶层流 `streams.draft`：客户端输入框的击键流，`PUT`、NDJSON 帧、帧体 `{ text, version, steps? }`，连接建立后、以及每发出一帧（草稿帧或心跳帧）后重新计时；空闲满 15 秒还没有新帧，就发一帧 `{ "heartbeat": true }`。还没输入过的连接，也从建立连接时开始计时。provider 跳过它、不更新草稿，`input` 是空的参数 schema，不分组，只给 Coda 自己和实现这个协议的 provider 用。旧的 `operations.draft` 保留，标注「将退役，改用 `streams.draft`」。
-- `coda/resource@1` 新增 `safe` 查询 `list`（输入 `{}`），返回 `{ resources: [...] }`，每项的形状同 Coda 的 `GET /v1/resources` 的 `resources`（`local` 必填，`source` 是来源机器的显示名，本机的也写机器名）；归权限组 `read`。
-- 不碰扩展点的 `contributions`、`implementers` 与要删的旧 schema（H9-C 的部分）。
-
 ## 6.17.0 — 2026-11-20
 
 - 这是在 6.16.0 之上的次版本。依据 README「版本」一节：核心协议是内部面，新增协议升次版本；`stable/` 不动。新增核心协议 `coda/resource@1`（`schemas/protocol/v1/resource.json`，导出 `RESOURCE_PROTOCOL`，加入 `CORE_PROTOCOLS`，复数名 `resource-types`），插件用命令写这种记录，见 Coda 文档「资源」。

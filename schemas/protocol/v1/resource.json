@@ -100,49 +100,6 @@
     "description": "不用，写空对象"
   },
   "operations": {
-    "list": {
-      "description": "列出这台机器上的资源，形状同 GET /v1/resources 的 resources：每种可引用的资源类型下，空间里每台机器的记录（kind 是资源的种类，不限 coda/resource@1），各自按种类的列显示的名字与标签、来源机器、字段、上次同步的时刻与是否离线；立即结果，只读。",
-      "safe": true,
-      "input": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false},
-      "result": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "$defs": {
-          "resource": {
-            "type": "object",
-            "properties": {
-              "kind": {"type": "string", "minLength": 1, "description": "资源的种类"},
-              "id": {"type": "string", "minLength": 1},
-              "title": {"type": "string", "description": "种类的列里显示的名字"},
-              "labels": {"type": "array", "items": {"type": "string"}, "description": "种类的其余列，空的不列"},
-              "local": {"type": "boolean", "description": "是不是这台机器自己的"},
-              "owner": {"type": "string", "minLength": 1, "description": "记录所在机器的 ID"},
-              "spec": {"type": "object", "description": "记录的 spec，原样"},
-              "resourceType": {"type": "string", "minLength": 1, "description": "种类是插件上报的资源类型时的类型 ID"},
-              "kindTitle": {"type": "string", "description": "种类的名字"},
-              "fields": {
-                "type": "array",
-                "description": "spec 里种类有的字段，按种类的顺序，没有值的不列",
-                "items": {
-                  "type": "object",
-                  "properties": {"name": {"type": "string"}, "value": {"type": "string"}},
-                  "required": ["name", "value"],
-                  "additionalProperties": false
-                }
-              },
-              "source": {"type": "string", "description": "来源机器的显示名，本机的也写这台机器的名字，如 Mac mini"},
-              "syncedAt": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}], "description": "别的机器的记录上次同步的时刻（毫秒）；本机的、从没同步过的为 null"},
-              "offline": {"type": "boolean", "description": "上次同步是不是太久以前"}
-            },
-            "required": ["kind", "id", "title", "labels", "local", "owner", "spec", "kindTitle", "fields", "source", "syncedAt", "offline"],
-            "additionalProperties": false
-          }
-        },
-        "properties": {"resources": {"type": "array", "items": {"$ref": "#/$defs/resource"}}},
-        "required": ["resources"],
-        "additionalProperties": false
-      }
-    },
     "act": {
       "description": "做按钮上的一个动作：action 是动作名，args 是按钮带的参数（没有就传 {}），由插件的命令分派；不认识的动作让调用失败。期限 10 分钟。",
       "input": {
@@ -175,7 +132,7 @@
     }
   },
   "permissions": {
-    "read": {"title": "查看资源类型与它们的读数", "trial": true, "read": true, "operations": ["list"]},
+    "read": {"title": "查看资源类型与它们的读数", "trial": true, "read": true},
     "act": {"title": "做资源上的动作、登录和安装", "trial": true, "operations": ["act", "sign-in", "install"]}
   }
 }

@@ -251,7 +251,7 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 }
 ```
 
-`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/resource@1` 的分组如下，都标 `trial`（还不在稳定面里）。`coda/session@1` 的流 `draft`（客户端输入框的击键流，见该协议一节）不分组，不对插件开放；旧的 `draft` 操作也不分组：
+`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/resource@1` 的分组如下，都标 `trial`（还不在稳定面里）。`coda/session@1` 的 `draft` 是客户端输入框的击键流，不分组，不对插件开放：
 
 | 协议 | 组 | 说明 | 管什么 |
 | --- | --- | --- | --- |
@@ -262,7 +262,7 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 | `coda/session@1` | `read` | 读取外部会话的标题、参与者与消息 | 读记录、`read` |
 | | `post` | 以你的身份往外部会话里发消息 | `post` |
 | `coda/environment@1` | `read` | 浏览并读取外部环境里的目录与文件 | 读记录、`list`、`read` |
-| `coda/resource@1` | `read` | 查看资源类型与它们的读数 | 读记录、`list` |
+| `coda/resource@1` | `read` | 查看资源类型与它们的读数 | 读记录 |
 | | `act` | 做资源上的动作、登录和安装 | `act`、`sign-in`、`install` |
 
 插件申请权限写在清单根的 `uses`（见「插件清单」）。
@@ -453,9 +453,9 @@ status：
 | --- | --- |
 | `audio` | `{ maxDuration? }`：收 `upload` 引用的语音；`maxDuration` 是一条语音最长多少秒，大于 0 |
 
-参与者的 `avatar` 是 `{ blob }`：头像图片的 Blob 指针（见「Blob 指针」一节），观察方按指针的 `owner` 去取；图片长边一般取 100 到 200 像素就够。
-旧写法 `{ service, path }` 还保留，**将退役，改用 `avatar.blob`**：头像图片在 provider 插件登记的本机流式服务里的路径，`service` 1 到 200 个字符，`path` 1 到 2048 个字符，两个都要有，读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`。`blob` 与 `{ service, path }` 至少写一种，可以并写；观察方有 `blob` 就用 `blob`。
-不写、或读不到（404、持有方连不上）时，观察方用名字代替（如名字的第一个字），不当成错误。头像换了，Provider 就换一个 `path`，观察方缓存头像时以 `owner` 加 `path` 一起作键，不能只看 `path`：不同机器上同一个 `path` 是不同的文件。
+参与者的 `avatar` 是 `{ service, path }`：头像图片在 provider 插件登记的本机流式服务里的路径，`service` 1 到 200 个字符，`path` 1 到 2048 个字符，两个都要有。
+观察方和取媒体 part 的 `path` 一样，读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`；图片长边一般取 100 到 200 像素就够。
+不写、或读不到（404、持有方连不上）时，观察方用名字代替（如名字的第一个字），不当成错误。头像换了，Provider 就换一个 `path`，观察方按路径缓存。
 
 不写 `accepts` 就是只收文字。客户端据此决定显示不显示录音入口，录音时到 `maxDuration` 自动停止。放在 status 而不在 spec，是因为 Provider 的能力可能随状态变化，例如手机上的麦克风权限被收回。
 
@@ -466,7 +466,7 @@ status：
 `notify: true` 表示这条记录来了新消息要提醒用户：观察方（Coda）在 `head` 越过用户的已读位置时推到手机、在电脑上弹横幅，读到 `head` 后撤掉。不写或写 `false` 就不提醒，这是缺省，所以不认识这个字段的旧 Provider 不会开始提醒。
 写不写由 Provider 按记录决定，比如只给用户在设置里选中的群写 `true`；设置改了就改 status，所以它放在 status 而不在 spec。提醒只说「有新消息」，不带消息正文。
 
-观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。`read` 与 `draft` 是立即结果，`read` 是 `safe` 的，`draft` 是 `idempotent` 的；`post` 开运行。另有流 `draft`，见下：
+观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。`read` 与 `draft` 是立即结果，`read` 是 `safe` 的，`draft` 是 `idempotent` 的；`post` 开运行：
 
 - `read`：输入 `{ after?, before?, limit? }`，`after`、`before` 是游标，`limit` 为 1 到 100；结果 `{ messages, cursor, more }`，没有消息时 `cursor` 为 `null`。`messages` 总按先后排，旧的在前：
   - 都不带游标：最新的 `limit` 条，`more` 表示更早还有没有；客户端打开会话时先读这一页；
@@ -481,7 +481,7 @@ status：
   - 输入里的媒体 part 可以用 `upload` 引用记录持有方的上传，见下；
   - 取消沿用 `coda/run@1` 的 `cancel`：还没开始发的停下，得到 `canceled`；已经开始发的，Provider 可以不停，是否停下看 status；
   - 全文总在 `post` 的输入里；没有先写过草稿的 `post` 也照常发出去。
-- `draft`（`idempotent`，**将退役，改用流 `draft`**）：设定 `self` 在这个会话里还没发出去的文字，结果 `{}`。输入 `{ text, version, steps? }`：
+- `draft`（`idempotent`）：设定 `self` 在这个会话里还没发出去的文字，结果 `{}`。输入 `{ text, version, steps? }`：
   - `text` 是当前草稿的全文，至多 65536 个字符；空串表示清空或放弃；
   - `version` 是调用方给的非负整数版本号，比大小：Provider 收到不大于已见最大版本的直接丢掉，多台设备都在写时后写的为准；建议用毫秒时间；
   - `steps` 可选，至多 1000 项，是从上一版到这一版之间按先后排的中间状态 `{ text, delayMs }`：每一步的全文，以及距上一步的间隔（毫秒，0 到 600000）；Provider 可以照这个节奏回放，最后一步等于 `text`；
@@ -499,7 +499,7 @@ status：
 `parts` 的每一项是下面之一：
 
 - `{ type: "text", text }`；
-- `{ type: "image"|"video"|"file"|"audio", name, size?, mime?, width?, height?, duration?, thumb?, blob?, preview?, upload?, service?, path? }`：媒体，大文件只给引用，字段见下；
+- `{ type: "image"|"video"|"file"|"audio", name, size?, mime?, width?, height?, duration?, thumb?, service?, path?, preview?, upload? }`：媒体，大文件只给引用，字段见下；
 - `{ type: "thinking"|"tool", text }`。
 
 媒体 part 在 `read` 的消息和 `post` 的输入里是同一种形状，只有 `upload` 只在 `post` 的输入里有；`type`、`name` 以外都可选：
@@ -510,57 +510,48 @@ status：
 | `width`、`height` | 像素，整数，至少 1，已按拍摄方向转正；图片和视频用 |
 | `duration` | 时长，秒，不为负；视频和语音用 |
 | `thumb` | 内嵌 JPEG 的 base64（不带 `data:` 前缀），至多 8192 个字符；视频用封面帧 |
-| `blob` | 原文件的 Blob 指针，见「Blob 指针」一节 |
-| `preview` | 预览图：写成 Blob 指针（推荐）；写成字符串是旧写法，见下 |
-| `service` | **将退役，改用 `blob`**：provider 插件登记的本机流式服务 ID |
-| `path` | **将退役，改用 `blob`**：原文件的服务内路径，1 到 2048 个字符 |
+| `service` | provider 插件登记的本机流式服务 ID |
+| `path` | 原文件的服务内路径，1 到 2048 个字符 |
+| `preview` | 预览图的服务内路径，在同一个 `service` 里，1 到 2048 个字符 |
 | `upload` | 只在 `post` 的输入里：持有这条记录的机器上 Coda 上传的 ID（那台机器 `POST /v1/uploads` 返回、`GET /v1/uploads/<id>` 能读回的），1 到 200 个字符 |
 
-旧写法里，有 `path` 或字符串的 `preview`（同一个 `service` 里的服务内路径，1 到 2048 个字符）就必须有 `service`；`preview` 是指针时不要求 `service`。`upload` 与 `blob`、`preview`、`service`、`path` 互斥：一个媒体 part 要么引用 Blob 指针（或旧的 Provider 服务），要么引用持有方的上传。新旧可以并写，读的一方有 `blob` 就用 `blob`、有指针形的 `preview` 就用它。`upload` 不变：它只用在本机、同一条记录上，不存在跨机猜 `owner` 的问题。
+有 `path` 或 `preview` 就必须有 `service`。`upload` 与 `service`、`path`、`preview` 互斥：一个媒体 part 要么引用 Provider 自己的服务，要么引用持有方的上传。
 
 `audio` 是一段语音消息，即对方平台的「语音条」，不是任意音频文件：
 
-- 用 `name`、`size`、`mime`、`duration`、`blob`（或旧的 `service`、`path`；`post` 里也可以是 `upload`）；`width`、`height`、`thumb`、`preview` 对它没有意义，不用；
-- `blob`（或旧的 `path`）给出的文件应当是常见播放器能直接播放的格式（如 AAC/M4A、MP3、WAV），`mime` 写实际给出的格式；对方平台的原始编码不能直接播时，由 Provider 转换；
+- 用 `name`、`size`、`mime`、`duration`、`service`、`path`（`post` 里也可以是 `upload`）；`width`、`height`、`thumb`、`preview` 对它没有意义，不用；
+- `path` 给出的文件应当是常见播放器能直接播放的格式（如 AAC/M4A、MP3、WAV），`mime` 写实际给出的格式；对方平台的原始编码不能直接播时，由 Provider 转换；
 - 观察方看不懂 `audio` 时照常退回 `text`：Provider 给语音消息写一个可读的 `text` 兜底，例如「[语音] 5″」，具体写法由 Provider 定。
 
 发语音时，调用方先把录好的文件传到记录的持有方（`POST /v1/uploads`），再在 `post` 里用 `upload` 引用；持有方的 Coda 负责把上传交给 Provider 读取，Provider 不经网络取。本版本 `upload` 只要求 Provider 对 `audio` 支持，其他类型以后再说。
 
 一个媒体分三档，从小到大：
 
-- **`thumb`**：内嵌在消息里，框一出现就能画。**保留，不随指针一起换**。约束只是至多 8192 个字符：自己生成时长边取 64 像素左右；Provider 手上已有的小缩略图，只要在上限以内，可以原样放进来。一页 `read` 里 `thumb` 加起来的体积由 Provider 自己控制，不为此另设机制。
-- **`preview`**：持有方本地就有的较小版本，写成指针。图片是一张静图，长边一般不超过约 1280 像素；视频是封面帧。观察方在会话里画它，原图只在打开时取。
-- **`blob`**（旧写法 `path`）：原文件。
+- **`thumb`**：内嵌在消息里，框一出现就能画。约束只是至多 8192 个字符：自己生成时长边取 64 像素左右；Provider 手上已有的小缩略图，只要在上限以内，可以原样放进来。
+- **`preview`**：持有方本地就有的较小版本。图片是一张静图，长边一般不超过约 1280 像素；视频是封面帧。观察方在会话里画它，原图只在打开时取。
+- **`path`**：原文件。
 
 尺寸和 `thumb` 让框在图到达前就是最终大小：先显示放大、模糊的 `thumb`，`preview` 到了在原地换上；没有 `preview` 的，照旧换上原图。
-观察方按指针的 `owner` 去那台机器取 `path`（本机直接取，别的机器经空间到达）；字节、Range 和流中断语义沿用 Coda 的本机流式服务。旧写法读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<preview 或 path>`，路径原样接在后面，Provider 写它时就按 URL 路径编码好，不以 `/` 开头。
+观察方读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<preview 或 path>`（别的机器经空间到达持有方）；路径原样接在后面，Provider 写它时就按 URL 路径编码好，不以 `/` 开头。
+字节、Range 和流中断语义沿用 Coda 的本机流式服务。
 
 取不到时这样降级：
 
-- 取 `blob`（旧写法 `path`）回 404 而有 `preview`：显示预览图，并注明原图不在持有方（比如微信还没下载），不当成「文件已清理」；
+- 取 `path` 回 404 而有 `preview`：显示预览图，并注明原图不在持有方（比如微信还没下载），不当成「文件已清理」；
 - 没有 `preview` 或 `preview` 也取不到：退回 `thumb`；
-- 原文件、预览、缩略图都不可用（没有，或都取不到）：才显示文件卡。
+- 三档都没有或都取不到：显示文件卡。
 
 缺字段时这样降级，旧消息不补算：
 
 - 缺 `width`、`height`：按默认比例占位；
 - 缺 `thumb`：图到之前是空框；
-- 既没有 `blob`，也没有 `service`（或有 `service`，`path` 和 `preview` 都没有）：不能打开原文件，有预览（只有 `preview` 指针也算）就显示预览，只有 `thumb` 就显示缩略图；原文件、预览、缩略图都不可用才显示文件卡。
+- 缺 `service`（或有 `service`，`path` 和 `preview` 都没有）：只显示文件卡，不能打开原文件。
 
 一个图片 part：
 
 ```json
 {"type": "image", "name": "IMG_0412.jpg", "size": 2310144, "mime": "image/jpeg", "width": 3024, "height": 4032,
  "thumb": "/9j/4AAQSkZJRgABAQ…", "service": "media", "path": "msg/m7/IMG_0412.jpg", "preview": "msg/m7/IMG_0412.preview.jpg"}
-```
-
-同一个图片 part，用指针写（推荐）：
-
-```json
-{"type": "image", "name": "IMG_0412.jpg", "size": 2310144, "mime": "image/jpeg", "width": 3024, "height": 4032,
- "thumb": "/9j/4AAQSkZJRgABAQ…",
- "blob": {"owner": "49057de5-4a09-465b-af32-2c3bc655bfab", "path": "plugins/wechat/services/media/msg/m7/IMG_0412.jpg"},
- "preview": {"owner": "49057de5-4a09-465b-af32-2c3bc655bfab", "path": "plugins/wechat/services/media/msg/m7/IMG_0412.preview.jpg"}}
 ```
 
 `post` 发一条语音：
@@ -596,46 +587,6 @@ status：
   "more": false
 }
 ```
-
-### Blob 指针
-
-`blob`、`preview` 和 `avatar.blob` 是同一种指针 `{ owner, path, name?, size?, mime? }`，定义在 `coda/session@1` 各 schema 的 `$defs.blob`：
-
-| 字段 | 含义 |
-| --- | --- |
-| `owner` | 必填，机器 ID（空间成员），不是主机名，也不是端口；1 到 512 个字符，字母、数字和 `._:-` |
-| `path` | 必填，`owner` 那台机器上产品 API 的路径，不带 `/v1/`；已按 URL 路径编码，只用字母、数字和 `._~!$&'()*+,;=@/-`，百分号只接受 `%HH`（两位十六进制）形式的转义，`uploads/file%.jpg` 这样不完整的转义不收；不以 `/` 开头，不含 `..`、`?`、`#`，至多 2048 个字符 |
-| `name` | 可选，1 到 255 个字符 |
-| `size` | 可选，字节数，非负整数 |
-| `mime` | 可选，1 到 127 个字符，字母、数字和 `!#$&^_.+/;=-` |
-
-不许有别的键。指针序列化后不超过 4 KiB，按 UTF-8 的 `JSON.stringify` 结果计量。字段上限不保证这一点（`name` 里的控制字符编码成 `\u0001` 要占 6 字节），schema 也查不了字节数，所以由取用指针的宿主在运行时校验，超限的不解析。
-
-**指针指向哪里，一律收紧到三类**：
-
-1. 上传区 `uploads/<id>`；
-2. 写指针的插件自己的 service：`plugins/<这个插件>/services/<service>/…`；
-3. Coda 自己的文件路由。
-
-别的插件的服务一律不解析。schema 只查形状，指向哪一类、`plugins/<插件>` 是不是写指针的那个插件，由解析指针的一方（宿主）在取用时查。
-
-旧的 `service` / `path` / 字符串 `preview` 和 `avatar` 的 `{ service, path }` 都**将退役，改用 `blob` / `preview` 指针 / `avatar.blob`**；这一版只加不删，新旧并存。
-
-### 流 `draft`
-
-`draft` 是客户端输入框的击键流，声明在 `coda/session@1` 的顶层 `streams`，`input` 是空的参数 schema（没有查询参数）。它不分组，只给 Coda 自己和实现这个协议的 provider 用，不对插件开放：
-
-- 客户端打开外部会话页时，对这条记录开一条长连接：`PUT /v1/records/coda/session@1/<id>/streams/draft`，`content-type: application/x-ndjson`，chunked。协议包的 `streams` 没有 `method` 字段，`PUT` 写在这里和 Coda 文档里；
-- 每帧一行 JSON，帧体 `{ text, version, steps? }`，含义同旧 `draft` 操作的输入；帧之间换行。连接建立后、以及每发出一帧（草稿帧或心跳帧）后重新计时；空闲满 15 秒还没有新帧，就发一帧 `{ "heartbeat": true }`（帧体只有这一个键）。还没输入过的连接，也从建立连接时开始计时。provider 收到心跳帧直接跳过，不更新草稿，也不算版本；
-- provider 顺序读请求体，逐帧处理；连接关闭即停止。
-
-```
-{"text":"收","version":1762675200000}
-{"text":"收到","version":1762675200150,"steps":[{"text":"收到","delayMs":120}]}
-{"heartbeat":true}
-```
-
-旧的 `draft` 操作还保留，**将退役，改用流 `draft`**。
 
 ## coda/environment@1
 
@@ -675,32 +626,13 @@ spec：
 - `values` 至多 8 项，每项 `{ label?, value?, fraction?, time? }`：`value`（至多 80 字）与数值 `fraction`（0–1）至少有一样；`time` 是 ISO 8601 时间。
 - `buttons` 至多 8 项，每项 `{ label, action | view | url, args?, confirm?, disabled? }`，`action`、`view`、`url` 三选一：`action` 调 `act` 操作，`view` 打开本插件的视图，`url` 只认 https（至多 2000 字），不带 `args` 与 `confirm`。`args` 是 JSON 对象，序列化后至多 4096 字节；JSON Schema 说不了字节数，schema 不查，由宿主在写记录和收 `act` 调用时检查。`action`、`view` 有没有对应的动作与视图 schema 查不了：不认识的动作由 `act` 失败，不认识的视图由页面打开时失败。
 
-`list` 是 `safe` 的查询，立即结果；`act`、`sign-in`、`install` 都是立即结果 `{}`，不分 `safe`：
+三个操作都是立即结果 `{}`，不分 `safe`：
 
 | 操作 | 输入 | 期限 | 说明 |
 | --- | --- | --- | --- |
-| `list` | `{}` | 默认 | `safe`：列出这台机器上的资源，结果 `{ resources: [...] }`，形状同 Coda 的 `GET /v1/resources` 的 `resources`（见下）；归权限组 `read` |
 | `act` | `{ action, args }` | 10 分钟 | 做按钮上的动作，由插件的命令按 `action` 分派；`args` 必填，没有参数的按钮传 `{}` |
 | `sign-in` | `{}` | 15 分钟 | 进度 `{ url, code? }` 报登录链接（和设备码）；`signIn.input` 为 `authorizationCode` 时提问 `{ input: "authorizationCode" }`，回答 `{ code }` |
 | `install` | `{}` | 10 分钟 | 装上登录要用的程序 |
-
-`list` 结果里 `resources` 的每一项是空间里某台机器上的一条可引用的资源（`kind` 是资源的种类，不限 `coda/resource@1`）：
-
-| 字段 | 含义 |
-| --- | --- |
-| `kind`、`id` | 必填，种类和这条资源的 ID |
-| `title`、`labels` | 必填，种类的列里显示的名字，和其余列（空的不列） |
-| `local` | 必填，布尔，是不是这台机器自己的 |
-| `owner` | 必填，记录所在机器的 ID |
-| `spec` | 必填，记录的 spec，原样 |
-| `resourceType` | 可选，种类是插件上报的资源类型时的类型 ID |
-| `kindTitle` | 必填，种类的名字 |
-| `fields` | 必填，`[{ name, value }]`：spec 里种类有的字段，没有值的不列 |
-| `source` | 必填，来源机器的显示名；本机的也写这台机器的名字（如 `Mac mini`），不写「本机」 |
-| `syncedAt` | 必填，别的机器的记录上次同步的时刻（毫秒，整数）；本机的、从没同步过的为 `null` |
-| `offline` | 必填，布尔，上次同步是不是太久以前 |
-
-结果只有 `resources` 一个键，不许有别的；`GET /v1/resources` 里另外的 `kinds`、`projects`、`recents` 不在这个查询里。
 
 ```json
 {
