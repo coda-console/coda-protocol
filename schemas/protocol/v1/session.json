@@ -34,6 +34,21 @@
   "status": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
+    "$defs": {
+      "blob": {
+        "type": "object",
+        "description": "跨机 Blob 指针：owner 那台机器上的产品 API 路径。序列化后不超过 4 KiB，按 UTF-8 的 JSON.stringify 结果计量；schema 查不了字节数，由取用指针的宿主在运行时校验。指针只许指向上传区 uploads/<id>、写指针的插件自己的 service（plugins/<这个插件>/services/<service>/…）、Coda 自己的文件路由，别的插件的服务一律不解析；schema 查形状，指向哪里由持有方在解析时查",
+        "properties": {
+          "owner": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,512}$", "description": "机器 ID（空间成员），不是主机名，也不是端口"},
+          "path": {"type": "string", "maxLength": 2048, "pattern": "^(?!/)(?!.*\\.\\.)(?:[A-Za-z0-9._~!$&'()*+,;=@/-]|%[0-9A-Fa-f]{2})+$", "description": "owner 那台机器上产品 API 的路径，不带 /v1/；已按 URL 路径编码，百分号只接受 %HH 形式的转义；不以 / 开头，不含 ..、?、#"},
+          "name": {"type": "string", "minLength": 1, "maxLength": 255},
+          "size": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+          "mime": {"type": "string", "pattern": "^[A-Za-z0-9!#$&^_.+/;=-]{1,127}$"}
+        },
+        "required": ["owner", "path"],
+        "additionalProperties": false
+      }
+    },
     "properties": {
       "head": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "最新一条消息的游标，不透明；Provider 每追加一条就写，还没有消息时不写"},
       "participants": {
@@ -47,12 +62,14 @@
             "self": {"const": true, "description": "这个 Provider 登录的账号，即 Coda 的 Bot"},
             "avatar": {
               "type": "object",
-              "description": "头像，可选：provider 插件登记的本机流式服务里的一张图，取法同媒体 part 的 path；读不到时观察方用名字代替",
+              "description": "头像，可选：写成 Blob 指针 blob（推荐）；{ service, path } 是旧写法，provider 插件登记的本机流式服务里的一张图，将退役，改用 avatar.blob。读不到时观察方用名字代替。缓存头像以 owner 加 path 一起作键，不能只看 path",
               "properties": {
-                "service": {"type": "string", "minLength": 1, "maxLength": 200},
-                "path": {"type": "string", "minLength": 1, "maxLength": 2048}
+                "blob": {"$ref": "#/$defs/blob"},
+                "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "将退役，改用 blob"},
+                "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "将退役，改用 blob"}
               },
-              "required": ["service", "path"],
+              "dependentRequired": {"service": ["path"], "path": ["service"]},
+              "anyOf": [{"required": ["blob"]}, {"required": ["service", "path"]}],
               "additionalProperties": false
             }
           },
@@ -110,6 +127,19 @@
         "type": "object",
         "$defs": {
           "id": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "blob": {
+            "type": "object",
+            "description": "跨机 Blob 指针：owner 那台机器上的产品 API 路径。序列化后不超过 4 KiB，按 UTF-8 的 JSON.stringify 结果计量；schema 查不了字节数，由取用指针的宿主在运行时校验。指针只许指向上传区 uploads/<id>、写指针的插件自己的 service（plugins/<这个插件>/services/<service>/…）、Coda 自己的文件路由，别的插件的服务一律不解析；schema 查形状，指向哪里由持有方在解析时查",
+            "properties": {
+              "owner": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,512}$", "description": "机器 ID（空间成员），不是主机名，也不是端口"},
+              "path": {"type": "string", "maxLength": 2048, "pattern": "^(?!/)(?!.*\\.\\.)(?:[A-Za-z0-9._~!$&'()*+,;=@/-]|%[0-9A-Fa-f]{2})+$", "description": "owner 那台机器上产品 API 的路径，不带 /v1/；已按 URL 路径编码，百分号只接受 %HH 形式的转义；不以 / 开头，不含 ..、?、#"},
+              "name": {"type": "string", "minLength": 1, "maxLength": 255},
+              "size": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "mime": {"type": "string", "pattern": "^[A-Za-z0-9!#$&^_.+/;=-]{1,127}$"}
+            },
+            "required": ["owner", "path"],
+            "additionalProperties": false
+          },
           "part": {
             "oneOf": [
               {
@@ -129,12 +159,18 @@
                   "height": {"type": "integer", "minimum": 1, "description": "像素高，已按拍摄方向转正；图片和视频用"},
                   "duration": {"type": "number", "minimum": 0, "description": "时长，秒；视频和语音用"},
                   "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀；自己生成时长边取 64 像素左右，已有的小缩略图在上限内可原样放；视频用封面帧"},
-                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID"},
-                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "原文件的服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"},
-                  "preview": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "预览图在同一个 service 里的服务内路径：图片是长边一般不超过约 1280 像素的静图，视频是封面帧"}
+                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID。将退役，改用 blob"},
+                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "原文件的服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后。将退役，改用 blob"},
+                  "preview": {
+                    "description": "预览图：图片是长边一般不超过约 1280 像素的静图，视频是封面帧。写成 Blob 指针（推荐）；写成字符串是旧写法，是同一个 service 里的服务内路径，将退役，改用 preview 指针",
+                    "oneOf": [{"type": "string", "minLength": 1, "maxLength": 2048}, {"$ref": "#/$defs/blob"}]
+                  },
+                  "blob": {"$ref": "#/$defs/blob", "description": "原文件的 Blob 指针，替换旧的 service + path"}
                 },
                 "required": ["type", "name"],
-                "dependentRequired": {"path": ["service"], "preview": ["service"]},
+                "dependentRequired": {"path": ["service"]},
+                "if": {"properties": {"preview": {"type": "string"}}, "required": ["preview"]},
+                "then": {"required": ["service"]},
                 "additionalProperties": false
               },
               {
@@ -189,6 +225,19 @@
         "type": "object",
         "$defs": {
           "id": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "blob": {
+            "type": "object",
+            "description": "跨机 Blob 指针：owner 那台机器上的产品 API 路径。序列化后不超过 4 KiB，按 UTF-8 的 JSON.stringify 结果计量；schema 查不了字节数，由取用指针的宿主在运行时校验。指针只许指向上传区 uploads/<id>、写指针的插件自己的 service（plugins/<这个插件>/services/<service>/…）、Coda 自己的文件路由，别的插件的服务一律不解析；schema 查形状，指向哪里由持有方在解析时查",
+            "properties": {
+              "owner": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,512}$", "description": "机器 ID（空间成员），不是主机名，也不是端口"},
+              "path": {"type": "string", "maxLength": 2048, "pattern": "^(?!/)(?!.*\\.\\.)(?:[A-Za-z0-9._~!$&'()*+,;=@/-]|%[0-9A-Fa-f]{2})+$", "description": "owner 那台机器上产品 API 的路径，不带 /v1/；已按 URL 路径编码，百分号只接受 %HH 形式的转义；不以 / 开头，不含 ..、?、#"},
+              "name": {"type": "string", "minLength": 1, "maxLength": 255},
+              "size": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+              "mime": {"type": "string", "pattern": "^[A-Za-z0-9!#$&^_.+/;=-]{1,127}$"}
+            },
+            "required": ["owner", "path"],
+            "additionalProperties": false
+          },
           "part": {
             "oneOf": [
               {
@@ -208,14 +257,20 @@
                   "height": {"type": "integer", "minimum": 1, "description": "像素高，已按拍摄方向转正；图片和视频用"},
                   "duration": {"type": "number", "minimum": 0, "description": "时长，秒；视频和语音用"},
                   "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀；自己生成时长边取 64 像素左右，已有的小缩略图在上限内可原样放；视频用封面帧"},
-                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID"},
-                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "原文件的服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"},
-                  "preview": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "预览图在同一个 service 里的服务内路径：图片是长边一般不超过约 1280 像素的静图，视频是封面帧"},
-                  "upload": {"type": "string", "minLength": 1, "maxLength": 200, "description": "持有这条记录的机器上 Coda 上传的 ID（POST /v1/uploads 返回的）；与 service、path、preview 互斥"}
+                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID。将退役，改用 blob"},
+                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "原文件的服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后。将退役，改用 blob"},
+                  "preview": {
+                    "description": "预览图：图片是长边一般不超过约 1280 像素的静图，视频是封面帧。写成 Blob 指针（推荐）；写成字符串是旧写法，是同一个 service 里的服务内路径，将退役，改用 preview 指针",
+                    "oneOf": [{"type": "string", "minLength": 1, "maxLength": 2048}, {"$ref": "#/$defs/blob"}]
+                  },
+                  "blob": {"$ref": "#/$defs/blob", "description": "原文件的 Blob 指针，替换旧的 service + path"},
+                  "upload": {"type": "string", "minLength": 1, "maxLength": 200, "description": "持有这条记录的机器上 Coda 上传的 ID（POST /v1/uploads 返回的）；与 service、path、preview、blob 互斥"}
                 },
                 "required": ["type", "name"],
-                "dependentRequired": {"path": ["service"], "preview": ["service"]},
-                "dependentSchemas": {"upload": {"properties": {"service": false, "path": false, "preview": false}}},
+                "dependentRequired": {"path": ["service"]},
+                "if": {"properties": {"preview": {"type": "string"}}, "required": ["preview"]},
+                "then": {"required": ["service"]},
+                "dependentSchemas": {"upload": {"properties": {"service": false, "path": false, "preview": false, "blob": false}}},
                 "additionalProperties": false
               },
               {
@@ -239,7 +294,7 @@
       "run": true
     },
     "draft": {
-      "description": "设定 self 在这个会话里还没发出去的草稿，立即结果。text 是全文，空串为清空；version 只增，Provider 丢掉不大于已见最大版本的；steps 是从上一版到这一版的中间状态，可照 delayMs 回放，最后一步等于 text。用不上草稿的 Provider 直接答 {}。",
+      "description": "将退役，改用 streams.draft（击键流）。设定 self 在这个会话里还没发出去的草稿，立即结果。text 是全文，空串为清空；version 只增，Provider 丢掉不大于已见最大版本的；steps 是从上一版到这一版的中间状态，可照 delayMs 回放，最后一步等于 text。用不上草稿的 Provider 直接答 {}。",
       "idempotent": true,
       "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -269,6 +324,16 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "maxProperties": 0
+      }
+    }
+  },
+  "streams": {
+    "draft": {
+      "description": "客户端输入框的击键流：客户端打开外部会话页时对这条记录开一条长连接，PUT（协议包的 streams 没有 method 字段，PUT 写在这里和 Coda 文档里），content-type 为 application/x-ndjson，chunked；每帧一行 JSON，帧体 { text, version, steps? }，含义同 operations.draft 的输入；连接建立后、以及每发出一帧（草稿帧或心跳帧）后重新计时；空闲满 15 秒还没有新帧，就发一帧 { \"heartbeat\": true }。还没输入过的连接，也从建立连接时开始计时。provider 收到后跳过，不更新草稿，也不算版本。不分组，只给 Coda 自己和实现这个协议的 provider 用，不对插件开放。provider 顺序读请求体，逐帧处理，连接关闭即停止。",
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false
       }
     }
   },
