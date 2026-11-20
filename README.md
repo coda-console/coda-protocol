@@ -2,7 +2,7 @@
 
 Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
-- **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v2/<文件>`）。`plugin.json` 是整份清单，只列通用键（`configuration`、`extensionPoints`、`extensions`、`services`、`setup`、`environment`、`path`、`views`、`protocols`、`protocolImplementations`、`records`、`self`）；`setting.json` 是一项设置的声明。其余键由 Coda 的贡献点登记表或某个插件的扩展点声明：Coda 自己的（`agents`、`composerModes`、`modelProviders` 等）的 schema 仍放在这里作公开数据（如 `agents.json`、`composer-modes.json`），由登记它的 provider 引用；扩展点可以带自己的 schema（`extensionPoints.<名>.schema`，声明它的插件目录里的一个文件），写给它的东西合乎那份 schema 才对。
+- **插件清单的类型**（`schemas/plugin/`）：插件目录 `package.json` 里 `contributes` 的每个键是一种类型，各有一份 JSON Schema（draft 2020-12，`$id` 为 `https://coda.pub/schemas/plugin/v2/<文件>`）。`plugin.json` 是整份清单，只列通用键（`configuration`、`services`、`setup`、`environment`、`path`、`views`、`protocols`、`protocolImplementations`、`records`）；`setting.json` 是一项设置的声明。其余键由 Coda 的贡献点登记表声明：Coda 自己的（`agents`、`composerModes`、`modelProviders` 等）的 schema 仍放在这里作公开数据（如 `agents.json`、`composer-modes.json`），由登记它的 provider 引用；`contributes` 里只有 Coda 认得的键。
 - **通用校验器**（`validate.mjs`）：用 Ajv 对清单做 schema 校验。JSON Schema 说不了的只用五个通用关键字（`x-unique-by`、`x-max-contains`、`x-ref`、`x-placeholders`、`x-file`，照 Kubernetes 的 `x-kubernetes-*`），每个在哪里写都是同一个意思，写法见文件开头。校验器不随功能变长：类型加字段就是改 schema。
 - **协议定义与调用**（`schemas/protocol/`、`protocol.mjs`、`docs/protocol.md`）：协议是 `命名空间/名字@大版本` + spec/status 的 JSON Schema + 操作；插件在 `contributes.protocols` 里定义自己命名空间下的协议，在 `contributes.protocolImplementations` 里声明实现哪些协议；定义可写 `streams` 声明只读记录流，可写 `events` 声明事件（载荷格式与 `starts`、`ends`；只有事件的协议可以不写 `spec`、`status`、`operations`，`protocolHasRecords` 判断一份定义有没有记录），可写 `permissions` 把操作、流、事件与记录的读取分成权限组，插件在清单根的 `uses` 里按组申请。调用是 `{ record, operation, input, requestId, parent, awaited }`，回答是 `{ result }` 或 `{ run }`；`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/card@1` 是五个核心协议。
 - **流程方言**（`workflow/`）：项目和插件的流程（`.coda/workflows/*.bpmn`，BPMN 2.0）在 Coda 的命名空间 `https://coda.pub/schema/bpmn/1.0` 里能写什么。`moddle.json` 是 `coda:` 属性与元素（bpmn-moddle 的描述格式），`values.json` 是每个值能写什么（每个 `coda:` 类型的属性组成的对象的 JSON Schema，一个元素里同种 `coda:` 元素成组的 schema），`actions.json` 是 `coda:action` 的各个动作和它们接受的参数，`dialect.json` 是 Coda 自己发的事件、步骤失败的错误码、表达式能读的运行变量和运行的输入能是哪些类型。`workflow.mjs` 用它们读一份流程：方言里没有的、值不合 schema 的都拒绝，说法是「位置：schema 对那里的说明」。值的 schema 用清单的那几个关键字，另加三个：`x-feel`（是 FEEL：「=」开头是表达式，否则文字里的 `{{ … }}` 是，按这份流程里的名字读得通）、`x-duration`（ISO 8601 时长，不为负）、`x-number`（文字换算成数字是个有限的数）。`structure.json` 声明流程结构规则，`structure.mjs` 负责跨节点检查。
@@ -44,8 +44,8 @@ const problem = manifestProblem(manifest, 'plugin');
 contributionProblem(SCHEMAS['agents.json'], manifest, 'agents', 'plugin');
 // 某个类型里的一部分，如输入框模式声明的参数。
 valueProblem('composer-modes.json#/$defs/parameters', parameters, '插件给出的参数');
-// 写给别的插件扩展点的东西，按那个扩展点的 schema（已读出的对象）；给出写它的插件目录时连同它点名的文件一起查。
-pointProblem(panelsSchema, manifest.contributes.panels, 'contributes.panels', 'plugin');
+// 一个独立的值，按给定的 schema（已读出的对象）校验；给出插件目录时连同值里点名的文件一起查。
+pointProblem(valueSchema, value, 'contributes.panels', 'plugin');
 ```
 
 ```js
@@ -81,7 +81,7 @@ optionsProblem([{ id: 'release', name: '发布正式版', default: false, inputs
 // CODA_FIELDS 是同一份 fields.json，也可从 @coda-console/protocol/workflow/fields.json 导入。
 ```
 
-扩展点的 schema 和这里的并列：可以 `$ref` 协议的 schema（`common.json#/$defs/line40`），可以用五个关键字；它自己写的 `$id` 不算数，指针只指它校验的那份值里的位置。
+给 `pointProblem` 的 schema 和这里的并列：可以 `$ref` 协议的 schema（`common.json#/$defs/line40`），可以用五个关键字；它自己写的 `$id` 不算数，指针只指它校验的那份值里的位置。
 
 `TYPES` 是清单 schema 自己校验的通用键（4.0.0 起不含 `agents` 等 Coda 业务键），`SCHEMAS` 是 `schemas/plugin/` 里的全部 schema（按文件名），包括业务键的。协议定义的 schema 在 `schemas/protocol/v1/`，由 `@coda-console/protocol/protocol` 导出。
 
@@ -152,7 +152,7 @@ agentValueProblem('review.json', review, '工具的审核');
 
 Coda 与检查包都钉一个确切版本。对第三方的兼容承诺只覆盖**稳定面**：第三方实际在用的清单键和页面接口，定义在随 npm 包发布的 [`stable/manifest.json`](stable/manifest.json) 与 [`stable/view.json`](stable/view.json)。稳定面只增不减；要改变或删除承诺，先标弃用，保留过渡时间，不能直接移除定义或破坏现有用法。
 
-其余都是**内部面**，不承诺兼容，删改升次版本。包括未列入稳定面的清单键、扩展点、模块的 `coda` 对象、`CODA_*` 环境变量、Agent 接入协议、协议定义与流程方言，以及 `coda-view://service/…`。新增可选字段、新类型、放宽限制升次版本。主版本只留给稳定面的不兼容改动；按稳定面只增不减的规矩，这不该发生，真要发生须先标弃用、留过渡时间。协议名里的版本（如 `coda/run@1`）与 npm 包版本、schema 的 `$id` 独立。
+其余都是**内部面**，不承诺兼容，删改升次版本。包括未列入稳定面的清单键、模块的 `coda` 对象、`CODA_*` 环境变量、Agent 接入协议、协议定义与流程方言，以及 `coda-view://service/…`。新增可选字段、新类型、放宽限制升次版本。主版本只留给稳定面的不兼容改动；按稳定面只增不减的规矩，这不该发生，真要发生须先标弃用、留过渡时间。协议名里的版本（如 `coda/run@1`）与 npm 包版本、schema 的 `$id` 独立。
 
 两份数据各有从 1 起的整数 `revision`。每项清单以 `path` 标识；`.` 分隔固定键，`[]` 表示数组项，`*` 表示插件自行命名的键。例如 `contributes.configuration.properties.*.additionalProperties.properties.*.format`。`values` 是承诺接受的取值，而非完整枚举。页面文件的成员、事件、根类名、CSS 变量分别列出；`open.targets` 只承诺 `{ view, args }`，`toolbar.fields/kinds` 只承诺列出的字段和种类。
 

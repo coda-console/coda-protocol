@@ -2,6 +2,13 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.18.0 — 2026-11-20
+
+- 这是在 6.17.0 之上的次版本。依据 README「版本」一节：这三个键都不在 `stable/manifest.json`，是内部面，删内部键升次版本；`stable-grows` 与 `test/stable.test.mjs` 不受影响（Coda 宿主设计 coda#2749 H9-C）。
+- 不兼容：删掉清单 `contributes.extensionPoints`、`contributes.extensions`、`contributes.self` 三个类型：删去 `schemas/plugin/extension-points.json`、`extensions.json`、`self.json` 与 `plugin.json` 里的三处引用，`TYPES` 少这三项。`extensionDependencies` 是独立的顶层键，不动。
+- 原因：H9-C 删旧槽位（扩展点）、删预留（`contributes.self` 的命令形式，只留模块的 `coda.self.handle`）。`plugin.json` 的说明同改：`contributes` 里只有 Coda 认得的键。
+- 这三个键已退役，由 Coda 宿主判「需要更新」，协议 schema 不再定义它们：写了它们的清单，`manifestProblem` 与别的不认识的键一样放过，不查形状（先例见 6.14.0、6.15.0 删 `events`、`endpoints`）；schema 只做静态校验，「需要更新」是宿主读到退役键时的诊断，两件事分开。
+
 ## 6.17.0 — 2026-11-20
 
 - 这是在 6.16.0 之上的次版本。依据 README「版本」一节：核心协议是内部面，新增协议升次版本；`stable/` 不动。新增核心协议 `coda/resource@1`（`schemas/protocol/v1/resource.json`，导出 `RESOURCE_PROTOCOL`，加入 `CORE_PROTOCOLS`，复数名 `resource-types`），插件用命令写这种记录，见 Coda 文档「资源」。

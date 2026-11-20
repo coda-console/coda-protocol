@@ -1,5 +1,5 @@
 // The checker against manifests of every kind of mistake, one at a time: each is said where it is, in what the schema says
-// there; its five keywords, each as it means the same thing wherever it is written; and an extension point's own schema.
+// there; its five keywords, each as it means the same thing wherever it is written; and a schema given to pointProblem.
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -68,12 +68,10 @@ test('an agent no longer declares a lifecycle', () => {
     assert.equal(checked({ contributes: { agents: [{ ...agent, lifecycle }] } }), 'contributes.agents[0] 里有不认识的键：lifecycle');
 });
 
-test('endpoints is no type of Coda\'s any more: no schema checks it, and the name stays reserved', () => {
+test('endpoints is no type of Coda\'s any more: no schema checks it', () => {
   assert.equal(Object.hasOwn(SCHEMAS, 'endpoints.json'), false);
   assert.equal(checked({ contributes: { endpoints: [{ id: 'check', command: 'run' }] } }), null);
   assert.equal(checked({ contributes: { endpoints: 1 } }), null);
-  const reserved = SCHEMAS['extension-points.json'].additionalProperties.properties.contributes.not.enum;
-  for (const key of ['endpoints', 'records', 'self', 'events', 'groups']) assert.ok(reserved.includes(key), key);
 });
 
 test('records: one { kind, command, every? } per kind, at most 20; the command is a file of the plugin, every an ISO 8601 duration', () => {
@@ -98,17 +96,12 @@ test('records: one { kind, command, every? } per kind, at most 20; the command i
   for (const bad of [{}, 'x', 1, null]) assert.match(check(bad), /records/, JSON.stringify(bad));
 });
 
-test('self: names of the plugin\'s own queries → a file of the plugin, at most 50', () => {
-  const dir = directory({ 'bin/q.sh': '#!/bin/sh\n', 'bin/sub/x': '' });
-  const check = self => checked({ contributes: { self } }, dir);
-  assert.equal(check({}), null);
-  assert.equal(check({ operation: 'bin/q.sh', 'a-1': 'bin/q.sh', b: 'bin/q.sh' }), null);
-  assert.equal(check(Object.fromEntries(Array.from({ length: 50 }, (_, i) => [`q${i}`, 'bin/q.sh']))), null);
-  assert.match(check(Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`q${i}`, 'bin/q.sh']))), /self/);
-  for (const bad of [{ Operation: 'bin/q.sh' }, { '1q': 'bin/q.sh' }, { 'a b': 'bin/q.sh' }, { '': 'bin/q.sh' },
-    { q: 1 }, { q: null }, { q: '' }, { q: '../q.sh' }, { q: '/bin/q.sh' }, { q: 'bin/none.sh' }, { q: 'bin/sub' }, { q: { command: 'bin/q.sh' } }])
-    assert.match(check(bad), /self/, JSON.stringify(bad));
-  for (const bad of [[], 'bin/q.sh', 1, null]) assert.match(check(bad), /self/, JSON.stringify(bad));
+test('extensionPoints, extensions and self are no types of Coda\'s any more: no schema checks them, they pass as any key of none', () => {
+  for (const file of ['extension-points.json', 'extensions.json', 'self.json']) assert.equal(Object.hasOwn(SCHEMAS, file), false, file);
+  for (const key of ['extensionPoints', 'extensions', 'self']) {
+    assert.equal(TYPES.includes(key), false, key);
+    for (const value of [{ x: { command: 'x' } }, { operation: 'bin/q.sh' }, [], 1, null]) assert.equal(checked({ contributes: { [key]: value } }), null, key);
+  }
 });
 
 test('executors is no type of Coda\'s: no schema checks it', () => {
@@ -117,8 +110,8 @@ test('executors is no type of Coda\'s: no schema checks it', () => {
 });
 
 test('the manifest\'s schema names only the general types; those of Coda\'s points are kept beside them, by file', () => {
-  assert.deepEqual(TYPES, ['configuration', 'extensionPoints', 'extensions', 'services', 'setup', 'environment', 'path', 'views',
-    'protocols', 'protocolImplementations', 'records', 'self']);
+  assert.deepEqual(TYPES, ['configuration', 'services', 'setup', 'environment', 'path', 'views',
+    'protocols', 'protocolImplementations', 'records']);
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
     ['agents.json', 'capabilities.json', 'commands.json', 'common.json', 'composer-modes.json',
@@ -152,7 +145,6 @@ test('contributes.events is no longer Coda\'s: it is a key of no type, whatever 
   for (const events of [[{ name: 'pull_request.closed', starts: false, ends: true }], {}, 'host', [{ name: 'Workflow.x' }]])
     assert.equal(checked({ name: 'kit', contributes: { configuration: settings, events } }), null);
   assert.equal(Object.hasOwn(SCHEMAS, 'events.json'), false);
-  assert.equal(manifestProblem({ name: 'kit', contributes: { extensionPoints: { feed: { description: '订阅', contributes: 'events' } } } }) === null, false);
 });
 
 test('a manifest of the types it names is right; one key of no type, or of none Coda reads, is said where it is', () => {
@@ -249,9 +241,6 @@ test('x-ref: a name of something elsewhere in the manifest, of the kind asked, b
   const provider = key => ({ contributes: { configuration: settings, modelProviders: [{ id: 'p', title: 'P', api: 'openai-completions', url: 'https://p', key }] } });
   assert.equal(checked(provider('${config:kit.key}')), null);
   assert.match(checked(provider('${config:kit.size}')), /^contributes\.modelProviders\[0\]\.key：/);
-  // The plugin it plugs into is one it depends on.
-  assert.equal(checked({ extensionDependencies: ['codex'], contributes: { extensions: { 'codex/accounts': { command: 'x' } } } }), null);
-  assert.match(checked({ contributes: { extensions: { 'codex/accounts': { command: 'x' } } } }), /extensionDependencies 里的一个/);
 });
 
 test('x-placeholders: what a text may name, its own settings among them as asked', () => {
@@ -306,36 +295,12 @@ test('a server for Agents of another kind than one they start is told what a ser
     'contributes.mcpServers.docs 缺 command：一个服务器：由 Agent 在本机启动、经标准输入输出说话的程序（stdio），写 command 与 args；远程的（http、sse）现在不支持');
 });
 
-test('an extension point\'s schema is a file of its plugin\'s that compiles beside these; what another plugin writes for it is of it', () => {
+test('a schema given to pointProblem compiles beside these; what is written for it is of it', () => {
   const panels = { description: '面板的数组', type: 'array', 'x-unique-by': ['id'],
     items: { type: 'object', properties: { id: { $ref: 'common.json#/$defs/name' }, title: { $ref: 'common.json#/$defs/line40' } }, required: ['id', 'title'], additionalProperties: false } };
-  const dir = directory({ 'panels.json': JSON.stringify(panels), 'broken.json': '{', 'loose.json': JSON.stringify({ type: 'array', colour: 'red' }),
-    'old.json': JSON.stringify({ $schema: 'http://json-schema.org/draft-07/schema#', type: 'array' }), 'panels.txt': '',
-    'later.json': JSON.stringify({ $async: true, type: 'array' }), 'unpointed.json': JSON.stringify({ type: 'string', 'x-ref': {} }),
-    'unparsed.json': JSON.stringify({ type: 'array', 'x-unique-by': [{ part: '[' }] }),
-    'inner.json': JSON.stringify({ type: 'string', 'x-ref': { pointer: '/target', match: { $async: true, type: 'string' } } }),
-    'innerConfig.json': JSON.stringify({ type: 'string', 'x-placeholders': { config: { $async: true } } }),
-    'anything.json': 'true', 'nothing.json': 'false', 'list.json': '[]' });
-  const point = schema => ({ name: 'kit', contributes: { extensionPoints: { panels: { description: '面板', contributes: 'panels', title: '面板', schema } } } });
-  assert.equal(checked(point('panels.json'), dir), null);
-  assert.match(checked(point('broken.json'), dir), /^contributes\.extensionPoints\.panels\.schema：broken\.json 不是可用的 JSON Schema：/);
-  assert.match(checked(point('loose.json'), dir), /loose\.json 不是可用的 JSON Schema：strict mode: unknown keyword: "colour"/);
-  assert.match(checked(point('old.json'), dir), /old\.json 不是可用的 JSON Schema：no schema with key or ref "http:\/\/json-schema\.org\/draft-07\/schema#"/);
-  assert.match(checked(point('gone.json'), dir), /插件目录里没有 gone\.json/);
-  // One that would answer later, or whose keywords are written wrong, is refused here, not where a value is checked by it.
-  assert.match(checked(point('later.json'), dir), /later\.json 不是可用的 JSON Schema：不能是异步的（\$async）/);
-  assert.match(checked(point('unpointed.json'), dir), /unpointed\.json 不是可用的 JSON Schema：keyword "x-ref" value is invalid at path "#": data must have required property 'pointer'/);
-  assert.match(checked(point('unparsed.json'), dir), /unparsed\.json 不是可用的 JSON Schema：Invalid regular expression/);
-  for (const file of ['inner.json', 'innerConfig.json']) assert.match(checked(point(file), dir), /不是可用的 JSON Schema：不能是异步的（\$async）/, file);
-  // A schema of true or false is one; what is neither an object nor those is none.
-  for (const file of ['anything.json', 'nothing.json']) assert.equal(checked(point(file), dir), null, file);
-  assert.match(checked(point('list.json'), dir), /list\.json 不是可用的 JSON Schema：schema is invalid/);
+  const dir = directory({ 'panels.json': JSON.stringify(panels) });
   assert.equal(pointProblem(true, [{ any: 1 }], 'contributes.panels'), null);
   assert.equal(pointProblem(false, [], 'contributes.panels'), 'contributes.panels：boolean schema is false');
-  assert.match(checked(point('panels.txt'), dir), /^contributes\.extensionPoints\.panels\.schema：别的插件在这个键下写的东西的 JSON Schema/);
-  // Only a point taking what others write has one.
-  assert.equal(checked({ contributes: { extensionPoints: { accounts: { description: '账号', schema: 'panels.json' } } } }, dir),
-    'contributes.extensionPoints.accounts：只有写了 contributes 的扩展点才写 title、commands 与 schema');
 
   assert.equal(pointProblem(panels, [{ id: 'quota', title: '额度' }], 'contributes.panels'), null);
   assert.equal(pointProblem(panels, {}, 'contributes.panels'), 'contributes.panels 须为数组：面板的数组');

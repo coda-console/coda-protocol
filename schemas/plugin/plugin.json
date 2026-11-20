@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/plugin/v2/plugin.json",
   "title": "插件清单（插件目录的 package.json）",
-  "description": "照 VS Code 扩展的 package.json 写；Coda 读的是下面这些键，其余是 npm 的，不管。contributes 下这里只写通用键，各有自己的 schema；其余键由 Coda 的贡献点登记表或某个插件的扩展点声明，由声明它的一方的 schema 校验。",
+  "description": "照 VS Code 扩展的 package.json 写；Coda 读的是下面这些键，其余是 npm 的，不管。contributes 下这里只写通用键，各有自己的 schema；其余键由 Coda 的贡献点登记表声明，由登记它的 provider 的 schema 校验。",
   "type": "object",
   "properties": {
     "id": {"$ref": "common.json#/$defs/id", "description": "插件 ID：小写字母、数字和「-」，以字母开头，至多 40 个字符；不写就用 name"},
@@ -30,7 +30,7 @@
     "activationEvents": {"description": "宿主什么时候加载 main：onStartupFinished（后端一启动），不重复", "type": "array", "items": {"enum": ["onStartupFinished"]}, "uniqueItems": true},
     "extensionDependencies": {"description": "需要先装的插件的 ID，不重复", "type": "array", "items": {"$ref": "common.json#/$defs/id"}, "uniqueItems": true},
     "uses": {
-      "description": "插件用到的别的协议的权限：协议名（带大版本，如 coda/thread@1）→ 权限组名的数组，至少一项、不重复。没声明的调用被宿主拒绝。放在清单根上而不是 contributes 里：Coda 把 contributes 里不认识的键当扩展点，旧版本会因此拒装。组在不在该协议的定义里由 Coda 对照目录查，这里只管形状",
+      "description": "插件用到的别的协议的权限：协议名（带大版本，如 coda/thread@1）→ 权限组名的数组，至少一项、不重复。没声明的调用被宿主拒绝。放在清单根上而不是 contributes 里：contributes 里只有 Coda 认得的键，不认识的键 Coda 判无效。组在不在该协议的定义里由 Coda 对照目录查，这里只管形状",
       "type": "object",
       "maxProperties": 100,
       "propertyNames": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"},
@@ -49,12 +49,10 @@
       }
     },
     "contributes": {
-      "description": "插件带来的东西：每个键一种类型。这里只列通用键；其余键由 Coda 的贡献点登记表或某个插件的扩展点声明",
+      "description": "插件带来的东西：每个键一种类型。这里只列通用键；其余键由 Coda 的贡献点登记表声明，contributes 里只有 Coda 认得的键",
       "type": "object",
       "properties": {
         "configuration": {"$ref": "configuration.json"},
-        "extensionPoints": {"$ref": "extension-points.json"},
-        "extensions": {"$ref": "extensions.json"},
         "services": {"$ref": "services.json"},
         "setup": {"$ref": "setup.json"},
         "environment": {"$ref": "environment.json"},
@@ -62,8 +60,7 @@
         "views": {"$ref": "views.json"},
         "protocols": {"$ref": "protocols.json"},
         "protocolImplementations": {"$ref": "protocol-implementations.json"},
-        "records": {"$ref": "records.json"},
-        "self": {"$ref": "self.json"}
+        "records": {"$ref": "records.json"}
       },
       "propertyNames": {"description": "contributes 的键：字母和数字，以小写字母开头", "pattern": "^[a-z][A-Za-z0-9]{0,39}$"}
     }
