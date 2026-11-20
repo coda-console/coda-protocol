@@ -75,7 +75,7 @@ test('core definitions validate, and definitions reject malformed names, operati
   assert.equal(AGENT_PROTOCOL.operations.spawn.run, true);
   const safe = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
     Object.entries(protocol.operations).filter(([, operation]) => operation.safe).map(([name]) => `${protocol.name} ${name}`));
-  assert.deepEqual(safe, ['coda/session@1 read', 'coda/environment@1 list', 'coda/environment@1 read', 'coda/resource@1 list']);
+  assert.deepEqual(safe, ['coda/session@1 read', 'coda/environment@1 list', 'coda/environment@1 read']);
   const idempotent = Object.values(CORE_PROTOCOLS).flatMap(protocol =>
     Object.entries(protocol.operations).filter(([, operation]) => operation.idempotent).map(([name]) => `${protocol.name} ${name}`));
   assert.deepEqual(idempotent, ['coda/session@1 draft']);
@@ -339,110 +339,6 @@ test('session records, messages, posts and drafts follow coda/session@1', () => 
   assert.equal(draft.result({ accepted: true }), false);
 });
 
-test('coda/session@1 Blob pointers: owner plus a path on that machine, bounded to 4 KiB, in the media parts and the avatar beside the old shapes', () => {
-  const { status, operations: { read, post } } = checks(SESSION_PROTOCOL);
-  const blobs = [SESSION_PROTOCOL.status, SESSION_PROTOCOL.operations.read.result, SESSION_PROTOCOL.operations.post.input].map(schema => schema.$defs.blob);
-  assert.deepEqual(blobs[1], blobs[0]);
-  assert.deepEqual(blobs[2], blobs[0]);
-  const ajv = new Ajv({ strict: false });
-  const blob = ajv.compile({ ...blobs[0], $defs: undefined });
-
-  const pointers = [
-    { owner: 'm-1', path: 'uploads/ab12' },
-    { owner: '49057de5-4a09-465b-af32-2c3bc655bfab', path: 'plugins/wechat/services/media/image2/ab/cd/x.jpg', name: 'x.jpg', size: 0, mime: 'image/jpeg' },
-    { owner: 'm-1', path: 'plugins/wechat/services/media/%E4%B8%AD.jpg', name: '中文.jpg', mime: 'text/plain;charset=utf-8' },
-    { owner: 'a'.repeat(100), path: 'a'.repeat(2048), name: '\u0001'.repeat(255), size: 9007199254740991, mime: 'a'.repeat(127) },
-    { owner: 'm-1', path: 'uploads/%E4%B8%AD%e6%96%87.jpg' },
-  ];
-  for (const pointer of pointers) assert.equal(blob(pointer), true, JSON.stringify(pointer).slice(0, 80));
-  // The 4 KiB is of the UTF-8 JSON.stringify result, which the schema cannot measure: every field below is within its own
-  // limit, and a name of control characters written as \u0001 takes six bytes each, so the pointer is over. The host that takes
-  // a pointer checks the size at run time.
-  const oversized = { owner: 'a'.repeat(512), path: 'a'.repeat(2048), name: '\u0001'.repeat(255), mime: 'a'.repeat(127) };
-  assert.equal(blob(oversized), true);
-  assert.ok(Buffer.byteLength(JSON.stringify(oversized)) > 4096, String(Buffer.byteLength(JSON.stringify(oversized))));
-  assert.ok(Buffer.byteLength(JSON.stringify(pointers[0])) <= 4096);
-
-  const good = pointers[0];
-  const without = key => Object.fromEntries(Object.entries(good).filter(([name]) => name !== key));
-  for (const [what, pointer] of [
-    ['缺 owner', without('owner')], ['缺 path', without('path')], ['空对象', {}], ['字符串', 'uploads/ab12'], ['null', null],
-    ['owner 为空', { ...good, owner: '' }], ['owner 513 字', { ...good, owner: 'a'.repeat(513) }], ['owner 带空白', { ...good, owner: 'm 1' }],
-    ['owner 是数字', { ...good, owner: 1 }],
-    ['path 以 / 开头', { ...good, path: '/uploads/ab12' }], ['path 带 ..', { ...good, path: 'uploads/../x' }],
-    ['path 以 .. 开头', { ...good, path: '../uploads/x' }], ['path 带 ?', { ...good, path: 'uploads/ab12?x=1' }],
-    ['path 带 #', { ...good, path: 'uploads/ab12#x' }], ['path 带空白', { ...good, path: 'uploads/a b' }], ['path 带反斜杠', { ...good, path: 'uploads\\ab12' }],
-    ['path 以 % 结尾的不完整转义', { ...good, path: 'uploads/file%.jpg' }], ['path 的 % 只跟一位', { ...good, path: 'uploads/a%1' }],
-    ['path 的 % 后不是十六进制', { ...good, path: 'uploads/a%zz.jpg' }], ['path 的 % 只跟一位再接别的', { ...good, path: 'uploads/a%1.jpg' }],
-    ['path 带中文', { ...good, path: 'uploads/中.jpg' }], ['path 是完整 URL', { ...good, path: 'https://x/a' }],
-    ['path 为空', { ...good, path: '' }], ['path 2049 字（超过 4 KiB 的路径）', { ...good, path: 'a'.repeat(2049) }],
-    ['path 4096 字', { ...good, path: 'a'.repeat(4096) }],
-    ['name 为空', { ...good, name: '' }], ['name 256 字', { ...good, name: 'a'.repeat(256) }],
-    ['size 为负', { ...good, size: -1 }], ['size 不是整数', { ...good, size: 1.5 }],
-    ['mime 为空', { ...good, mime: '' }], ['mime 128 字', { ...good, mime: 'a'.repeat(128) }], ['mime 带引号', { ...good, mime: 'a"b' }],
-    ['多余的键', { ...good, url: 'https://x' }],
-  ]) assert.equal(blob(pointer), false, what);
-
-  // Media parts, read and sent: the old service/path/preview shape and the new pointers are both valid.
-  const photo = { type: 'image', name: 'a.jpg', thumb: '/9j/' };
-  const old = { ...photo, service: 'media', path: 'a.jpg', preview: 'a.preview.jpg' };
-  const fresh = { ...photo, blob: pointers[1], preview: { ...pointers[1], path: 'plugins/wechat/services/media/th_x.jpg' } };
-  const both = { ...old, blob: pointers[1], preview: pointers[1] };
-  const mixed = { ...old, blob: pointers[1] };
-  const readOf = part => read.result({ messages: [{ id: 'm1', cursor: 'c1', sender: 'u1', text: '', parts: [part] }], cursor: 'c1', more: false });
-  const postOf = part => post.input({ text: 'x', parts: [part] });
-  // A part with only a preview pointer, no blob, no service and no thumb, is valid: the preview is shown.
-  const previewOnly = { type: 'image', name: 'a.jpg', preview: good };
-  for (const part of [old, fresh, both, mixed, previewOnly, { ...photo, blob: good }, { ...photo, preview: good, service: 'media' }, { ...old, preview: undefined }]) {
-    assert.equal(readOf(part), true, JSON.stringify(part));
-    assert.equal(postOf(part), true, JSON.stringify(part));
-  }
-  const upload = { type: 'audio', name: 'v.m4a', upload: 'up_1' };
-  assert.equal(postOf(upload), true);
-  for (const [what, part] of [
-    ['旧 preview 没有 service', { ...photo, preview: 'a.jpg' }], ['path 没有 service', { ...photo, path: 'a.jpg' }],
-    ['blob 缺 owner', { ...photo, blob: without('owner') }], ['blob 路径越界', { ...photo, blob: { ...good, path: '../x' } }],
-    ['blob 是字符串', { ...photo, blob: 'uploads/ab12' }], ['preview 指针缺 owner', { ...photo, preview: without('owner') }],
-    ['preview 指针路径越界', { ...photo, preview: { ...good, path: '/a' } }], ['preview 是空字符串', { ...old, preview: '' }],
-  ]) {
-    assert.equal(readOf(part), false, what);
-    assert.equal(postOf(part), false, what);
-  }
-  for (const [what, part] of [['upload 与 blob', { ...upload, blob: good }], ['upload 与 preview 指针', { ...upload, preview: good }],
-    ['upload 与 service', { ...upload, service: 'media' }]])
-    assert.equal(postOf(part), false, what);
-  assert.equal(readOf(upload), false);
-
-  // Avatars: { blob }, or the old { service, path }.
-  const avatarOf = avatar => status({ participants: [{ id: 'u1', name: '小王', kind: 'person', avatar }] });
-  for (const avatar of [{ blob: good }, { blob: pointers[1] }, { service: 'media', path: 'avatar/u1' }, { blob: good, service: 'media', path: 'avatar/u1' }])
-    assert.equal(avatarOf(avatar), true, JSON.stringify(avatar));
-  for (const avatar of [{}, { blob: without('owner') }, { blob: { ...good, path: '/a' } }, { blob: 'uploads/ab12' }, { blob: good, service: 'media' },
-    { blob: good, path: 'a' }, { service: 'media' }, { path: 'a' }, { blob: good, url: 'https://x' }])
-    assert.equal(avatarOf(avatar), false, JSON.stringify(avatar));
-});
-
-test('coda/session@1 streams.draft is the keystroke stream; operations.draft stays, marked as retiring', () => {
-  assert.deepEqual(Object.keys(SESSION_PROTOCOL.streams), ['draft']);
-  const { draft } = SESSION_PROTOCOL.streams;
-  assert.match(draft.description, /PUT/);
-  assert.match(draft.description, /application\/x-ndjson/);
-  assert.match(draft.description, /\{ text, version, steps\? \}/);
-  assert.match(draft.description, /每发出一帧（草稿帧或心跳帧）后重新计时；空闲满 15 秒还没有新帧，就发一帧 \{ "heartbeat": true \}。还没输入过的连接，也从建立连接时开始计时。provider 收到后跳过，不更新草稿/);
-  assert.equal(definitionProblem(SESSION_PROTOCOL), null);
-  const input = new Ajv({ strict: false }).compile(draft.input);
-  assert.equal(input({}), true);
-  for (const params of [{ after: 'c1' }, [], null]) assert.equal(input(params), false, JSON.stringify(params));
-  // Not in any permission group: not open to plugins.
-  for (const group of Object.values(SESSION_PROTOCOL.permissions)) assert.equal(group.streams, undefined);
-  // A definition of someone else's declaring the same stream is accepted.
-  assert.equal(definitionProblem({ ...own, streams: { draft } }), null);
-  assert.equal(definitionProblem({ ...own, streams: { draft: { ...draft, input: undefined } } }) === null, false);
-  // The old operation is still there, and says it retires.
-  assert.equal(SESSION_PROTOCOL.operations.draft.idempotent, true);
-  assert.match(SESSION_PROTOCOL.operations.draft.description, /将退役，改用 streams\.draft/);
-});
-
 test('environment records, listings and reads follow the read-only coda/environment@1', () => {
   const { spec, status, operations: { list, read } } = checks(ENVIRONMENT_PROTOCOL);
   assert.deepEqual(Object.keys(ENVIRONMENT_PROTOCOL.operations), ['list', 'read']);
@@ -508,8 +404,8 @@ test('resource records follow coda/resource@1: one plugin type on one machine, w
     operations: Object.fromEntries(Object.entries(protocol.operations).map(([name, operation]) =>
       [name, { input: ajv.compile(operation.input), result: ajv.compile(operation.result) }])),
   }))(RESOURCE_PROTOCOL);
-  assert.deepEqual(Object.keys(RESOURCE_PROTOCOL.operations), ['list', 'act', 'sign-in', 'install']);
-  assert.deepEqual(Object.values(RESOURCE_PROTOCOL.operations).map(operation => operation.timeout), [undefined, 600000, 900000, 600000]);
+  assert.deepEqual(Object.keys(RESOURCE_PROTOCOL.operations), ['act', 'sign-in', 'install']);
+  assert.deepEqual(Object.values(RESOURCE_PROTOCOL.operations).map(operation => operation.timeout), [600000, 900000, 600000]);
 
   const button = { label: '移除', action: 'remove', args: { id: 'a1' }, confirm: '确定移除？', disabled: false };
   const value = { label: '5 小时', value: '80%', fraction: 0.8, time: '2026-11-20T08:00:00.000Z' };
@@ -601,35 +497,6 @@ test('resource records follow coda/resource@1: one plugin type on one machine, w
   assert.match(RESOURCE_PROTOCOL.operations['sign-in'].description, /\{ url, code\? \}.*\{ input: "authorizationCode" \}.*\{ code \}/);
 });
 
-test('coda/resource@1 list is a safe query returning { resources } as GET /v1/resources has them', () => {
-  const ajv = new Ajv({ strict: false });
-  const { list } = RESOURCE_PROTOCOL.operations;
-  assert.equal(list.safe, true);
-  assert.equal(list.run, undefined);
-  assert.equal(definitionProblem(RESOURCE_PROTOCOL), null);
-  assert.deepEqual(RESOURCE_PROTOCOL.permissions.read.operations, ['list']);
-  const input = ajv.compile(list.input), result = ajv.compile(list.result);
-  assert.equal(input({}), true);
-  for (const value of [{ kind: 'machines' }, [], null]) assert.equal(input(value), false, JSON.stringify(value));
-
-  const machine = { kind: 'machines', id: 'a1', title: 'Mac mini', labels: ['macOS'], local: true, owner: 'm-1', spec: { name: 'Mac mini' },
-    kindTitle: '机器', fields: [{ name: 'os', value: 'macOS 27' }], source: 'Mac mini', syncedAt: null, offline: false };
-  const claude = { kind: 'resource-types', id: 'c1', title: 'Claude', labels: ['rig'], local: false, owner: 'm-2', spec: { type: 'claude' },
-    resourceType: 'claude', kindTitle: '资源', fields: [], source: 'rig', syncedAt: 1763600000000, offline: true };
-  for (const value of [{ resources: [] }, { resources: [machine] }, { resources: [machine, claude] }])
-    assert.equal(result(value), true, JSON.stringify(value));
-  const without = key => Object.fromEntries(Object.entries(machine).filter(([name]) => name !== key));
-  for (const [what, value] of [
-    ['缺 resources', {}], ['resources 不是数组', { resources: machine }], ['多余的键 kinds', { resources: [], kinds: [] }],
-    ...['kind', 'id', 'title', 'labels', 'local', 'owner', 'spec', 'kindTitle', 'fields', 'source', 'syncedAt', 'offline'].map(key => [`缺 ${key}`, { resources: [without(key)] }]),
-    ['fields 项缺 value', { resources: [{ ...machine, fields: [{ name: 'os' }] }] }],
-    ['syncedAt 是字符串', { resources: [{ ...machine, syncedAt: '2026-11-20' }] }],
-    ['local 不是布尔', { resources: [{ ...machine, local: 'yes' }] }],
-    ['offline 不是布尔', { resources: [{ ...machine, offline: 'no' }] }],
-    ['多余的键', { resources: [{ ...machine, extra: 1 }] }],
-  ]) assert.equal(result(value), false, what);
-});
-
 test('a protocol is implemented by the module (a name) or in part by commands (an object), once', () => {
   const dir = mkdtempSync(join(tmpdir(), 'coda-protocol-'));
   after(() => rmSync(dir, { recursive: true, force: true }));
@@ -668,7 +535,7 @@ test('an operation sits in at most one permission group; core groups follow the 
   assert.deepEqual(groups(AGENT_PROTOCOL), { read: { trial: true, read: true }, spawn: { trial: true, operations: ['spawn'] } });
   assert.deepEqual(groups(SESSION_PROTOCOL), { read: { trial: true, read: true, operations: ['read'] }, post: { trial: true, operations: ['post'] } });
   assert.deepEqual(groups(ENVIRONMENT_PROTOCOL), { read: { trial: true, read: true, operations: ['list', 'read'] } });
-  assert.deepEqual(groups(RESOURCE_PROTOCOL), { read: { trial: true, read: true, operations: ['list'] }, act: { trial: true, operations: ['act', 'sign-in', 'install'] } });
+  assert.deepEqual(groups(RESOURCE_PROTOCOL), { read: { trial: true, read: true }, act: { trial: true, operations: ['act', 'sign-in', 'install'] } });
   assert.ok(!Object.values(SESSION_PROTOCOL.permissions).some(group => group.operations?.includes('draft')));
   assert.equal(definitionProblem(grouped({ read: { title: '读取任务', operations: ['peek'] } })), null);
 
