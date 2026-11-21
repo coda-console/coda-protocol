@@ -5,8 +5,8 @@
   "description": "字段须为对象",
   "type": "object",
   "allOf": [
-    {"required": ["type"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view、choices"},
-    {"properties": {"type": {"enum": ["markdown", "code", "image", "text", "secret", "link", "view", "choices"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view、choices"}}},
+    {"required": ["type"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view、choices、operations"},
+    {"properties": {"type": {"enum": ["markdown", "code", "image", "text", "secret", "link", "view", "choices", "operations"], "description": "字段的 type 只能是 markdown、code、image、text、secret、link、view、choices、operations"}}},
     {"if": {"properties": {"type": {"const": "markdown"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/markdown"}},
     {"if": {"properties": {"type": {"const": "code"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/code"}},
     {"if": {"properties": {"type": {"const": "image"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/image"}},
@@ -14,7 +14,8 @@
     {"if": {"properties": {"type": {"const": "secret"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/secret"}},
     {"if": {"properties": {"type": {"const": "link"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/link"}},
     {"if": {"properties": {"type": {"const": "view"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/view"}},
-    {"if": {"properties": {"type": {"const": "choices"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/choices"}}
+    {"if": {"properties": {"type": {"const": "choices"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/choices"}},
+    {"if": {"properties": {"type": {"const": "operations"}}, "required": ["type"]}, "then": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/operations"}}
   ],
   "$defs": {
     "markdown": {
@@ -271,6 +272,62 @@
         {"required": ["id"], "description": "须有 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）"},
         {"required": ["label"], "description": "须写 label"},
         {"required": ["options"], "description": "须写 options"}
+      ]
+    },
+    "operations": {
+      "$comment": "一组客户端操作：卡片上显示为一个按钮，用户点一下，客户端按顺序在本机执行 steps。操作有哪些、怎么执行由客户端决定，协议只定形状；显示字段，不进答复。into 须是同一张卡上的 text 或 secret 字段的 id（也就不会是这个字段自己）；单个字段读不到整张卡，这一条由 values.json 的 UserTask.children 查。",
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {"const": "operations"},
+            "id": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/id"},
+            "label": {"$ref": "https://coda.pub/schema/bpmn/1.0/fields.json#/$defs/label"},
+            "steps": {
+              "x-deferred": {
+                "x-json": {
+                  "schema": {
+                    "description": "steps 须为不超过 32768 字节的 JSON 数组",
+                    "allOf": [
+                      {"type": "array", "description": "steps 须为步骤的 JSON 数组"},
+                      {"minItems": 1, "maxItems": 20, "description": "steps 须有 1–20 个步骤"},
+                      {
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "op": {
+                              "type": "string",
+                              "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)+$",
+                              "x-length": 64,
+                              "description": "步骤的 op 须为小写点分名字（至少两段，每段小写字母开头，只含小写字母、数字，第二段起可含「-」），最长 64 个字符"
+                            },
+                            "args": {
+                              "type": "object",
+                              "additionalProperties": {"type": ["string", "number", "boolean"], "description": "步骤的 args 的值只能是字符串、数字或布尔"},
+                              "description": "步骤的 args 须为 JSON 对象"
+                            },
+                            "into": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+                              "description": "步骤的 into 须为字段 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）"
+                            }
+                          },
+                          "required": ["op"],
+                          "additionalProperties": false,
+                          "description": "步骤须为对象，有 op，可有 args 与 into"
+                        }
+                      }
+                    ]
+                  },
+                  "maxBytes": 32768
+                },
+                "description": "steps 须为步骤的 JSON 数组"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {"required": ["steps"], "description": "须写 steps"}
       ]
     },
     "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$", "description": "须有 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）"},

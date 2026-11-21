@@ -18,9 +18,11 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 流程方言的 **勾选项**写在答复（外层的 `coda:choice`）里：`coda:option` 是一项，`coda:optionList` 的 `value` 是一个表达式，任务打开时读出一组勾选项（列表或它的 JSON），在它写的位置展开，两者按写的顺序排。`<coda:options>` 不是它的写法（那个名字是答复自己的勾选项集合）。定义里每个 `coda:optionList` 算一项；打开后的整组由 `workflow/options.json` 定义：每项是 `{ id, name, detail?, default?, inputs? }`（`default` 为布尔值，没有 `shown`），最多 12 项，id 不重复；`inputs` 是勾上这一项时卡片上出现的文字输入，每个 `{ id, label }`，一项最多 4 个、id 不重复，几项带同一个 id 时卡上只出一个。`optionsProblem(options, where)` 检查一个答复打开后的整组（静态项已求值、各组已展开），合法时返回 `null`，否则返回「位置：说明」；表达式求值与展开仍由 Coda 完成。
 
-流程方言的 **卡片字段**由 `workflow/fields.json` 定义：八种字段各能写哪些属性、必填项、文字长度与单行限制、路径与网址、视图参数、输入框与密钥选项、多选的选项表；`values.json` 的 `Field` 引用它，`Fields` 声明读出 JSON 字段列表的表达式，`UserTask.children` 限定最多 12 个静态字段、id 不重复，以及全部字段已知时答复的 `fields` 只能引用输入字段（含按住出现的答复）。
+流程方言的 **卡片字段**由 `workflow/fields.json` 定义：九种字段各能写哪些属性、必填项、文字长度与单行限制、路径与网址、视图参数、输入框与密钥选项、多选的选项表、一组客户端操作；`values.json` 的 `Field` 引用它，`Fields` 声明读出 JSON 字段列表的表达式，`UserTask.children` 限定最多 12 个静态字段、id 不重复，以及全部字段已知时答复的 `fields` 只能引用输入字段（含按住出现的答复）。
 
 输入字段有 `text`、`secret` 与多选 `choices`。`choices` 的 `options` 是选项表，每项 `{ id, label, detail?, disabled? }`（`id` 一行、1–64 个字、前后不带空白、表中不重复，`label` 一行、1–80 个字、前后不带空白，`detail` 一行不超过 200 字，`disabled` 为 true 的列出但不能勾），1–32 项，至少一项能勾；`default` 是初始勾上的选项 id，每个须是 options 里能勾的一项，不写就是都不勾；两者都可写表达式在任务打开时读，读出（或直接写下）的是 JSON 数组或它的文字。`required`（默认 true）要求至少勾一项。答复是勾中项的 id 组成的数组，按 options 的顺序，在答复的 `values.<id>` 里（其余输入是文字，它是数组），流程读 `=<任务>.values.<id>`，是 FEEL 列表；它不认识机器或别的什么，选项的意思由给出它的步骤定（如 `check-setting` 的 `machines`）。
+
+显示字段（`markdown`、`code`、`image`、`link`、`view`、`operations`）不进答复，不能写 `required`、`default` 之类输入属性。`operations` 是一组客户端操作：卡片上点一下，客户端按顺序在本机执行。`steps` 必写，是 1–20 项的 JSON 数组（或它的文字，可写表达式在任务打开时读），每项 `{ op, args?, into? }`，不许别的键：`op` 是小写点分名字（至少两段，每段小写字母开头，只含小写字母、数字，第二段起可含「-」，如 `space.create`），最长 64 个字符；`args` 是 JSON 对象，值只能是字符串、数字或布尔，不能嵌套对象、数组或 null；`into` 是同一张卡上另一个字段的 id。`steps` 不超过 32768 字节；`label` 可选，是这组操作的标题。操作有哪些、怎么执行由客户端决定，协议只定形状。`into` 须指向同一张卡上已声明的 `text` 或 `secret` 字段，这个字段自己是 `operations`，所以也不会指到自己：用 `x-ref` 在整卡的校验（`values.json` 的 `UserTask.children`）里查，`steps` 是数组或 JSON 文字都一样。读定义时查静态字段（卡上有 `coda:fields` 时不查，那时整张卡还不知道）；`fieldsProblem` 查展开后的整张卡，与 `workflowProblem` 说法相同。单独的 `fieldProblem` 只看一个字段，只查 `into` 是字段 id 的写法。
 
 脚本步骤的 **工作副本** 由 `coda:source` 声明：这一步在哪个工作副本目录里跑，写本机上的绝对路径，可以写 FEEL 表达式。它只用于 `coda:checkout="false"` 的步骤：在那个目录里就地跑，不检出提交。
 
