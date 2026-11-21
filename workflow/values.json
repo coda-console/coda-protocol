@@ -214,6 +214,42 @@
           "if": {"not": {"properties": {"fields": {"minItems": 1}}, "required": ["fields"]}},
           "then": {
             "properties": {
+              "field": {
+                "items": {
+                  "if": {"properties": {"type": {"const": "operations"}}, "required": ["type"]},
+                  "then": {
+                    "if": {"properties": {"steps": {"x-json": {"schema": true, "maxBytes": 32768}}}, "required": ["steps"]},
+                    "then": {
+                      "properties": {
+                        "steps": {
+                          "x-deferred": {
+                            "x-json": {
+                              "schema": {
+                                "items": {
+                                  "properties": {
+                                    "into": {
+                                      "if": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$"},
+                                      "then": {
+                                        "x-ref": {
+                                          "pointer": "4",
+                                          "key": "id",
+                                          "match": {"type": "object", "required": ["type"], "properties": {"type": {"enum": ["text", "secret"]}}}
+                                        },
+                                        "description": "步骤的 into 里的 {value} 不是这个任务的 text 或 secret 字段"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "maxBytes": 32768
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
               "choice": {
                 "items": {
                   "allOf": [

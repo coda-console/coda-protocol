@@ -2,6 +2,15 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.19.0 — 2026-11-21
+
+- 这是在 6.18.0 之上的次版本。依据 README「版本」一节：流程方言是内部面，新增字段类型升次版本；`stable/` 不动。
+- 卡片字段新增类型 `operations`（`workflow/fields.json`）：一组客户端操作，用户点一下，客户端按顺序在本机执行。属性 `steps`（必写）、`label`（可选）、`id`；显示字段，不进答复，不能写 `required`、`default`。`steps` 是 1–20 项的 JSON 数组（或它的文字，可写表达式在任务打开时读，同 `options`），不超过 32768 字节；每项 `{ op, args?, into? }`，不许别的键。`op` 是小写点分名字，正则 `^[a-z][a-z0-9]*(\.[a-z][a-z0-9-]*)+$`，至多 64 个字符；`args` 是 JSON 对象，值只能是字符串、数字或布尔；`into` 是字段 id 的写法。操作有哪些、怎么执行不进协议，由客户端决定。
+- `workflow/moddle.json` 的 `coda:Field` 加属性 `steps`（String，承载 JSON 文字，同 `view` 的 `args`）。
+- `into` 须指向同一张卡上已声明的 `text` 或 `secret` 字段，且不能指向自己：由协议校验，复用 `x-ref`，写在 `values.json` 的 `UserTask.children`（整卡）里，没有新关键字。目标只认 `text`、`secret`，`operations` 字段自己是 `operations`，所以自然不能指向自己。`steps` 是数组或 JSON 文字都查；表达式或含 `{{ }}` 的 `steps` 定义时不查。读定义时查静态字段，卡上有 `coda:fields` 时留到展开后；`fieldsProblem` 查展开后的整张卡，错误说「ask 的字段 go：步骤的 into 里的 … 不是这个任务的 text 或 secret 字段」（`workflowProblem` 说「… 的 coda:field go：…」）。单独的 `fieldProblem` 只看一个字段，只查 `into` 的写法。
+- `fieldsProblem` 改按整张卡（`{ field: 列表 }`）对 `UserTask.children` 校验，字段 id 重复的说法不变。
+- 字段 `type` 的枚举与说明加上 `operations`。
+
 ## 6.18.0 — 2026-11-20
 
 - 这是在 6.17.0 之上的次版本。依据 README「版本」一节：这三个键都不在 `stable/manifest.json`，是内部面，删内部键升次版本；`stable-grows` 与 `test/stable.test.mjs` 不受影响（Coda 宿主设计 coda#2749 H9-C）。

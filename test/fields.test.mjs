@@ -11,9 +11,11 @@ const text = { type: 'text', id: 'a', label: '名称' }, secret = { type: 'secre
 const view = { type: 'view', label: '查看', plugin: 'remote', view: 'desktop' };
 const machines = [{ id: '49057de5-4a09-465b-af32-2c3bc655bfab', label: '本机' }, { id: 'rig', label: 'rig', detail: '离线' }, { id: 'phone', label: 'xiaomi', detail: '没有装这个插件', disabled: true }];
 const choices = { type: 'choices', id: 'machines', label: '写到', options: machines };
+const steps = [{ op: 'space.create', args: { name: 'lane', size: 3, shared: false } }, { op: 'machine.open' }];
+const operations = { type: 'operations', id: 'go', label: '一键泳道环境', steps };
 const missing = (raw, key) => Object.fromEntries(Object.entries(raw).filter(([name]) => name !== key));
 const idSaid = '须有 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）';
-const typesSaid = '字段的 type 只能是 markdown、code、image、text、secret、link、view、choices';
+const typesSaid = '字段的 type 只能是 markdown、code、image、text、secret、link、view、choices、operations';
 const keepSaid = 'keep 只能是 session（写进会话的密钥目录，流程拿到路径）、memory（只在后端内存里，本会话的桌面动作可反复用，流程拿到句柄）或 use（只在后端内存里，流程拿到句柄，用一次）';
 const cases = [
   [{}, typesSaid], [{ type: 'video' }, typesSaid],
@@ -189,7 +191,7 @@ test('task-wide rules count declarations, distinguish ids and resolve choice inp
 
 test('each type allows only its declared attributes, including object-owned names supplied as extra keys', async () => {
   const examples = [{ type: 'markdown', text: 'x' }, { type: 'code', text: 'x' }, { type: 'image', src: '/tmp/x' },
-    { ...text }, { ...secret }, { type: 'link', label: 'L', href: 'https://example.com' }, { ...view }, { ...choices }];
+    { ...text }, { ...secret }, { type: 'link', label: 'L', href: 'https://example.com' }, { ...view }, { ...choices }, { ...operations }];
   const keys = new Set(examples.flatMap(field => Object.keys(CODA_FIELDS.$defs[field.type].allOf[0].properties)));
   for (const field of examples) {
     const allowed = CODA_FIELDS.$defs[field.type].allOf[0].properties;
@@ -298,4 +300,105 @@ test('a choices field is an input: an answer may send it, the task is the user\'
   assert.equal(fieldsProblem([choices, { ...text, id: 'note' }], 'ask'), null);
   assert.equal(fieldsProblem([choices, { ...choices, options: [] }], 'ask'), 'ask 的字段 machines：options 须有 1–32 个选项');
   assert.equal(fieldsProblem([choices, { ...text, id: 'machines' }], 'ask'), 'ask：字段 id 重复：machines');
+});
+
+// An operations field: steps to run on the user's machine when the card's button is tapped, each { op, args?, into? }. A display
+// field: it takes no answer, so it has no required or default. `into` names a text or secret field of the same card.
+const opSaid = '步骤的 op 须为小写点分名字（至少两段，每段小写字母开头，只含小写字母、数字，第二段起可含「-」），最长 64 个字符';
+const stepSaid = '步骤须为对象，有 op，可有 args 与 into';
+const argSaid = '步骤的 args 的值只能是字符串、数字或布尔';
+const step = { op: 'space.create' };
+const operationsCases = [
+  [missing(operations, 'steps'), '须写 steps'], [{ ...operations, label: 'x'.repeat(41) }, 'label 须为一行、1–40 个字'],
+  [{ ...operations, label: 'a\nb' }, 'label 须为一行、1–40 个字'], [{ ...operations, id: '_go' }, idSaid],
+  [{ ...operations, steps: 'broken' }, 'steps 须为步骤的 JSON 数组'],
+  ...['{}', '"x"', 'null', '42'].map(value => [{ ...operations, steps: value }, 'steps 须为步骤的 JSON 数组']),
+  [{ ...operations, steps: [] }, 'steps 须有 1–20 个步骤'], [{ ...operations, steps: '[]' }, 'steps 须有 1–20 个步骤'],
+  [{ ...operations, steps: Array(21).fill(step) }, 'steps 须有 1–20 个步骤'],
+  [{ ...operations, steps: [{ op: 'a.b', args: { a: '界'.repeat(11000) } }] }, 'steps 须为不超过 32768 字节的 JSON 数组'],
+  ...[null, 'space.create', ['space.create']].map(value => [{ ...operations, steps: [value] }, stepSaid]),
+  [{ ...operations, steps: [{}] }, stepSaid], [{ ...operations, steps: [{ args: {} }] }, stepSaid],
+  [{ ...operations, steps: [{ ...step, extra: 1 }] }, stepSaid], [{ ...operations, steps: [{ ...step, Into: 'a' }] }, stepSaid],
+  ...['space', 'Space.create', 'space.Create', 'space..create', '.create', 'space.', '1space.create', 'space.1', 'space.cre_ate', 'sp-ace.create', 'space create', ' space.create', 'space.create\n', 42, null]
+    .map(op => [{ ...operations, steps: [{ op }] }, opSaid]),
+  [{ ...operations, steps: [{ op: `a.${'b'.repeat(63)}` }] }, opSaid],
+  ...[{ x: {} }, { x: { y: 1 } }, { x: [] }, { x: [1] }, { x: null }].map(args => [{ ...operations, steps: [{ ...step, args }] }, argSaid]),
+  ...[[], null, 'x', 1, true].map(args => [{ ...operations, steps: [{ ...step, args }] }, '步骤的 args 须为 JSON 对象']),
+  ...['', 'a b', '-a', 'a.b', 'x'.repeat(41), 1, null, {}].map(into => [{ ...operations, steps: [{ ...step, into }] }, '步骤的 into 须为字段 id（字母或数字开头的字母、数字、「_」「-」，最长 40 个字符）']),
+  [{ ...operations, required: true }, `operations 字段没有 required，可写 type、id、label、steps`],
+  [{ ...operations, default: 'x' }, `operations 字段没有 default，可写 type、id、label、steps`],
+  [{ ...operations, text: 'x' }, `operations 字段没有 text，可写 type、id、label、steps`],
+];
+for (const [index, [field, description]] of operationsCases.entries()) test(`operations rule ${index + 1}: ${description}`, async () => {
+  assert.equal(fieldProblem(field, 'ask'), `ask：${description}`);
+  assert.equal(await workflowProblem(workflow(fieldXML(field))), `ask 的 coda:field${field.id ? ` ${field.id}` : ''}：${description}`);
+});
+
+test('an operations field takes steps as a JSON array or its text, with scalar args only, and leaves them as they are', async () => {
+  const good = [operations, missing(operations, 'id'), missing(missing(operations, 'id'), 'label'), { ...operations, steps: JSON.stringify(steps) },
+    { ...operations, steps: [{ op: 'a.b' }] }, { ...operations, steps: [{ op: 'a.b-c.d', args: {} }] }, { ...operations, steps: [{ op: `a.${'b'.repeat(62)}` }] },
+    { ...operations, steps: Array(20).fill({ op: 'a1.b2', args: { s: '', n: 1.5, z: 0, t: true, f: false, nested: '{"not":"parsed"}' } }) }];
+  for (const field of good) {
+    const before = structuredClone(field);
+    assert.equal(fieldProblem(field), null, JSON.stringify(field));
+    assert.deepEqual(field, before);
+    assert.equal(await workflowProblem(workflow(fieldXML(field))), null, JSON.stringify(field));
+  }
+  const { root } = await readWorkflow(workflow(fieldXML(operations)));
+  const parsed = root.rootElements[0].flowElements.find(e => e.id === 'ask').extensionElements.values[0];
+  assert.equal(parsed.steps, JSON.stringify(steps));
+  // Read as the task opens, like view's args: an expression is deferred in a definition, and is content at runtime.
+  assert.equal(await workflowProblem(workflow(fieldXML({ ...operations, steps: '=inputs.steps' }))), null);
+  assert.equal(await workflowProblem(workflow(fieldXML({ ...operations, label: '=inputs.label' }))), null);
+  assert.equal(fieldProblem({ ...operations, steps: '=inputs.steps' }), '字段：steps 须为步骤的 JSON 数组');
+});
+
+// `into` names a text or secret field declared on the same card; that is never the operations field itself. Checked on the static
+// fields of a definition, and on the whole list once a coda:fields expression has expanded.
+const into = (...ids) => ({ ...operations, steps: ids.map(id => ({ op: 'a.b', into: id })) });
+const targets = [{ ...text, id: 'name' }, { ...secret, id: '0' }, { ...text, id: 'constructor' }, { ...text, id: 'x'.repeat(40) }];
+const intoSaid = name => `步骤的 into 里的 ${name} 不是这个任务的 text 或 secret 字段`;
+const intoCases = [
+  [[...targets, { type: 'markdown', id: 'note', text: 'x' }, into('missing')], 'missing', 'go'],
+  [[...targets, { type: 'markdown', id: 'note', text: 'x' }, into('note')], 'note', 'go'],
+  [[...targets, { type: 'markdown', id: 'note', text: 'x' }, into('name', 'note')], 'note', 'go'],
+  [[...targets, { ...choices, id: 'pick' }, into('pick')], 'pick', 'go'],
+  [[...targets, { type: 'link', id: 'page', label: 'L', href: 'https://example.com' }, into('page')], 'page', 'go'],
+  [[...targets, into('go')], 'go', 'go'],
+  [[...targets, { ...into('name'), id: 'first' }, { ...into('first'), id: 'second' }], 'first', 'second'],
+  [[...targets, { ...missing(operations, 'id'), steps: [{ op: 'a.b', into: 'missing' }] }], 'missing', undefined],
+  [[...targets, { ...operations, steps: JSON.stringify([{ op: 'a.b', into: 'name' }, { op: 'a.b', into: 'missing' }]) }], 'missing', 'go'],
+  [[{ ...operations, steps: JSON.stringify([{ op: 'a.b', into: 'name' }]) }], 'name', 'go'],
+];
+for (const [index, [fields, name, id]] of intoCases.entries()) test(`operations into ${index + 1}: ${name}`, async () => {
+  assert.equal(fieldsProblem(fields, 'ask'), `ask 的字段 ${id ?? fields.findIndex(field => field.type === 'operations') + 1}：${intoSaid(name)}`);
+  assert.equal(await workflowProblem(workflow(fields.map(fieldXML).join(''))), `ask 的 coda:field${id ? ` ${id}` : ''}：${intoSaid(name)}`);
+});
+
+test('an operations step\'s into may name any text or secret field of the card, in any order, as an array or as JSON text', async () => {
+  const good = [
+    [...targets, into('name', '0', 'constructor', 'x'.repeat(40))],
+    [into('name'), ...targets],
+    [...targets, { ...operations, steps: JSON.stringify([{ op: 'a.b', into: 'name' }, { op: 'a.b' }]) }],
+    [...targets, { type: 'operations', steps: [{ op: 'a.b', into: 'name' }] }, { ...into('0'), id: 'again' }],
+  ];
+  for (const fields of good) {
+    assert.equal(fieldsProblem(fields, 'ask'), null, JSON.stringify(fields));
+    assert.equal(await workflowProblem(workflow(fields.map(fieldXML).join(''))), null, JSON.stringify(fields));
+  }
+});
+
+test('into is checked after coda:fields expands, not against the static fields alone', async () => {
+  // In a definition the rest of the card is not known yet; the expanded list is checked as a whole.
+  assert.equal(await workflowProblem(workflow(fieldXML(into('later')) + '<coda:fields value="=inputs.fields"/>')), null);
+  assert.equal(fieldsProblem([{ ...text, id: 'later' }, into('later')], 'ask'), null);
+  assert.equal(fieldsProblem([into('later')], 'ask'), `ask 的字段 go：${intoSaid('later')}`);
+  // Expressions and templates are read when the task opens.
+  assert.equal(await workflowProblem(workflow(fieldXML({ ...operations, steps: '=inputs.steps' }))), null);
+  assert.equal(await workflowProblem(workflow(fieldXML({ ...operations, steps: '[{"op":"a.b","into":"{{ inputs.id }}"}]' }))), null);
+});
+
+test('an operations field is a display field: an answer cannot send it', async () => {
+  const choice = fields => `<coda:choice id="apply" name="应用" primary="true" fields="${fields}"/>`;
+  assert.equal(await workflowProblem(workflow(fieldXML(operations) + choice('go'))), 'ask 的 coda:choice apply：fields 里的 go 不是这个任务的输入字段');
 });

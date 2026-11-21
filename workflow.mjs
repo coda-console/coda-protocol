@@ -191,8 +191,14 @@ export function fieldsProblem(list, where = '任务') {
     const problem = fieldProblem(field, `${where} 的字段 ${typeof field?.id === 'string' ? field.id : index + 1}`);
     if (problem) return problem;
   }
-  const validate = ajv.getSchema(`${values.$id}#/$defs/UserTask.children/properties/field`);
-  return validate(list) ? null : `${where}：字段 id 重复：${validate.errors[0].message.slice('id 不能重复：'.length)}`;
+  const validate = ajv.getSchema(`${values.$id}#/$defs/UserTask.children`);
+  if (validate({ field: list })) return null;
+  const error = validate.errors[0];
+  if (error.keyword === 'x-ref') {
+    const index = Number(error.instancePath.split('/')[2]), id = list[index].id;
+    return `${where} 的字段 ${typeof id === 'string' ? id : index + 1}：${description(error)}`;
+  }
+  return `${where}：字段 id 重复：${error.message.slice('id 不能重复：'.length)}`;
 }
 // One answer's options as the task opens: the static ones resolved and each coda:optionList read and put where it is
 // written, in order. Each is an object of id, name and optionally detail and a boolean default; at most 12, ids unique.
@@ -247,9 +253,14 @@ function valuesProblem(root) {
     let problem = failed(validate, grouped, at, false);
     if (problem && validate.errors[0].keyword === 'x-ref') {
       const error = validate.errors[0], path = error.instancePath.split('/').slice(1);
-      let parent = grouped;
-      for (const key of path.slice(0, -1)) parent = parent[key];
-      problem = `${at} 的 coda:choice ${parent.id}：${description(error)}`;
+      if (path[0] === 'field') {
+        const id = grouped.field[path[1]].id;
+        problem = `${at} 的 coda:field${id ? ` ${id}` : ''}：${description(error)}`;
+      } else {
+        let parent = grouped;
+        for (const key of path.slice(0, -1)) parent = parent[key];
+        problem = `${at} 的 coda:choice ${parent.id}：${description(error)}`;
+      }
     }
     if (problem && validate.errors[0].keyword === 'x-unique-by' && validate.errors[0].instancePath === '/field')
       problem = `${at}：字段 id 重复：${validate.errors[0].message.slice('id 不能重复：'.length)}`;
