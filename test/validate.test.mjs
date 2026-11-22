@@ -357,3 +357,15 @@ test('x-ref can name an array item by its own property, with each separated name
     assert.equal(pointProblem(schema, { items, uses }, '引用'), '引用.uses：引用一个可用项');
   assert.equal(pointProblem(schema, { items: [Object.create({ id: 'inherited', enabled: true })], uses: 'inherited' }, '引用'), '引用.uses：引用一个可用项');
 });
+
+test('a manifest\'s optionalUses has the same shape as uses', () => {
+  const good = [{ 'coda/friend@1': ['read'] }, { 'coda/friend@1': ['read', 'write'], 'my-plugin/task@2': ['go'] }, {}];
+  for (const optionalUses of good) assert.equal(manifestProblem({ id: 'my-plugin', optionalUses }), null, JSON.stringify(optionalUses));
+  assert.equal(manifestProblem({ id: 'my-plugin', uses: { 'coda/session@1': ['read'] }, optionalUses: { 'coda/friend@1': ['read'] } }), null);
+  for (const optionalUses of [{ 'coda/friend@1': [] }, { 'coda/friend@1': ['read', 'read'] }, { 'coda/friend@1': ['Read'] }, { 'coda/friend@1': [1] },
+    { 'coda/friend@1': 'read' }, { 'coda/friend': ['read'] }, { 'Coda/friend@1': ['read'] }, ['coda/friend@1'], 'coda/friend@1', null,
+    { 'coda/friend@1': Array.from({ length: 51 }, (_, i) => `g${i}`) },
+    Object.fromEntries(Array.from({ length: 101 }, (_, i) => [`p/n${i}@1`, ['read']]))])
+    assert.match(manifestProblem({ id: 'my-plugin', optionalUses }), /optionalUses/, JSON.stringify(optionalUses).slice(0, 80));
+  assert.equal(manifestProblem({ id: 'my-plugin', optionalUses: { 'coda/friend@1': Array.from({ length: 50 }, (_, i) => `g${i}`) } }), null);
+});

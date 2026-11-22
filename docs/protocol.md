@@ -275,7 +275,7 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 
 ### 权限组
 
-一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的操作、流、事件与记录的读取分成组，插件在清单的 `uses` 里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
+一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的操作、流、事件与记录的读取分成组，插件在清单的 `uses`（必需）或 `optionalUses`（可选）里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
 
 | 字段 | 含义 |
 | --- | --- |
@@ -283,7 +283,7 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 | `trial` | 可选，布尔，这组是否试行；只影响展示，不影响能否调用 |
 | `operations` | 可选，不重复的操作名数组，归这组管的操作 |
 | `streams` | 可选，不重复的流名数组，归这组管的流 |
-| `events` | 可选，至少一项、不重复的事件名数组，归这组管的事件；插件在 `uses` 里写了这组，就是订了组里全部事件 |
+| `events` | 可选，至少一项、不重复的事件名数组，归这组管的事件；插件在 `uses` 或 `optionalUses` 里写了这组，就是订了组里全部事件 |
 | `read` | 可选，布尔，管不管读这个协议的记录（get、list、watch）。写记录只许实现方，不分给插件 |
 
 不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作、每条流、每个事件最多属于一组；组里列的操作都在 `operations` 里，列的流都在 `streams` 里，列的事件都在 `events` 里；每组至少管一样东西（有操作、有流、有事件，或 `read` 为 true）；有 `events` 的组只放事件：`events` 至少一项，且不能再出现 `operations`、`streams`、`read` 这几个键，写成 `[]` 或 `false` 也不行。**不在任何组里的操作、流和事件不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
@@ -309,7 +309,7 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 | `coda/resource@1` | `read` | 查看资源类型与它们的读数 | 读记录 |
 | | `act` | 做资源上的动作、登录和安装 | `act`、`sign-in`、`install` |
 
-插件申请权限写在清单根的 `uses`（见「插件清单」）。
+插件申请权限写在清单根的 `uses`（必需）或 `optionalUses`（可选）里（见「插件清单」）。可选权限缺席时不阻止插件运行，可用性判定与鉴权由 Coda 宿主负责。
 
 ## 插件清单
 
@@ -352,7 +352,7 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 - `every`：可选，定时重跑的间隔，ISO 8601 风格：周 `W`、天 `D`、时 `H`、分 `M`、秒 `S`（如 `PT5M`、`PT90S`、`P1W1D`），只有秒能带小数点，不收年、月；不短于 `PT1M`；不写就不定时。下限 schema 表达不了，由 Coda 判。
 - 不许别的键。命令怎么跑、打印什么由 Coda 的文档讲，这里不重述。
 
-插件用到别的协议的权限，写在清单根的 `uses`，不放进 `contributes`（`contributes` 里只有 Coda 认得的键）。键是带大版本的协议名，值是权限组名的数组，至少一项、不重复：
+插件用到别的协议的权限，必需的写在清单根的 `uses`，可选的写在 `optionalUses`（见下），都不放进 `contributes`（`contributes` 里只有 Coda 认得的键）。键是带大版本的协议名，值是权限组名的数组，至少一项、不重复：
 
 ```json
 {
@@ -362,6 +362,8 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 ```
 
 协议名与组名只查写法；协议和组在不在目录里，由 Coda 校验。实现一个协议不用在 `uses` 里申请它。
+
+可选用到的协议写在 `optionalUses`，形状与 `uses` 完全相同。对应的协议、权限组或提供方缺席、未启用、停用时不阻止插件运行；可用不可用的判定与鉴权由 Coda 宿主负责，协议包只校验形状。
 
 清单根上的 `engines.coda` 写插件要的最低 Coda API Level，正整数（`0`、负数、小数、字符串都被拒）；不写视为不限。`engines` 里的其余键（如 `node`）不管：
 
