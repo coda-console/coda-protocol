@@ -2,6 +2,13 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.23.0 — 2026-11-23
+
+- 这是在 6.22.0 之上的次版本。依据 README「版本」一节：新增导出是内部面，升次版本；`stable/` 不动，清单与协议的 schema 没改。这一版把 `@coda-console/plugin-check` 里不依赖 Coda 宿主运行时的两样迁进本包，供 Coda 与各插件仓库直接依赖。
+- 新增导出 `./types`（`plugin.d.mts`）：插件模块的公开 TypeScript 类型（`Json`、`Ref`、`KeyRef`、`Context`、`Handler`、`Coda`、`ViewInstance` 等），与此前 `plugin-check` 的 `./types` 同源，只去掉了测试宿主专用的声明（`TestHost`、`TestPlugin`、`TestCallOptions`、`ProtocolImplementation`、`createTestHost`、`TEST_OWNER`）。TypeScript 与 `@ts-check` 的 JSDoc 都能解析。
+- `./validate` 新增 `resourceRecordsProblem(output)`：一个插件为 `coda/resource@1` 写的记录（命令输出，已解析）按 Coda 收的标准查，合乎返回 `null`，否则是第一处问题的说明，按记录在数组里的位置说。查的是：顶层为数组；每条序列化后至多 64 KiB（不能序列化的，如循环引用、BigInt，说出原因，不抛）；每条是不带 `id` 的对象，`key` 为 1–256 个字符、不含 NUL 且不重复；除 `key` 外只有 `spec`、`status`、`labels`，`labels` 写了须为 `null` 或值为文本的对象；`spec`、`status`（写了才查）合 `RESOURCE_PROTOCOL` 的 schema；`spec.type` 与 `key` 相同；按钮的 `args` 序列化后至多 4096 字节。纯函数，不读文件、不跑命令。`validate.mjs` 与 `protocol.mjs` 共用同一份 `RESOURCE_PROTOCOL`（新增内部文件 `resource-protocol.mjs`，随包发布，不是导出）；`./protocol` 的导出不变。
+- `./types` 引用了 `node:http`、`node:stream` 的类型，类型检查时使用方须自己装 `@types/node`；本包不依赖它。
+
 ## 6.22.0 — 2026-11-22
 
 - 这是在 6.21.0 之上的次版本。依据 README「版本」一节：新增可选的清单键升次版本；`optionalUses` 暂不进稳定面，`stable/` 不动，旧清单不受影响。

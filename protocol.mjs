@@ -2,6 +2,7 @@
 // record format (spec/status JSON Schemas) and operations (input plus an immediate result schema or a run reference).
 // Nothing here reads a live Coda store or decides who may call what.
 import { readFileSync } from 'node:fs';
+import { RESOURCE_PROTOCOL } from './resource-protocol.mjs';
 import { explain, newAjv } from './validate.mjs';
 
 const base = new URL('./schemas/protocol/v1/', import.meta.url);
@@ -15,7 +16,7 @@ export const AGENT_PROTOCOL = read('agent.json');
 export const SESSION_PROTOCOL = read('session.json');
 export const ENVIRONMENT_PROTOCOL = read('environment.json');
 export const CARD_PROTOCOL = read('card.json');
-export const RESOURCE_PROTOCOL = read('resource.json');
+export { RESOURCE_PROTOCOL };
 export const CORE_PROTOCOLS = Object.freeze(Object.fromEntries(
   [RUN_PROTOCOL, AGENT_PROTOCOL, SESSION_PROTOCOL, ENVIRONMENT_PROTOCOL, CARD_PROTOCOL, RESOURCE_PROTOCOL].map(protocol => [protocol.name, protocol])));
 
