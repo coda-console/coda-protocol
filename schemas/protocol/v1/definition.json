@@ -34,7 +34,7 @@
       "additionalProperties": {"$ref": "#/$defs/event"}
     },
     "permissions": {
-      "description": "权限组：组名 → 一组对插件开放的能力。插件在清单的 uses 里按组申请，没申请的调用被宿主拒绝。每个操作、每条流、每个事件最多属于一组，组里列的操作、流与事件都存在，每组至少管一样东西（有操作、有流、有事件，或 read 为真），有 events 的组不能再有 operations、streams、read 这几个键；没写 spec、status 的协议不能有非空的 operations、streams，也不能有 read 为真的组；这些由 definitionProblem 查。不在任何组里的操作、流和事件不对插件开放，只有 Coda 自己和它的客户端调；不写 permissions 就是整个协议都不分组",
+      "description": "权限组：组名 → 一组对插件开放的能力。插件在清单的 uses（必需）或 optionalUses（可选）里按组申请，没申请的调用被宿主拒绝；可选权限缺席时不阻止插件运行，可用性判定与鉴权由 Coda 宿主负责。每个操作、每条流、每个事件最多属于一组，组里列的操作、流与事件都存在，每组至少管一样东西（有操作、有流、有事件，或 read 为真），有 events 的组不能再有 operations、streams、read 这几个键；没写 spec、status 的协议不能有非空的 operations、streams，也不能有 read 为真的组；这些由 definitionProblem 查。不在任何组里的操作、流和事件不对插件开放，只有 Coda 自己和它的客户端调；不写 permissions 就是整个协议都不分组",
       "type": "object",
       "maxProperties": 50,
       "propertyNames": {"$ref": "#/$defs/operationName"},
@@ -64,7 +64,7 @@
       "pattern": "^[a-z][a-z0-9-]{0,62}$"
     },
     "operationName": {
-      "description": "操作名，也是流名与权限组名（协议定义的 streams、permissions 的键、清单 uses 里的组名）：小写字母开头，只用小写字母、数字和「-」，不超过 64 个字符",
+      "description": "操作名，也是流名与权限组名（协议定义的 streams、permissions 的键、清单 uses、optionalUses 里的组名）：小写字母开头，只用小写字母、数字和「-」，不超过 64 个字符",
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{0,63}$"
     },
@@ -80,7 +80,7 @@
     "title": {"description": "给人看的名字", "type": "string", "maxLength": 100, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
     "description": {"description": "一句话说明", "type": "string", "maxLength": 1000, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
     "permissionGroup": {
-      "description": "一个权限组：title 是给用户看的一句话，说这组让插件能做什么；trial 标这组是试行的；operations 是归这组管的操作；streams 是归这组管的流；events 是归这组管的事件，插件在 uses 里写了这组就是订了组里全部事件，有 events 的组只放事件（不能再写 operations、streams、read 这几个键）；read 管不管读这个协议的记录（get、list、watch）；写记录只许实现方，不分给插件",
+      "description": "一个权限组：title 是给用户看的一句话，说这组让插件能做什么；trial 标这组是试行的；operations 是归这组管的操作；streams 是归这组管的流；events 是归这组管的事件，插件在 uses 或 optionalUses 里写了这组就是订了组里全部事件，有 events 的组只放事件（不能再写 operations、streams、read 这几个键）；read 管不管读这个协议的记录（get、list、watch）；写记录只许实现方，不分给插件",
       "type": "object",
       "properties": {
         "title": {"$ref": "#/$defs/title"},

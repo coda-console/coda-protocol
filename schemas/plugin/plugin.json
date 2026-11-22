@@ -42,6 +42,19 @@
         "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/operationName"}
       }
     },
+    "optionalUses": {
+      "description": "插件可选用到的别的协议的权限，写法同 uses：协议名（带大版本，如 coda/friend@1）→ 权限组名的数组，至少一项、不重复。对应的协议、权限组或提供方缺席、未启用、停用时不阻止插件运行；运行时可用不可用的判定与鉴权由 Coda 宿主负责，这里只管清单形状",
+      "type": "object",
+      "maxProperties": 100,
+      "propertyNames": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"},
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 50,
+        "uniqueItems": true,
+        "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/operationName"}
+      }
+    },
     "engines": {
       "description": "对宿主的要求，写法同 VS Code 的 engines；Coda 只读 coda，其余键（如 node）是 npm 的，不管",
       "properties": {
