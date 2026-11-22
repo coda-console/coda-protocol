@@ -77,6 +77,13 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 ```
 
 ```js
+import { parseBlobPath } from '@coda-console/protocol/blob';
+
+// 指针的 path 是哪一类、各部分是什么；不认得给 null。不依赖 Node，浏览器里也能跑。
+parseBlobPath('plugins/wechat/services/media/a.jpg'); // { kind: 'service', plugin: 'wechat', service: 'media', path: 'a.jpg' }
+```
+
+```js
 import { workflowProblem, readWorkflow, fieldProblem, fieldsProblem, optionsProblem, joinInputNames, CODA_FIELDS, CODA_OPTIONS } from '@coda-console/protocol/workflow';
 
 // 一份流程（名字不带 .bpmn，用在说明里）：方言里都有就返回 null，否则是一句说明。
@@ -144,7 +151,7 @@ agentValueProblem('review.json', review, '工具的审核');
 
 - **`coda/run@1`**：被调用方自己的运行记录。spec 记录调用的记录、操作、输入、请求 ID、父引用和是否被等待；status 是 `working`、`input-required`、`completed`、`failed`、`canceled`，后三个是终态。`completed`/`failed` 必带 `result`，`failed` 的 `result` 约定为 `{ code, message }`（`code: "unknown"` 表示结局不明），`canceled` 可带取消前的话和留下的东西；另有可选的 `progress` 和等输入时的 `awaiting`。操作是 `cancel`。
 - **`coda/agent@1`**：Agent 资源，复数名 `agents`；spec 照 Coda 的 Agent 资源（`agent`、`title`、`plugin?`、`defaultModel`、`models`、`modes` 等），`plugin` 是提供 Agent 程序的插件、不是记录的 provider；status 为空对象；操作 `spawn`（`run: true`）开一个子会话。
-- **`coda/session@1`**：插件提供的外部会话。spec 是标题、容器和可选的环境引用；status 是 `head` 游标、参与者（可带头像 `avatar`）与 `post` 收不收语音（`accepts`）；操作 `read`（`safe`）与 `draft`（`idempotent`，将退役）是立即结果，`post` 开运行；流 `draft` 是输入框的击键流；撤回、编辑、表情是用 `about` 指向旧消息的新消息。
+- **`coda/session@1`**：插件提供的外部会话。spec 是标题、容器和可选的环境引用；status 是 `head` 游标、参与者（可带头像 `avatar`）与 `post` 收不收语音（`accepts`）；媒体与头像用指针 `{ owner, path, … }` 说内容在哪台后端的哪个地址，读的一方找 Coda 取，旧的 `service`、`path` 写法照收、将退役；操作 `read`（`safe`）与 `draft`（`idempotent`，将退役）是立即结果，`post` 开运行；流 `draft` 是输入框的击键流；撤回、编辑、表情是用 `about` 指向旧消息的新消息。
 - **`coda/environment@1`**：插件提供的只读外部环境。spec 带 `actions`；操作 `list` 列目录、`read` 读文件（一次至多 1 MiB）。
 - **`coda/resource@1`**：插件持有的一种资源类型在一台机器上的现状，复数名 `resource-types`；一条记录是一台机器上一个插件的一个资源类型，`key` 是类型 ID。spec 是 `{ type, title, resources, signIn? }`；status 是 `{}`；操作 `act`、`sign-in`、`install`。
 
