@@ -74,7 +74,7 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `spec` | 记录的 spec 的 JSON Schema；没写 `events` 时必填，与 `status` 一起写 |
 | `status` | 记录的 status 的 JSON Schema；没写 `events` 时必填，与 `spec` 一起写 |
 | `operations` | 操作名 → `{ description?, input, result, safe?, idempotent?, timeout? }` 或 `{ description?, input, run: true, timeout? }`；没写 `events` 时必填，不定义操作写 `{}` |
-| `streams` | 流名 → `{ description?, input }`，可选（见「只读记录流」） |
+| `streams` | 流名 → `{ description?, input, shape?, frames?, subprotocol? }`，可选（见「记录流」） |
 | `events` | 事件名 → `{ description?, payload, starts?, ends? }`，可选（见「事件」） |
 | `permissions` | 权限组名 → `{ title, trial?, operations?, streams?, events?, read? }`，可选（见「权限组」） |
 
@@ -176,16 +176,29 @@ invocationRequestProblem(request);   // null 或说明
 invocationResponseProblem(response); // 恰好有 result 或 run 之一
 ```
 
-### 只读记录流
+### 记录流
 
-流是协议记录上的第三种入口，和查询、操作并列：按记录 `{ kind, id }` 寻址、只读、返回字节流（而不是一个 JSON 结果）。定义用顶层 `streams` 声明，键是流名（写法同操作名：小写字母开头，只用小写字母、数字和「-」，至多 64 个字符，至多 50 条），值是：
+流是协议记录上的第三种入口，和查询、操作并列：按记录 `{ kind, id }` 寻址，内容是一条流（而不是一个 JSON 结果）。一条流就是一次 HTTP 交换，同一时刻只有一个方向在流；要两个方向同时流，就开一条读加一条写。定义用顶层 `streams` 声明，键是流名（写法同操作名：小写字母开头，只用小写字母、数字和「-」，至多 64 个字符，至多 50 条），值是：
 
 | 字段 | 含义 |
 | --- | --- |
 | `description` | 可选，一句话说明 |
 | `input` | 必填，参数的 JSON Schema（draft 2020-12，和操作的 `input` 同一写法，`definitionProblem` 查它能编译） |
+| `shape` | 可选，形状：`read`、`write`、`http` 之一，不写就是 `read`，见下 |
+| `frames` | 可选，只能写 `true`，表示内容是帧流；不写就是字节流。`shape` 为 `http` 时不能写 |
+| `subprotocol` | 带版本的子协议名，如 `git-smart-http/2`：小写字母开头，只用小写字母、数字和「-」，后面是「/」加数字。`shape` 为 `http` 时必须写，其余形状不能写 |
 
-参数都来自查询串，取值都是字符串，所以 `input` 里的属性按字符串写约束。流名可以和操作名相同，两者各管各的。定义里不写 `streams` 就是没有流。本包只管声明的形状；怎样寻址、怎样出字节是宿主的事。
+不许有别的键。三种形状：
+
+| `shape` | 方法 | 请求体 | 应答体 |
+| --- | --- | --- | --- |
+| `read`（不写就是它） | GET | 无 | 流，字节或帧 |
+| `write` | POST | 流，字节或帧 | 结束时给一个短应答 |
+| `http` | GET、POST | 有限 | 有限 |
+
+`http` 是原样的 HTTP，给自带 HTTP 语义的子协议用（如 git smart HTTP）：地址后面可以带路径后缀，里面跑的是什么由 `subprotocol` 说。
+
+参数都来自查询串，取值都是字符串，所以 `input` 里的属性按字符串写约束。流名可以和操作名相同，两者各管各的。定义里不写 `streams` 就是没有流。本包只管声明的形状；怎样寻址、怎样传字节是宿主的事。
 
 ```json
 "streams": {
@@ -197,9 +210,40 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
       "required": ["job"],
       "additionalProperties": false
     }
+  },
+  "changes": {
+    "description": "状态变化，一帧是一次变化",
+    "frames": true,
+    "input": {"type": "object", "additionalProperties": false}
+  },
+  "git": {
+    "description": "仓库的 git smart HTTP",
+    "shape": "http",
+    "subprotocol": "git-smart-http/2",
+    "input": {"type": "object", "additionalProperties": false}
   }
 }
 ```
+
+**帧流**（`frames: true`）是 `application/x-ndjson`，UTF-8，一行一个 JSON 对象，每行以 `\n` 收尾：
+
+- **空行是心跳**（只含空格、制表符、回车的行也算），读的一方跳过。发送方一段时间没写过东西就写一个空行；
+- 一行（不含 `\n`）默认至多 1 MiB，`readFrames` 的 `maxBytes` 可以改，收发双方要约定一致；
+- 流结束时最后一行没有 `\n` 又不是空的，就是被截断，不算一帧；
+- 一帧里有什么由这条流的 `description` 说，不写进定义的 schema，宿主不解释。
+
+没写 `frames` 的是字节流，内容不解释，没有帧也没有心跳。读写帧流用 `@coda-console/protocol/frames`，只用 Web 标准的流，Node 和浏览器都能跑：
+
+```js
+import { readFrames, writeFrames, FrameError } from '@coda-console/protocol/frames';
+
+// ReadableStream<Uint8Array> → 异步迭代器，逐个给出对象；提前 break 就取消底下的流；读完、出错、提前结束都释放它的锁。
+for await (const frame of readFrames(request.body, { maxBytes: 1024 * 1024 })) handle(frame);
+// （异步或同步）可迭代的对象 → ReadableStream<Uint8Array>；15 秒没写过东西就写一个空行。
+const body = writeFrames(frames, { heartbeatMs: 15000 });
+```
+
+读到坏的帧抛 `FrameError`，消息说是第几帧（心跳不算），`code` 是 `truncated`（被截断）、`too_large`（一行超过 `maxBytes`，不等收完就抛）或 `invalid`（不是合法 JSON，或不是对象）。`writeFrames` 不给 `heartbeatMs` 就不发心跳；消费方没在读时不往里堆心跳；遇到不是普通对象的值，或写出来（经 `toJSON`）不是 JSON 对象的，流以 `invalid` 出错，那个值不写出去。
 
 ### 事件
 
@@ -251,7 +295,7 @@ invocationResponseProblem(response); // 恰好有 result 或 run 之一
 }
 ```
 
-`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/resource@1` 的分组如下，都标 `trial`（还不在稳定面里）。`coda/session@1` 的 `draft` 是客户端输入框的击键流，不分组，不对插件开放：
+`coda/run@1`、`coda/agent@1`、`coda/session@1`、`coda/environment@1`、`coda/resource@1` 的分组如下，都标 `trial`（还不在稳定面里）。`coda/session@1` 的流 `draft`（外部会话输入框的击键流）和将退役的 `draft` 操作都不分组，不对插件开放：
 
 | 协议 | 组 | 说明 | 管什么 |
 | --- | --- | --- | --- |
@@ -460,7 +504,7 @@ status：
 `notify: true` 表示这条记录来了新消息要提醒用户：观察方（Coda）在 `head` 越过用户的已读位置时推到手机、在电脑上弹横幅，读到 `head` 后撤掉。不写或写 `false` 就不提醒，这是缺省，所以不认识这个字段的旧 Provider 不会开始提醒。
 写不写由 Provider 按记录决定，比如只给用户在设置里选中的群写 `true`；设置改了就改 status，所以它放在 status 而不在 spec。提醒只说「有新消息」，不带消息正文。
 
-观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。`read` 与 `draft` 是立即结果，`read` 是 `safe` 的，`draft` 是 `idempotent` 的；`post` 开运行：
+观察方 watch 这条记录，`head` 变了就用 `read` 读游标之后的消息。`read` 与 `draft` 是立即结果，`read` 是 `safe` 的，`draft` 是 `idempotent` 的；`post` 开运行；击键走流 `draft`，见下：
 
 - `read`：输入 `{ after?, before?, limit? }`，`after`、`before` 是游标，`limit` 为 1 到 100；结果 `{ messages, cursor, more }`，没有消息时 `cursor` 为 `null`。`messages` 总按先后排，旧的在前：
   - 都不带游标：最新的 `limit` 条，`more` 表示更早还有没有；客户端打开会话时先读这一页；
@@ -475,11 +519,18 @@ status：
   - 输入里的媒体 part 可以用 `upload` 引用记录持有方的上传，见下；
   - 取消沿用 `coda/run@1` 的 `cancel`：还没开始发的停下，得到 `canceled`；已经开始发的，Provider 可以不停，是否停下看 status；
   - 全文总在 `post` 的输入里；没有先写过草稿的 `post` 也照常发出去。
-- `draft`（`idempotent`）：设定 `self` 在这个会话里还没发出去的文字，结果 `{}`。输入 `{ text, version, steps? }`：
+- `draft`（`idempotent`，**将退役，改用流 `draft`**）：设定 `self` 在这个会话里还没发出去的文字，结果 `{}`。输入 `{ text, version, steps? }`：
   - `text` 是当前草稿的全文，至多 65536 个字符；空串表示清空或放弃；
   - `version` 是调用方给的非负整数版本号，比大小：Provider 收到不大于已见最大版本的直接丢掉，多台设备都在写时后写的为准；建议用毫秒时间；
   - `steps` 可选，至多 1000 项，是从上一版到这一版之间按先后排的中间状态 `{ text, delayMs }`：每一步的全文，以及距上一步的间隔（毫秒，0 到 600000）；Provider 可以照这个节奏回放，最后一步等于 `text`；
   - Provider 可以把草稿同步到对方平台的输入框，用户发出时那边基本已经打完；用不上草稿的 Provider 直接答 `{}`。
+
+流 `draft`（`shape: "write"`、`frames: true`，没有查询参数）是外部会话输入框的击键流，不在任何权限组里，不对插件开放：
+
+- 一帧是 `{ text, version, steps? }`，含义同上面 `draft` 操作的输入；
+- 一帧序列化后（不含换行）至多 1 MiB，即 `readFrames` 的默认上限；放不下时发送方去掉 `steps`，只发 `text` 和 `version`；接收方对超过的一帧报错、断开这条流；
+- 客户端打开外部会话的页面时开流，页面离开就结束请求体，Provider 给一个短应答；
+- 没有新帧时按空行心跳：15 秒没写过东西就写一个空行，从开流算起，每写一行重新计。空行不更新草稿，也不算版本。
 
 消息是 `{ id, cursor, sender, senderName?, text, parts?, replyTo?, mentions?, about?, createdAt? }`：
 

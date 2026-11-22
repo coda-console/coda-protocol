@@ -2,6 +2,14 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.20.0 — 2026-11-22
+
+- 这是在 6.19.0 之上的次版本。依据 README「版本」一节：协议定义与核心协议是内部面，只加可选字段、新流和新导出，升次版本；`stable/` 不动，清单 schema 没改，旧插件不受影响；不写新键的旧定义照旧有效，意思不变。
+- 协议定义的流（`definition.json` 的 `stream`）加三个可选的键，约束都写在 schema 里，`definitionProblem` 没有新判断：`shape` 是 `read`（不写就是它：GET，应答体是流）、`write`（POST，请求体是流，结束时给一个短应答）、`http`（原样的 HTTP：GET、POST，请求和应答都有限，地址后面可以带路径后缀）；`frames` 只能写 `true`，表示内容是帧流（ndjson，一行一个 JSON 对象，空行是心跳），`shape` 为 `http` 时不能写；`subprotocol` 是带版本的名字（如 `git-smart-http/2`），`shape` 为 `http` 时必须写，其余形状不能写。流不再只是只读的，说明跟着改准。
+- 新增导出 `./frames`（`frames.mjs`）：`readFrames(stream, { maxBytes })` 把 `ReadableStream<Uint8Array>` 读成逐帧的异步迭代器，`writeFrames(iterable, { heartbeatMs, timers })` 反过来，坏帧抛带 `code`（`truncated`、`too_large`、`invalid`）的 `FrameError`。只用 Web 标准，不依赖 Node 的模块。
+- `coda/session@1` 加流 `draft`（`shape: write`、`frames: true`，没有查询参数）：外部会话输入框的击键流，一帧是 `{ text, version, steps? }`，含义同 `draft` 操作的输入，序列化后至多 1 MiB，放不下时发送方去掉 `steps`；不在任何权限组里，不对插件开放。`draft` 操作的定义不改，标「将退役，改用流 `draft`」。
+- 本包只管声明的形状与帧的读写；流的路由、心跳与空闲中止的落实、客户端的改动由 Coda 实现。
+
 ## 6.19.0 — 2026-11-21
 
 - 这是在 6.18.0 之上的次版本。依据 README「版本」一节：流程方言是内部面，新增字段类型升次版本；`stable/` 不动。

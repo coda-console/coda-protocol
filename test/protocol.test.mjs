@@ -580,6 +580,43 @@ test('streams are declared per definition and permission groups cover them like 
     assert.equal(typeof definitionProblem(def(permissions)), 'string', JSON.stringify(permissions));
 });
 
+test('a stream says its shape, whether it is frames, and the subprotocol of plain HTTP', () => {
+  const problem = stream => definitionProblem({ ...own, streams: { x: { input: {}, ...stream } } });
+  for (const stream of [{}, { shape: 'read' }, { shape: 'write' }, { frames: true }, { shape: 'read', frames: true }, { shape: 'write', frames: true },
+    { shape: 'http', subprotocol: 'git-smart-http/2' }, { shape: 'http', subprotocol: 'a/10' }])
+    assert.equal(problem(stream), null, JSON.stringify(stream));
+
+  for (const shape of ['duplex', 'READ', '', null, true]) assert.match(problem({ shape }), /^协议定义\.streams\.x\.shape：形状，只能是 read、write、http/, String(shape));
+  for (const frames of [false, 'true', 1, null, {}]) for (const shape of [{}, { shape: 'read' }, { shape: 'write' }])
+    assert.match(problem({ ...shape, frames }), /^协议定义\.streams\.x\.frames：只能写 true/, String(frames));
+  for (const frames of [true, false])
+    assert.equal(problem({ shape: 'http', subprotocol: 'git-smart-http/2', frames }), '协议定义.streams.x.frames：shape 为 http 的流不能写 frames，内容由子协议规定');
+  assert.match(problem({ shape: 'http' }), /^协议定义\.streams\.x\.subprotocol：带版本的子协议名.*shape 为 http 时必须写$/);
+  for (const shape of [{}, { shape: 'read' }, { shape: 'write' }])
+    assert.equal(problem({ ...shape, subprotocol: 'git-smart-http/2' }), '协议定义.streams.x.subprotocol：只有 shape 为 http 的流才写 subprotocol');
+  for (const subprotocol of ['', 'git', 'git/', '/2', 'git/v2', 'git/2.0', 'git/2/3', 'Git/2', '2git/2', '-git/2', 'git_http/2', 'git http/2', 'git/2\n', 'git@2', 2, null])
+    assert.match(problem({ shape: 'http', subprotocol }), /^协议定义\.streams\.x\.subprotocol：带版本的子协议名/, JSON.stringify(subprotocol));
+
+  // the manifest checks its own definitions with the same schema
+  const manifest = stream => ({ id: 'my-plugin', name: 'my-plugin', version: '1.0.0', contributes: { protocols: [{ ...own, streams: { x: { input: {}, ...stream } } }] } });
+  assert.equal(manifestProblem(manifest({ shape: 'http', subprotocol: 'git-smart-http/2' })), null);
+  assert.equal(manifestProblem(manifest({ shape: 'http' })), 'contributes.protocols[0].streams.x 缺 subprotocol：shape 为 http 的流必须写 subprotocol，不能写 frames');
+  assert.equal(manifestProblem(manifest({ subprotocol: 'a/1' })), 'contributes.protocols[0].streams.x.subprotocol：只有 shape 为 http 的流才写 subprotocol');
+});
+
+test('coda/session@1 has the stream draft: frames written, no parameters, open to no plugin; the operation draft stays, marked as retiring', () => {
+  assert.deepEqual(Object.keys(SESSION_PROTOCOL.streams), ['draft']);
+  const { shape, frames, input, description } = SESSION_PROTOCOL.streams.draft;
+  assert.deepEqual({ shape, frames }, { shape: 'write', frames: true });
+  assert.match(description, /\{ text, version, steps\? \}/);
+  assert.match(description, /至多 1 MiB.*去掉 steps，只发 text 和 version/);
+  const check = new Ajv().compile(input);
+  assert.equal(check({}), true);
+  for (const query of [{ text: 'x' }, { version: '1' }, { after: '' }]) assert.equal(check(query), false, JSON.stringify(query));
+  for (const group of Object.values(SESSION_PROTOCOL.permissions)) assert.equal(group.streams, undefined);
+  assert.match(SESSION_PROTOCOL.operations.draft.description, /^将退役，改用流 draft。/);
+});
+
 test('events are declared per definition; a protocol of events only has no records, and permission groups cover events alone', () => {
   const pr = { description: '一个 PR 关闭了', payload: { type: 'object', properties: { number: { type: 'integer' } }, required: ['number'] }, starts: false, ends: true };
   const events = { 'pull_request.opened': { payload: { type: 'object' } }, 'pull_request.closed': pr, 'push.received': { payload: true } };
