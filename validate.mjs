@@ -27,6 +27,7 @@ import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync } fr
 import { isAbsolute, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
+import { RESOURCE_PROTOCOL } from './resource-protocol.mjs';
 
 export const SCHEMA_DIR = fileURLToPath(new URL('./schemas/plugin/', import.meta.url));
 const BASE = 'https://coda.pub/schemas/plugin/v2/';
@@ -333,4 +334,60 @@ export function contributionProblem(schema, manifest, key, dir = null) {
   const point = declared(schema);
   return point.validate.call({ dir }, manifest.contributes[key], { instancePath: `/contributes/${escape(key)}`, parentData: manifest.contributes,
     parentDataProperty: key, rootData: manifest, dynamicAnchors: {} }) ? null : explain(point.validate.errors, '', [point.schema]);
+}
+
+// The serialized size of a value in UTF-8 bytes, `{ ok: true, bytes }`, or why it has none, `{ ok: false, error }`: what
+// `JSON.stringify` refuses (a circular structure, a BigInt) or a `toJSON` throws, which may be any value.
+function sized(value) {
+  try { const text = JSON.stringify(value); return { ok: true, bytes: text === undefined ? 0 : Buffer.byteLength(text) }; }
+  catch (thrown) { return { ok: false, error: thrown instanceof Error ? thrown.message || thrown.name || 'Error' : typeof thrown === 'string' && thrown ? thrown : `抛出了 ${typeof thrown === 'object' && thrown !== null ? Object.prototype.toString.call(thrown) : String(thrown)}` }; }
+}
+// A value as an error message names it, which never throws.
+function shown(value) {
+  try { return JSON.stringify(value) ?? String(value); } catch { return Object.prototype.toString.call(value); }
+}
+// What Coda holds the records a plugin's command prints to, beyond the schema: a record at most 64 KiB serialized, a button's
+// `args` at most 4096 bytes.
+const RECORD_BYTES = 64 * 1024, ARGS_BYTES = 4096;
+// What is wrong with the records a plugin writes of `coda/resource@1` (`output`, an array of `{ key, spec, status?, labels? }`, as
+// parsed), judged as Coda takes them before it replaces the plugin's whole set of the kind: null, or the first thing found,
+// naming the record by its place in the array. Nothing is read or run; the same value always has the same answer.
+export function resourceRecordsProblem(output) {
+  if (!Array.isArray(output)) return '记录须为数组';
+  for (const [i, record] of output.entries()) {
+    const size = sized(record);
+    if (!size.ok) return `第 ${i + 1} 条记录无法序列化为 JSON：${size.error}`;
+    if (size.bytes > RECORD_BYTES) return `第 ${i + 1} 条记录超过 ${RECORD_BYTES / 1024} KiB`;
+  }
+  const keys = new Set();
+  for (const [i, record] of output.entries()) {
+    if (record === null || typeof record !== 'object' || Array.isArray(record)) return `第 ${i + 1} 条记录须为 { key, spec, status?, labels? }`;
+    if (Object.hasOwn(record, 'id')) return `第 ${i + 1} 条记录不能写 id：插件只给 key，id 由宿主派生`;
+    const { key } = record;
+    if (typeof key !== 'string' || key.length === 0 || key.length > 256 || key.includes('\0'))
+      return `第 ${i + 1} 条记录的 key 须为 1–256 个字符、不含 NUL 的文本，不是 ${shown(key)}`;
+    if (keys.has(key)) return `第 ${i + 1} 条记录的 key 重复：${key}`;
+    keys.add(key);
+  }
+  for (const [i, { key, ...value }] of output.entries()) {
+    const at = `第 ${i + 1} 条记录（${key}）`;
+    const extra = Object.keys(value).find(name => !['spec', 'status', 'labels'].includes(name));
+    if (extra !== undefined) return `${at} 里有不认识的键：${extra}（记录只写 key、spec、status、labels）`;
+    if (Object.hasOwn(value, 'labels')) {
+      const { labels } = value;
+      if (labels !== null && (typeof labels !== 'object' || Array.isArray(labels) || !Object.values(labels).every(each => typeof each === 'string')))
+        return `${at}：labels 须为 null 或值为文本的对象`;
+    }
+    const problem = pointProblem(RESOURCE_PROTOCOL.spec, value.spec, `${at} spec`)
+      ?? (Object.hasOwn(value, 'status') ? pointProblem(RESOURCE_PROTOCOL.status, value.status, `${at} status`) : null);
+    if (problem) return problem;
+    if (value.spec.type !== key) return `${at}：spec.type（${value.spec.type}）须与 key 相同`;
+    for (const [r, resource] of value.spec.resources.entries()) for (const [b, { args }] of resource.buttons.entries()) {
+      if (args === undefined) continue;
+      const size = sized(args), where = `${at}：spec.resources[${r}].buttons[${b}].args`;
+      if (!size.ok) return `${where} 无法序列化为 JSON：${size.error}`;
+      if (size.bytes > ARGS_BYTES) return `${where} 序列化后 ${size.bytes} 字节，超过 ${ARGS_BYTES} 字节`;
+    }
+  }
+  return null;
 }

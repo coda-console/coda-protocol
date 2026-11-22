@@ -69,6 +69,15 @@ invocationResponseProblem({ run: { kind: 'coda/run@1', id: 'run-1' } });
 ```
 
 ```js
+import { resourceRecordsProblem } from '@coda-console/protocol/validate';
+
+// 插件写 coda/resource@1 记录时，命令输出（已解析的 JSON）按 Coda 收的标准查：合乎返回 null，否则是第一处问题，按记录在数组里的位置说。
+// 数组里每条 { key, spec, status?, labels? }：序列化后至多 64 KiB，key 为 1–256 个字符、不含 NUL 且不重复，不写 id，spec、status 合协议的 schema，
+// spec.type 与 key 相同，按钮的 args 序列化后至多 4096 字节。纯函数，不读文件、不跑命令。
+const problem = resourceRecordsProblem(JSON.parse(output));
+```
+
+```js
 import { readFrames, writeFrames } from '@coda-console/protocol/frames';
 
 // 帧流（定义里写了 frames: true 的流）的读写：一行一个 JSON 对象，空行是心跳；只用 Web 标准的流，浏览器里也能跑。
@@ -101,6 +110,18 @@ optionsProblem([{ id: 'release', name: '发布正式版', default: false, inputs
 给 `pointProblem` 的 schema 和这里的并列：可以 `$ref` 协议的 schema（`common.json#/$defs/line40`），可以用五个关键字；它自己写的 `$id` 不算数，指针只指它校验的那份值里的位置。
 
 `TYPES` 是清单 schema 自己校验的通用键（4.0.0 起不含 `agents` 等 Coda 业务键），`SCHEMAS` 是 `schemas/plugin/` 里的全部 schema（按文件名），包括业务键的。协议定义的 schema 在 `schemas/protocol/v1/`，由 `@coda-console/protocol/protocol` 导出。
+
+## 插件的类型
+
+`@coda-console/protocol/types`（`plugin.d.mts`）是插件模块的公开 TypeScript 类型：调用与处理（`Context`、`Handler`、`Caller`）、记录（`Ref`、`KeyRef`、`RecordValue`、`RecordFilter`、`RecordChange`）、页面（`ViewInstance`）和模块里的 `coda` 对象（`Coda`）等。它们属于内部面，随 Coda 的版本可能变。TypeScript 与 `// @ts-check` 的 JSDoc 都能解析（`moduleResolution` 为 `node16`、`nodenext` 或 `bundler`）：
+
+```js
+// @ts-check
+/** @param {import('@coda-console/protocol/types').Context} ctx */
+export async function handle(ctx) {}
+```
+
+`./types` 引用了 `node:http` 与 `node:stream` 的类型，用 TypeScript 或 `@ts-check` 做类型检查时，使用方须自己安装 `@types/node`；本包不把它列入 `dependencies`。
 
 ## 插件的后端通道
 
