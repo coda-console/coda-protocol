@@ -239,7 +239,7 @@
       "run": true
     },
     "draft": {
-      "description": "设定 self 在这个会话里还没发出去的草稿，立即结果。text 是全文，空串为清空；version 只增，Provider 丢掉不大于已见最大版本的；steps 是从上一版到这一版的中间状态，可照 delayMs 回放，最后一步等于 text。用不上草稿的 Provider 直接答 {}。",
+      "description": "将退役，改用流 draft。设定 self 在这个会话里还没发出去的草稿，立即结果。text 是全文，空串为清空；version 只增，Provider 丢掉不大于已见最大版本的；steps 是从上一版到这一版的中间状态，可照 delayMs 回放，最后一步等于 text。用不上草稿的 Provider 直接答 {}。",
       "idempotent": true,
       "input": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -269,6 +269,18 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "maxProperties": 0
+      }
+    }
+  },
+  "streams": {
+    "draft": {
+      "description": "外部会话输入框的击键流：一帧是 { text, version, steps? }，含义同 draft 操作的输入。页面打开时开流，页面离开就结束；没有新帧时按空行心跳。一帧序列化后（不含换行）至多 1 MiB，即 readFrames 的默认上限；放不下时发送方去掉 steps，只发 text 和 version；接收方对超过的一帧报错、断开这条流。",
+      "shape": "write",
+      "frames": true,
+      "input": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false
       }
     }
   },
