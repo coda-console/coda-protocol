@@ -2,6 +2,15 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.21.0 — 2026-11-22
+
+- 这是在 6.20.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，只加可选字段、放宽限制和新导出，升次版本；`stable/` 不动，清单 schema 没改。`coda/session@1` 只加不删，协议名不变：6.20.0 里有效的记录和 `read` 结果照旧有效。
+- `coda/session@1` 加指针 `blob`：`{ owner, path, name?, size?, mime?, sha256? }`，`owner`、`path` 必写，不许别的键，说内容在哪台后端的哪个地址。`owner` 是机器 ID（小写 UUID）；`path` 是 URL 路径，已按段百分号编码，至多 2048 个字符，只收 `uploads/<上传 ID>`、`uploads/<上传 ID>/preview` 和 `plugins/<插件 ID>/services/<服务 ID>/<路径>`，不收空段、`.`、`..`（含百分号写法）、编码过的斜杠和反斜杠、`?`、`#`；`sha256` 是写的一方的声明。
+- `operations.read.result` 的媒体 part 加可选的 `blob`（原文件的指针），`preview` 放宽成字符串或指针；`blob` 与 `service`、`path` 互斥，字符串的 `preview` 照旧要求 `service`，指针的 `preview` 不能和 `service` 同写。`status` 里 `participants[].avatar` 放宽成 `{ service, path }` 或指针。`post` 的输入不动，发消息用 `upload`。
+- 旧写法（媒体 part 的 `service`、`path`、字符串的 `preview`，头像的 `{ service, path }`）标「将退役」，改写指针；现在照收。
+- 新增导出 `./blob`（`blob.mjs`）：`BLOB_PATHS` 列出两类路径，`parseBlobPath(path)` 给出是哪一类和它的各部分，不认得给 `null`；与 schema 的 `pattern` 判得一样。不依赖 Node 的模块。
+- 本包只管指针的写法；怎样取、跨机怎样转、取的时候判什么由 Coda 实现，schema 不核对 `owner`、插件和写的一方是不是同一个。
+
 ## 6.20.0 — 2026-11-22
 
 - 这是在 6.19.0 之上的次版本。依据 README「版本」一节：协议定义与核心协议是内部面，只加可选字段、新流和新导出，升次版本；`stable/` 不动，清单 schema 没改，旧插件不受影响；不写新键的旧定义照旧有效，意思不变。

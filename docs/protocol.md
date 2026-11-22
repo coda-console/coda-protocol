@@ -491,9 +491,9 @@ status：
 | --- | --- |
 | `audio` | `{ maxDuration? }`：收 `upload` 引用的语音；`maxDuration` 是一条语音最长多少秒，大于 0 |
 
-参与者的 `avatar` 是 `{ service, path }`：头像图片在 provider 插件登记的本机流式服务里的路径，`service` 1 到 200 个字符，`path` 1 到 2048 个字符，两个都要有。
-观察方和取媒体 part 的 `path` 一样，读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`；图片长边一般取 100 到 200 像素就够。
-不写、或读不到（404、持有方连不上）时，观察方用名字代替（如名字的第一个字），不当成错误。头像换了，Provider 就换一个 `path`，观察方按路径缓存。
+参与者的 `avatar` 是一个指针（见下面「指针」）；图片长边一般取 100 到 200 像素就够。
+不写、或读不到（404、`owner` 连不上）时，观察方用名字代替（如名字的第一个字），不当成错误。头像换了，Provider 就换一个 `path`，观察方按 `owner` 加 `path` 缓存。
+旧写法 `{ service, path }` **将退役，改写指针**，现在照收：头像图片在 provider 插件登记的本机流式服务里的路径，`service` 1 到 200 个字符，`path` 1 到 2048 个字符，两个都要有，不能和指针的字段混写；在记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<path>`。
 
 不写 `accepts` 就是只收文字。客户端据此决定显示不显示录音入口，录音时到 `maxDuration` 自动停止。放在 status 而不在 spec，是因为 Provider 的能力可能随状态变化，例如手机上的麦克风权限被收回。
 
@@ -544,10 +544,10 @@ status：
 `parts` 的每一项是下面之一：
 
 - `{ type: "text", text }`；
-- `{ type: "image"|"video"|"file"|"audio", name, size?, mime?, width?, height?, duration?, thumb?, service?, path?, preview?, upload? }`：媒体，大文件只给引用，字段见下；
+- `{ type: "image"|"video"|"file"|"audio", name, size?, mime?, width?, height?, duration?, thumb?, blob?, preview?, service?, path?, upload? }`：媒体，大文件只给引用，字段见下；
 - `{ type: "thinking"|"tool", text }`。
 
-媒体 part 在 `read` 的消息和 `post` 的输入里是同一种形状，只有 `upload` 只在 `post` 的输入里有；`type`、`name` 以外都可选：
+媒体 part 的 `type`、`name` 以外都可选。`read` 的消息用指针（`blob`、`preview`）指向文件；`post` 的输入用 `upload`，不收指针：
 
 | 字段 | 含义 |
 | --- | --- |
@@ -555,17 +555,51 @@ status：
 | `width`、`height` | 像素，整数，至少 1，已按拍摄方向转正；图片和视频用 |
 | `duration` | 时长，秒，不为负；视频和语音用 |
 | `thumb` | 内嵌 JPEG 的 base64（不带 `data:` 前缀），至多 8192 个字符；视频用封面帧 |
-| `service` | provider 插件登记的本机流式服务 ID |
-| `path` | 原文件的服务内路径，1 到 2048 个字符 |
-| `preview` | 预览图的服务内路径，在同一个 `service` 里，1 到 2048 个字符 |
+| `blob` | 只在 `read` 的消息里：原文件的指针 |
+| `preview` | 预览图。`read` 的消息里写指针；写字符串是旧写法，**将退役，改写指针**：预览图在同一个 `service` 里的服务内路径，1 到 2048 个字符 |
+| `service` | **将退役，改用 `blob` 和指针的 `preview`**。旧写法：provider 插件登记的本机流式服务 ID |
+| `path` | **将退役，改用 `blob`**。旧写法：原文件的服务内路径，1 到 2048 个字符 |
 | `upload` | 只在 `post` 的输入里：持有这条记录的机器上 Coda 上传的 ID（那台机器 `POST /v1/uploads` 返回、`GET /v1/uploads/<id>` 能读回的），1 到 200 个字符 |
 
-有 `path` 或 `preview` 就必须有 `service`。`upload` 与 `service`、`path`、`preview` 互斥：一个媒体 part 要么引用 Provider 自己的服务，要么引用持有方的上传。
+新旧写法不混写：`blob` 与 `service`、`path` 互斥，指针的 `preview` 与 `service` 互斥。旧写法照收：有 `path` 或字符串的 `preview` 就必须有 `service`。什么都不指的 part（如只有 `thumb`）也有效。
+`upload` 与 `service`、`path`、`preview` 互斥。`post` 的输入里 `service`、`path`、字符串的 `preview` 的形状没变。
+
+**指针**说内容在哪台后端的哪个地址，内容本身不在消息和记录里。形状是 `{ owner, path, name?, size?, mime?, sha256? }`，`owner`、`path` 必写，不许别的键：
+
+| 字段 | 含义 |
+| --- | --- |
+| `owner` | 后端的机器 ID，小写 UUID |
+| `path` | 那台上的地址，见下 |
+| `name`、`size`、`mime` | 文件名、字节数、MIME 类型，约束同媒体 part 的同名字段 |
+| `sha256` | 内容的 SHA-256，64 位小写十六进制；是写的一方的声明 |
+
+`path` 是 URL 路径的写法，已按段百分号编码，不带 `/v1/`、不带开头的 `/`、不带 `?` 和 `#`，至多 2048 个字符。只收两类：
+
+| 写法 | 是什么 |
+| --- | --- |
+| `uploads/<上传 ID>`、`uploads/<上传 ID>/preview` | 那台上的一个上传，和它的预览图；上传 ID 是小写 UUID |
+| `plugins/<插件 ID>/services/<服务 ID>/<路径>` | 那台上一个插件登记的本机流式服务里的内容；两个 ID 都是小写字母、数字和「-」，以字母开头，至多 40 个字符，路径至少一段 |
+
+每一段非空，只用 RFC 3986 的路径字符（字母、数字、`-._~!$&'()*+,;=:@`）和百分号编码，百分号后面必须是两位十六进制；不是 `.`、`..`，也不是它们的百分号写法（URL 解析器会把 `%2e%2e` 当成 `..`）；不许有编码过的斜杠和反斜杠（`%2f`、`%5c`，大小写都算）。
+
+**谁来取**：读的一方拿着指针找 Coda 取，不自己拼插件服务的地址；`owner` 不是它连着的那台时由 Coda 转。schema 只查写法，不核对 `owner`、插件和写的一方是不是同一个，取的时候由 Coda 判。
+
+两类路径列在 `@coda-console/protocol/blob` 的表里，schema 的 `pattern` 和它判得一样：
+
+```js
+import { parseBlobPath } from '@coda-console/protocol/blob';
+
+parseBlobPath('uploads/1c79fe8d-d534-4cb8-a53a-64c03a117027/preview');
+// { kind: 'upload', upload: '1c79fe8d-d534-4cb8-a53a-64c03a117027', preview: true }
+parseBlobPath('plugins/wechat/services/media/msg/m7/IMG_0412.jpg');
+// { kind: 'service', plugin: 'wechat', service: 'media', path: 'msg/m7/IMG_0412.jpg' }，path 是原样的，没有解码
+parseBlobPath('plugins/wechat/services/media/../secret'); // null
+```
 
 `audio` 是一段语音消息，即对方平台的「语音条」，不是任意音频文件：
 
-- 用 `name`、`size`、`mime`、`duration`、`service`、`path`（`post` 里也可以是 `upload`）；`width`、`height`、`thumb`、`preview` 对它没有意义，不用；
-- `path` 给出的文件应当是常见播放器能直接播放的格式（如 AAC/M4A、MP3、WAV），`mime` 写实际给出的格式；对方平台的原始编码不能直接播时，由 Provider 转换；
+- 用 `name`、`size`、`mime`、`duration` 和 `blob`（`post` 里是 `upload`）；`width`、`height`、`thumb`、`preview` 对它没有意义，不用；
+- `blob` 给出的文件应当是常见播放器能直接播放的格式（如 AAC/M4A、MP3、WAV），`mime` 写实际给出的格式；对方平台的原始编码不能直接播时，由 Provider 转换；
 - 观察方看不懂 `audio` 时照常退回 `text`：Provider 给语音消息写一个可读的 `text` 兜底，例如「[语音] 5″」，具体写法由 Provider 定。
 
 发语音时，调用方先把录好的文件传到记录的持有方（`POST /v1/uploads`），再在 `post` 里用 `upload` 引用；持有方的 Coda 负责把上传交给 Provider 读取，Provider 不经网络取。本版本 `upload` 只要求 Provider 对 `audio` 支持，其他类型以后再说。
@@ -573,30 +607,33 @@ status：
 一个媒体分三档，从小到大：
 
 - **`thumb`**：内嵌在消息里，框一出现就能画。约束只是至多 8192 个字符：自己生成时长边取 64 像素左右；Provider 手上已有的小缩略图，只要在上限以内，可以原样放进来。
-- **`preview`**：持有方本地就有的较小版本。图片是一张静图，长边一般不超过约 1280 像素；视频是封面帧。观察方在会话里画它，原图只在打开时取。
-- **`path`**：原文件。
+- **`preview`**：指针 `owner` 那台上就有的较小版本，那台不一定是记录的持有方；旧的字符串写法是持有方本地就有的。图片是一张静图，长边一般不超过约 1280 像素；视频是封面帧。观察方在会话里画它，原图只在打开时取。
+- **`blob`**：原文件，在指针 `owner` 那台上。旧写法是 `path`，在记录的持有方。
 
 尺寸和 `thumb` 让框在图到达前就是最终大小：先显示放大、模糊的 `thumb`，`preview` 到了在原地换上；没有 `preview` 的，照旧换上原图。
-观察方读记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<preview 或 path>`（别的机器经空间到达持有方）；路径原样接在后面，Provider 写它时就按 URL 路径编码好，不以 `/` 开头。
+观察方拿指针找 Coda 取。旧写法没有写在哪台，读的是记录持有方的 `/v1/plugins/<provider 插件>/services/<service>/<preview 或 path>`；路径原样接在后面，Provider 写它时就按 URL 路径编码好，不以 `/` 开头。
 字节、Range 和流中断语义沿用 Coda 的本机流式服务。
 
 取不到时这样降级：
 
-- 取 `path` 回 404 而有 `preview`：显示预览图，并注明原图不在持有方（比如微信还没下载），不当成「文件已清理」；
-- 没有 `preview` 或 `preview` 也取不到：退回 `thumb`；
+- `blob` 取不到（回 404，即 `owner` 那台上没有原文件，比如微信还没下载；或 `owner` 连不上）而有 `preview`：显示预览图，并注明原文件暂时取不到，不当成「文件已清理」；
+- 旧写法取 `path` 回 404 而有 `preview`：显示预览图，并注明原图不在持有方，不当成「文件已清理」；
+- 没有 `preview` 或 `preview` 也取不到（指针的 `owner` 连不上和 404 一样）：退回 `thumb`；
 - 三档都没有或都取不到：显示文件卡。
 
 缺字段时这样降级，旧消息不补算：
 
 - 缺 `width`、`height`：按默认比例占位；
 - 缺 `thumb`：图到之前是空框；
-- 缺 `service`（或有 `service`，`path` 和 `preview` 都没有）：只显示文件卡，不能打开原文件。
+- `blob`、`preview` 都没有（旧写法里是没有 `path` 和 `preview`）：只显示文件卡，不能打开原文件。
 
 一个图片 part：
 
 ```json
 {"type": "image", "name": "IMG_0412.jpg", "size": 2310144, "mime": "image/jpeg", "width": 3024, "height": 4032,
- "thumb": "/9j/4AAQSkZJRgABAQ…", "service": "media", "path": "msg/m7/IMG_0412.jpg", "preview": "msg/m7/IMG_0412.preview.jpg"}
+ "thumb": "/9j/4AAQSkZJRgABAQ…",
+ "blob": {"owner": "0947ce49-321d-4d63-bd66-415fb6a0ebce", "path": "plugins/wechat/services/media/msg/m7/IMG_0412.jpg"},
+ "preview": {"owner": "0947ce49-321d-4d63-bd66-415fb6a0ebce", "path": "plugins/wechat/services/media/msg/m7/IMG_0412.preview.jpg"}}
 ```
 
 `post` 发一条语音：

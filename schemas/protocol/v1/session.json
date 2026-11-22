@@ -34,6 +34,27 @@
   "status": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
+    "$defs": {
+      "blob": {
+        "type": "object",
+        "description": "指针：内容在哪台后端的哪个地址，内容本身不在这里。读的一方拿它找 Coda 取，不自己拼插件服务的地址",
+        "properties": {
+          "owner": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", "description": "后端的机器 ID，小写 UUID"},
+          "path": {
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^(?:uploads/(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/preview)?|plugins/(?:[a-z][a-z0-9-]{0,39})/services/(?:[a-z][a-z0-9-]{0,39})/(?:(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+(?:/(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+)*))$",
+            "description": "那台上的地址：URL 路径，已按段百分号编码，不带 /v1/ 和开头的 /。只收 uploads/<上传 ID>、uploads/<上传 ID>/preview 与 plugins/<插件 ID>/services/<服务 ID>/<路径>，同 @coda-console/protocol/blob 的 parseBlobPath"
+          },
+          "name": {"type": "string", "maxLength": 1024},
+          "size": {"type": "integer", "minimum": 0},
+          "mime": {"type": "string", "maxLength": 255},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "内容的 SHA-256，小写十六进制；是写的一方的声明"}
+        },
+        "required": ["owner", "path"],
+        "additionalProperties": false
+      }
+    },
     "properties": {
       "head": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "最新一条消息的游标，不透明；Provider 每追加一条就写，还没有消息时不写"},
       "participants": {
@@ -46,14 +67,20 @@
             "kind": {"enum": ["person", "agent", "bot"]},
             "self": {"const": true, "description": "这个 Provider 登录的账号，即 Coda 的 Bot"},
             "avatar": {
-              "type": "object",
-              "description": "头像，可选：provider 插件登记的本机流式服务里的一张图，取法同媒体 part 的 path；读不到时观察方用名字代替",
-              "properties": {
-                "service": {"type": "string", "minLength": 1, "maxLength": 200},
-                "path": {"type": "string", "minLength": 1, "maxLength": 2048}
-              },
-              "required": ["service", "path"],
-              "additionalProperties": false
+              "description": "头像，可选：一张图的指针；读不到时观察方用名字代替",
+              "oneOf": [
+                {"$ref": "#/$defs/blob"},
+                {
+                  "type": "object",
+                  "description": "将退役，改写指针 { owner, path }。旧写法：provider 插件登记的本机流式服务里的一张图",
+                  "properties": {
+                    "service": {"type": "string", "minLength": 1, "maxLength": 200},
+                    "path": {"type": "string", "minLength": 1, "maxLength": 2048}
+                  },
+                  "required": ["service", "path"],
+                  "additionalProperties": false
+                }
+              ]
             }
           },
           "required": ["id", "name", "kind"],
@@ -110,6 +137,25 @@
         "type": "object",
         "$defs": {
           "id": {"type": "string", "minLength": 1, "maxLength": 2048},
+          "blob": {
+            "type": "object",
+            "description": "指针：内容在哪台后端的哪个地址，内容本身不在这里。读的一方拿它找 Coda 取，不自己拼插件服务的地址",
+            "properties": {
+              "owner": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", "description": "后端的机器 ID，小写 UUID"},
+              "path": {
+                "type": "string",
+                "maxLength": 2048,
+                "pattern": "^(?:uploads/(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/preview)?|plugins/(?:[a-z][a-z0-9-]{0,39})/services/(?:[a-z][a-z0-9-]{0,39})/(?:(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+(?:/(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+)*))$",
+                "description": "那台上的地址：URL 路径，已按段百分号编码，不带 /v1/ 和开头的 /。只收 uploads/<上传 ID>、uploads/<上传 ID>/preview 与 plugins/<插件 ID>/services/<服务 ID>/<路径>，同 @coda-console/protocol/blob 的 parseBlobPath"
+              },
+              "name": {"type": "string", "maxLength": 1024},
+              "size": {"type": "integer", "minimum": 0},
+              "mime": {"type": "string", "maxLength": 255},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "内容的 SHA-256，小写十六进制；是写的一方的声明"}
+            },
+            "required": ["owner", "path"],
+            "additionalProperties": false
+          },
           "part": {
             "oneOf": [
               {
@@ -129,12 +175,27 @@
                   "height": {"type": "integer", "minimum": 1, "description": "像素高，已按拍摄方向转正；图片和视频用"},
                   "duration": {"type": "number", "minimum": 0, "description": "时长，秒；视频和语音用"},
                   "thumb": {"type": "string", "maxLength": 8192, "description": "内嵌 JPEG 的 base64，不带 data: 前缀；自己生成时长边取 64 像素左右，已有的小缩略图在上限内可原样放；视频用封面帧"},
-                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "provider 插件登记的本机流式服务 ID"},
-                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "原文件的服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"},
-                  "preview": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "预览图在同一个 service 里的服务内路径：图片是长边一般不超过约 1280 像素的静图，视频是封面帧"}
+                  "blob": {"$ref": "#/$defs/blob", "description": "原文件的指针；与 service、path 互斥"},
+                  "preview": {
+                    "description": "预览图：图片是长边一般不超过约 1280 像素的静图，视频是封面帧",
+                    "oneOf": [
+                      {"$ref": "#/$defs/blob", "description": "预览图的指针；与 service 互斥"},
+                      {"type": "string", "minLength": 1, "maxLength": 2048, "description": "将退役，改写指针。旧写法：预览图在同一个 service 里的服务内路径"}
+                    ]
+                  },
+                  "service": {"type": "string", "minLength": 1, "maxLength": 200, "description": "将退役，改用 blob 和指针的 preview。旧写法：provider 插件登记的本机流式服务 ID"},
+                  "path": {"type": "string", "minLength": 1, "maxLength": 2048, "description": "将退役，改用 blob。旧写法：原文件的服务内路径，原样接在 /v1/plugins/<provider 插件>/services/<service>/ 之后"}
                 },
                 "required": ["type", "name"],
-                "dependentRequired": {"path": ["service"], "preview": ["service"]},
+                "dependentRequired": {"path": ["service"]},
+                "dependentSchemas": {
+                  "blob": {"properties": {"service": false, "path": false}},
+                  "preview": {
+                    "if": {"properties": {"preview": {"type": "string"}}},
+                    "then": {"required": ["service"]},
+                    "else": {"properties": {"service": false}}
+                  }
+                },
                 "additionalProperties": false
               },
               {
