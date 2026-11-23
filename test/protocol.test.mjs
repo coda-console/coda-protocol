@@ -742,7 +742,8 @@ test('permission group sessions: for groups with an operation or a stream, never
   for (const sessions of [true, false])
     assert.match(definitionProblem({ ...own, events, permissions: { a: { title: 'A', events: ['pull_request.opened'], sessions } } }),
       /^协议定义\.permissions\.a：有 events 的组只放事件/, String(sessions));
-  assert.match(definitionProblem(def({ a: { title: 'A', read: true, sessions: true } })), /^协议定义\.permissions\.a\.sessions：开放给会话的组至少要有一个操作或一条流/);
+  assert.match(definitionProblem(def({ a: { title: 'A', read: true, sessions: true } })), /^协议定义\.permissions\.a\.sessions：写了 sessions 的组至少要有一个操作或一条流/);
+  assert.match(definitionProblem(def({ a: { title: 'A', read: true, sessions: false } })), /^协议定义\.permissions\.a\.sessions：写了 sessions 的组至少要有一个操作或一条流/);
   assert.match(definitionProblem(def({ a: { title: 'A', read: true, operations: [], streams: [], sessions: true } })), /^协议定义\.permissions\.a\.sessions：/);
   assert.equal(typeof definitionProblem(def({ a: { title: 'A', operations: ['start'], sessions: 'yes' } })), 'string');
 });

@@ -305,7 +305,7 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 | `read` | 可选，布尔，管不管读这个协议的记录（get、list、watch）。写记录只许实现方，不分给插件 |
 | `sessions` | 可选，布尔，为 true 表示这组里的操作与流开放给会话（会话经工具调用），不只是开放给插件 |
 
-不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作、每条流、每个事件最多属于一组；组里列的操作都在 `operations` 里，列的流都在 `streams` 里，列的事件都在 `events` 里；每组至少管一样东西（有操作、有流、有事件，或 `read` 为 true）；有 `events` 的组只放事件：`events` 至少一项，且不能再出现 `operations`、`streams`、`read`、`sessions` 这几个键，写成 `[]` 或 `false` 也不行；`sessions` 为 true 的组必须至少有一个操作或一条流，只有 `read` 不够。**不在任何组里的操作、流和事件不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
+不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作、每条流、每个事件最多属于一组；组里列的操作都在 `operations` 里，列的流都在 `streams` 里，列的事件都在 `events` 里；每组至少管一样东西（有操作、有流、有事件，或 `read` 为 true）；有 `events` 的组只放事件：`events` 至少一项，且不能再出现 `operations`、`streams`、`read`、`sessions` 这几个键，写成 `[]` 或 `false` 也不行；写了 `sessions` 的组（不论 true 还是 false）必须至少有一个操作或一条流，只有 `read` 不够。**不在任何组里的操作、流和事件不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
 
 ```json
 "permissions": {

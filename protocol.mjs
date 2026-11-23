@@ -78,7 +78,7 @@ function schemaProblem(schema, where) {
 
 // Permission groups, when written: every group names real operations, streams and events and covers something, every
 // operation, stream and event sits in at most one group. One that is in no group is not open to plugins. A group with events
-// holds only events: subscribing to the group is subscribing to all of them. A group open to sessions holds an operation or a stream.
+// holds only events: subscribing to the group is subscribing to all of them. A group that writes sessions holds an operation or a stream.
 function permissionsProblem({ operations = {}, streams = {}, events = {}, permissions }, where) {
   if (permissions === undefined) return null;
   const owner = { operations: new Map(), streams: new Map(), events: new Map() };
@@ -94,8 +94,8 @@ function permissionsProblem({ operations = {}, streams = {}, events = {}, permis
     }
     if (entry.events !== undefined && ['operations', 'streams', 'read', 'sessions'].some(key => Object.hasOwn(entry, key)))
       return `${where}.permissions.${group}：有 events 的组只放事件，不能再写 operations、streams、read、sessions`;
-    if (entry.sessions === true && !entry.operations?.length && !entry.streams?.length)
-      return `${where}.permissions.${group}.sessions：开放给会话的组至少要有一个操作或一条流，只有 read 不够`;
+    if (Object.hasOwn(entry, 'sessions') && !entry.operations?.length && !entry.streams?.length)
+      return `${where}.permissions.${group}.sessions：写了 sessions 的组至少要有一个操作或一条流，只有 read 不够`;
     if (!entry.operations?.length && !entry.streams?.length && !entry.events?.length && entry.read !== true)
       return `${where}.permissions.${group}：至少管一样东西：写 operations、streams 或 events，或 read 为 true`;
   }
