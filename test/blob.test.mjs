@@ -12,6 +12,7 @@ const status = ajv.compile(statusSchema), result = ajv.compile(resultSchema), po
 const BLOB = resultSchema.$defs.blob, blob = ajv.compile(BLOB);
 
 const OWNER = '0947ce49-321d-4d63-bd66-415fb6a0ebce', UPLOAD = '1c79fe8d-d534-4cb8-a53a-64c03a117027';
+const HASH = '0123456789abcdef'.repeat(4);
 const SERVED = 'plugins/wechat/services/media/';
 // Judged alike by the two, and what was accepted is the path a URL parser reads too.
 function judged(path, accepted) {
@@ -30,12 +31,12 @@ test('the definition of coda/session@1 is one, and its schemas compile as Coda c
 
 test('the pointer is defined alike in the two schemas, its pattern is the rows of the table, and post takes none', () => {
   assert.deepEqual(statusSchema.$defs.blob, BLOB);
-  assert.equal(BLOB.properties.path.pattern, `^(?:${BLOB_PATHS.map(({ pattern }) => pattern.replaceAll(/\(\?<[a-z]+>/g, '(?:')).join('|')})$`);
+  assert.equal(BLOB.properties.path.pattern, `^(?:${BLOB_PATHS.map(({ pattern }) => pattern.replaceAll(/\(\?<[a-z0-9]+>/g, '(?:')).join('|')})$`);
   assert.equal(postSchema.$defs.blob, undefined);
 });
 
-test('a path of an upload, or of something in a plugin\'s service, is read into its parts as written', () => {
-  assert.deepEqual(BLOB_PATHS.map(({ kind }) => kind), ['upload', 'service']);
+test('a path of an upload, of something in a plugin\'s service, or of content by its hash, is read into its parts as written', () => {
+  assert.deepEqual(BLOB_PATHS.map(({ kind }) => kind), ['upload', 'service', 'content']);
   for (const upload of [UPLOAD, '00000000-0000-0000-0000-000000000000', 'ffffffff-ffff-ffff-ffff-ffffffffffff']) {
     assert.deepEqual(judged(`uploads/${upload}`, true), { kind: 'upload', upload, preview: false });
     assert.deepEqual(judged(`uploads/${upload}/preview`, true), { kind: 'upload', upload, preview: true });
@@ -44,6 +45,8 @@ test('a path of an upload, or of something in a plugin\'s service, is read into 
     assert.deepEqual(judged(`plugins/${id}/services/media/a`, true), { kind: 'service', plugin: id, service: 'media', path: 'a' });
     assert.deepEqual(judged(`plugins/wechat/services/${id}/a`, true), { kind: 'service', plugin: 'wechat', service: id, path: 'a' });
   }
+  for (const sha256 of ['0'.repeat(64), 'f'.repeat(64), '0123456789abcdef'.repeat(4), 'a1b2c3d4e5f60718'.repeat(4)])
+    assert.deepEqual(judged(`content/${sha256}`, true), { kind: 'content', sha256 });
   for (const path of ['a', 'msg/m7/IMG_0412.jpg', 'msg/m7/IMG_0412.preview.jpg', 'a/b/c/d/e', 'preview', 'services/media/a', 'uploads/a',
     encodeURIComponent('你好 👋?#%.jpg'), encodeURIComponent("a!'()*~-_.b"), '%E4%BD%A0/%e5%a5%bd', "-._~!$&'()*+,;=:@", '%25', '%252f', '%00', '%FF'])
     assert.deepEqual(judged(SERVED + path, true), { kind: 'service', plugin: 'wechat', service: 'media', path });
@@ -62,10 +65,13 @@ test('a path of any other kind, or written another way, is none', () => {
     'plugins/services/media/a', 'plugins/wechat/media/a', 'plugins/wechat/service/media/a', 'plugins/wechat/Services/media/a',
     ...['Wechat', '1wechat', '-wechat', 'we_chat', 'we.chat', 'we%63hat', '.', '..', 'x'.repeat(41)].flatMap(id =>
       [`plugins/${id}/services/media/a`, `plugins/wechat/services/${id}/a`]),
+    // Content: 64 lowercase hex digits, nothing around them.
+    ...[HASH.toUpperCase(), HASH.slice(0, -1), `${HASH}0`, `g${HASH.slice(1)}`, `${HASH.slice(1)}g`, `${HASH.slice(0, 10)} ${HASH.slice(11)}`, `%61${HASH.slice(1)}`, `${HASH.slice(0, 2)}%61${HASH.slice(3)}`].map(sha256 => `content/${sha256}`),
+    'content', 'content/', 'content/a', `content/${HASH}/`, `content/${HASH}/preview`, `content/${HASH}//`, `content//${HASH}`, `content/${HASH}/../${HASH}`, `Content/${HASH}`, `content2/${HASH}`, `%63ontent/${HASH}`, `contents/${HASH}`, HASH,
     // Other prefixes.
     'threads/a', 'files/a', 'blobs/a', 'content/a', `upload/${UPLOAD}`, `Uploads/${UPLOAD}`, `uploads2/${UPLOAD}`, `%75ploads/${UPLOAD}`, 'services/space/a'])
     judged(path, false);
-  for (const path of [`uploads/${UPLOAD}`, `uploads/${UPLOAD}/preview`, `${SERVED}a`, `${SERVED}a/b.jpg`]) {
+  for (const path of [`uploads/${UPLOAD}`, `uploads/${UPLOAD}/preview`, `${SERVED}a`, `${SERVED}a/b.jpg`, `content/${HASH}`]) {
     judged(path, true);
     for (const other of [`/${path}`, `//${path}`, `v1/${path}`, `/v1/${path}`, `./${path}`, `../${path}`, `a/${path}`, `https://host/v1/${path}`,
       `${path}/`, `${path}//`, `${path}?`, `${path}?a=1`, `${path}#`, `${path}#a`, ` ${path}`, `${path} `, `${path}\n`, `\n${path}`, `${path}%`,
@@ -161,6 +167,7 @@ test('a media part\'s pointer is a whole pointer, and a part of text takes none'
   const pointer = pointerTo(`${SERVED}a.jpg`);
   for (const key of ['blob', 'preview']) {
     assert.equal(reads({ type: 'image', name: 'a', [key]: { ...pointer, name: 'a.jpg', size: 10, mime: 'image/jpeg', sha256: 'f'.repeat(64) } }), true);
+    for (const sha256 of ['0'.repeat(64), 'f'.repeat(64), HASH]) assert.equal(reads({ type: 'image', name: 'a', [key]: pointerTo(`content/${sha256}`) }), true);
     for (const value of [null, 1, [], {}, '', { owner: OWNER }, { path: pointer.path }, { service: 'media', path: 'a.jpg' }, { ...pointer, service: 'media' },
       { ...pointer, owner: 'macmini' }, { ...pointer, path: 'a.jpg' }, { ...pointer, path: `/v1/${pointer.path}` }, { ...pointer, sha256: 'f' }])
       assert.equal(reads({ type: 'image', name: 'a', [key]: value }), false, `${key} ${JSON.stringify(value)}`);
@@ -173,9 +180,9 @@ test('a media part\'s pointer is a whole pointer, and a part of text takes none'
 
 test('an avatar is a pointer or written the old way, never both', () => {
   const shown = avatar => status({ participants: [{ id: 'u1', name: '小王', kind: 'person', avatar }] });
-  const values = { owner: [OWNER], service: ['media'], path: ['avatar/u1/ab12', `${SERVED}avatar/u1/ab12`, `uploads/${UPLOAD}`], name: ['a.jpg'], size: [10], mime: ['image/jpeg'], sha256: ['f'.repeat(64)] };
+  const values = { owner: [OWNER], service: ['media'], path: ['avatar/u1/ab12', `${SERVED}avatar/u1/ab12`, `uploads/${UPLOAD}`, `content/${HASH}`], name: ['a.jpg'], size: [10], mime: ['image/jpeg'], sha256: ['f'.repeat(64)] };
   const all = Object.entries(values).reduce((some, [key, each]) => some.flatMap(avatar => [avatar, ...each.map(value => ({ ...avatar, [key]: value }))]), [{}]);
-  assert.equal(all.length, 2 ** 6 * 4);
+  assert.equal(all.length, 2 ** 6 * 5);
   for (const avatar of all) {
     const keys = Object.keys(avatar), pointing = 'owner' in avatar;
     const expected = pointing ? !('service' in avatar) && avatar.path !== undefined && avatar.path !== 'avatar/u1/ab12' : keys.join(' ') === 'service path';

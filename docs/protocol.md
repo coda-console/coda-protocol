@@ -575,18 +575,19 @@ status：
 | `name`、`size`、`mime` | 文件名、字节数、MIME 类型，约束同媒体 part 的同名字段 |
 | `sha256` | 内容的 SHA-256，64 位小写十六进制；是写的一方的声明 |
 
-`path` 是 URL 路径的写法，已按段百分号编码，不带 `/v1/`、不带开头的 `/`、不带 `?` 和 `#`，至多 2048 个字符。只收两类：
+`path` 是 URL 路径的写法，已按段百分号编码，不带 `/v1/`、不带开头的 `/`、不带 `?` 和 `#`，至多 2048 个字符。只收三类：
 
 | 写法 | 是什么 |
 | --- | --- |
 | `uploads/<上传 ID>`、`uploads/<上传 ID>/preview` | 那台上的一个上传，和它的预览图；上传 ID 是小写 UUID |
 | `plugins/<插件 ID>/services/<服务 ID>/<路径>` | 那台上一个插件登记的本机流式服务里的内容；两个 ID 都是小写字母、数字和「-」，以字母开头，至多 40 个字符，路径至少一段 |
+| `content/<sha256>` | 内容寻址：按内容的 SHA-256 取，`<sha256>` 是 64 位小写十六进制，后面没有别的段；供后端内容寻址缓存、头像与跨尾网小图等复用同一套指针 |
 
 每一段非空，只用 RFC 3986 的路径字符（字母、数字、`-._~!$&'()*+,;=:@`）和百分号编码，百分号后面必须是两位十六进制；不是 `.`、`..`，也不是它们的百分号写法（URL 解析器会把 `%2e%2e` 当成 `..`）；不许有编码过的斜杠和反斜杠（`%2f`、`%5c`，大小写都算）。
 
 **谁来取**：读的一方拿着指针找 Coda 取，不自己拼插件服务的地址；`owner` 不是它连着的那台时由 Coda 转。schema 只查写法，不核对 `owner`、插件和写的一方是不是同一个，取的时候由 Coda 判。
 
-两类路径列在 `@coda-console/protocol/blob` 的表里，schema 的 `pattern` 和它判得一样：
+三类路径列在 `@coda-console/protocol/blob` 的表里，schema 的 `pattern` 和它判得一样：
 
 ```js
 import { parseBlobPath } from '@coda-console/protocol/blob';
@@ -595,6 +596,8 @@ parseBlobPath('uploads/1c79fe8d-d534-4cb8-a53a-64c03a117027/preview');
 // { kind: 'upload', upload: '1c79fe8d-d534-4cb8-a53a-64c03a117027', preview: true }
 parseBlobPath('plugins/wechat/services/media/msg/m7/IMG_0412.jpg');
 // { kind: 'service', plugin: 'wechat', service: 'media', path: 'msg/m7/IMG_0412.jpg' }，path 是原样的，没有解码
+parseBlobPath('content/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef');
+// { kind: 'content', sha256: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' }
 parseBlobPath('plugins/wechat/services/media/../secret'); // null
 ```
 
