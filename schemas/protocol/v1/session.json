@@ -43,8 +43,8 @@
           "path": {
             "type": "string",
             "maxLength": 2048,
-            "pattern": "^(?:uploads/(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/preview)?|plugins/(?:[a-z][a-z0-9-]{0,39})/services/(?:[a-z][a-z0-9-]{0,39})/(?:(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+(?:/(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+)*))$",
-            "description": "那台上的地址：URL 路径，已按段百分号编码，不带 /v1/ 和开头的 /。只收 uploads/<上传 ID>、uploads/<上传 ID>/preview 与 plugins/<插件 ID>/services/<服务 ID>/<路径>，同 @coda-console/protocol/blob 的 parseBlobPath"
+            "pattern": "^(?:uploads/(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/preview)?|plugins/(?:[a-z][a-z0-9-]{0,39})/services/(?:[a-z][a-z0-9-]{0,39})/(?:(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+(?:/(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+)*)|content/(?:[0-9a-f]{64}))$",
+            "description": "那台上的地址：URL 路径，已按段百分号编码，不带 /v1/ 和开头的 /。只收 uploads/<上传 ID>、uploads/<上传 ID>/preview、plugins/<插件 ID>/services/<服务 ID>/<路径> 与 content/<sha256>（64 位小写十六进制 SHA-256），同 @coda-console/protocol/blob 的 parseBlobPath"
           },
           "name": {"type": "string", "maxLength": 1024},
           "size": {"type": "integer", "minimum": 0},
@@ -145,8 +145,8 @@
               "path": {
                 "type": "string",
                 "maxLength": 2048,
-                "pattern": "^(?:uploads/(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/preview)?|plugins/(?:[a-z][a-z0-9-]{0,39})/services/(?:[a-z][a-z0-9-]{0,39})/(?:(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+(?:/(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+)*))$",
-                "description": "那台上的地址：URL 路径，已按段百分号编码，不带 /v1/ 和开头的 /。只收 uploads/<上传 ID>、uploads/<上传 ID>/preview 与 plugins/<插件 ID>/services/<服务 ID>/<路径>，同 @coda-console/protocol/blob 的 parseBlobPath"
+                "pattern": "^(?:uploads/(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/preview)?|plugins/(?:[a-z][a-z0-9-]{0,39})/services/(?:[a-z][a-z0-9-]{0,39})/(?:(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+(?:/(?!(?:[.]|%2[eE]){1,2}(?:/|$))(?:[A-Za-z0-9._~!$&'()*+,;=:@-]|%(?!2[fF]|5[cC])[0-9A-Fa-f]{2})+)*)|content/(?:[0-9a-f]{64}))$",
+                "description": "那台上的地址：URL 路径，已按段百分号编码，不带 /v1/ 和开头的 /。只收 uploads/<上传 ID>、uploads/<上传 ID>/preview、plugins/<插件 ID>/services/<服务 ID>/<路径> 与 content/<sha256>（64 位小写十六进制 SHA-256），同 @coda-console/protocol/blob 的 parseBlobPath"
               },
               "name": {"type": "string", "maxLength": 1024},
               "size": {"type": "integer", "minimum": 0},

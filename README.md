@@ -90,6 +90,7 @@ import { parseBlobPath } from '@coda-console/protocol/blob';
 
 // 指针的 path 是哪一类、各部分是什么；不认得给 null。不依赖 Node，浏览器里也能跑。
 parseBlobPath('plugins/wechat/services/media/a.jpg'); // { kind: 'service', plugin: 'wechat', service: 'media', path: 'a.jpg' }
+parseBlobPath('content/' + 'f'.repeat(64)); // { kind: 'content', sha256: 'ffff…' }，内容寻址：64 位小写十六进制 SHA-256
 ```
 
 ```js

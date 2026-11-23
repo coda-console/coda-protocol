@@ -2,6 +2,12 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.24.0 — 2026-11-23
+
+- 这是在 6.23.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，放宽限制和新增路径种类，升次版本；`stable/` 不动，清单 schema 没改。`coda/session@1` 只加不删，协议名不变：6.23.0 里有效的记录和 `read` 结果照旧有效。
+- 指针 `blob` 的 `path` 新增第三类 `content/<sha256>`：内容寻址，`<sha256>` 是 64 位小写十六进制，后面不带别的段；大写、63 或 65 位、非十六进制字符、百分号编码、多余的斜杠或段都不收。供后端内容寻址缓存、头像与跨尾网小图复用同一套 `BlobPointer`。媒体 part 的 `blob`、`preview` 与头像的指针都照此放宽。
+- `./blob` 的 `BLOB_PATHS` 追加第 3 行 `content`，`parseBlobPath` 对这类路径给 `{ kind: 'content', sha256 }`；schema 的 `pattern` 与它判得一样，`test/blob.test.mjs` 守着。已有两类路径的判断与返回不变。
+
 ## 6.23.0 — 2026-11-23
 
 - 这是在 6.22.0 之上的次版本。依据 README「版本」一节：新增导出是内部面，升次版本；`stable/` 不动，清单与协议的 schema 没改。这一版把 `@coda-console/plugin-check` 里不依赖 Coda 宿主运行时的两样迁进本包，供 Coda 与各插件仓库直接依赖。
