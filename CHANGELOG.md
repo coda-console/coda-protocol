@@ -2,6 +2,14 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.25.0 — 2026-11-24
+
+- 这是在 6.24.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，只加可选的键和类型字段，升次版本；`stable/` 不动，清单 schema 没改。三处都是只增：6.24.0 下合法的定义仍合法。
+- 协议定义顶层加可选键 `resource`：`{ columns, symbol? }`，展示声明。写了它的种类成为可列出、可引用的资源；`columns` 非空、不重复、至多 8 项，每项是 `spec` 的顶层字段名，列表里按此顺序显示，第一列是名字，所在机器那一列由宿主自己加；`symbol` 是客户端画的 SF Symbol 名。`definitionProblem` 另查：每一列须是 `spec.properties` 里声明的标量字段（`type` 为 string、number、integer、boolean 之一，数组形式去掉 `"null"` 后只剩一种标量也算；有 `enum` 而无 `type` 不算）；没写 `spec` 的定义不能写 `resource`。
+- 权限组加布尔键 `sessions`：为 true 表示这组里的操作与流开放给会话（会话经工具调用），不只是开放给插件。`definitionProblem` 另查两条：有 `events` 的组不能出现 `sessions`（写成 `false` 也不行）；`sessions` 为 true 的组须至少有一个操作或一条流，只有 `read` 不够。
+- `./types`：`Caller` 与 `StreamCaller` 的各分支都可再带可选的 `machine`（发起调用的那台后端的 ID）、`plugin`（以哪个插件的身份发起）、`parent`（`{ kind, id }`，直接的发起方，不透明引用），共用新类型 `CallerOrigin`；已有字段与分支的形状不变。`machine` 由接收方按信封来源自己核验；`plugin`、`parent` 与页面打开者（`device`、`name`、`local`）是来源后端转述的，接收方无法独立核验；只给直接的调用方，不给整条父链。`Context.caller` 的注释同步：Coda 填写时，查询与插件、会话发起的调用也带。
+- 需要你知道：`Caller`、`StreamCaller` 的收窄是类型层面的变化（运行时的形状只增不改）。`machine`、`plugin` 现在可能出现在任何分支上，用 `in` 判断分支的 TypeScript 代码要改成按值判断，`in` 收窄后这两个字段的类型是 `string | undefined`。改写示例分两件事。一，字段有没有值：`caller.machine !== undefined`、`s.plugin !== undefined`，这只是说有没有值，不等于原来的哪个分支。二，保留原来分支的意思：原来的 `'machine' in caller`（别台后端转来的页面调用）写成 `caller.machine !== undefined && caller.machine !== selfId`（`selfId` 是本机自己的 ID）；原来的 `'plugin' in s`（`StreamCaller` 的插件分支：本机上的插件来问，本机按令牌核验过）写成 `s.plugin !== undefined && !('device' in s) && !('local' in s)`，因为别台转来的 `{ device, role: 'backend', plugin }` 的 `plugin` 是转述的，只看有没有值会把它当成本机核验过的（类型上联合没有公共的 `device`，所以写 `'device' in s`，不能写 `s.device === undefined`）。`'local' in caller`、`'device' in caller`、`'role' in caller` 照旧可用。两个字段在各分支上含义一致：`machine` 一律是发起调用的那台后端的 ID（接收方按信封核验）；`StreamCaller` 的 `plugin` 是以哪个插件的身份来问，最后一跳是本机时由本机核验，最后一跳是别台后端（`role: 'backend'`）时是转述的、本机无法核验。
+
 ## 6.24.0 — 2026-11-23
 
 - 这是在 6.23.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，放宽限制和新增路径种类，升次版本；`stable/` 不动，清单 schema 没改。`coda/session@1` 只加不删，协议名不变：6.23.0 里有效的记录和 `read` 结果照旧有效。

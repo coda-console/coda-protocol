@@ -61,11 +61,36 @@ export interface CallOptions {
 }
 
 /**
+ * What a call says of where it came from, beside who is before it. All optional, filled by Coda when it can; only the direct
+ * caller is given, never the whole chain of parents.
+ * - `machine`: the ID of the backend the call was made from. The receiver checks it itself against where the envelope came from.
+ * - `plugin`: the plugin the call is made as. Relayed by the originating backend: the receiver cannot check it on its own.
+ * - `parent`: whoever made the call directly, e.g. the session that did, an opaque reference. Relayed too, not checkable.
+ * The page's opener (`device`, `name`, `local`) is relayed by the originating backend as well.
+ *
+ * Read where a call came from by value, not by whether a property exists. Since 6.25.0 `machine` and `plugin` may be on any
+ * branch of `Caller` and `StreamCaller`, so `'machine' in caller` and `'plugin' in caller` no longer tell the branches apart,
+ * and TypeScript types the field as `string | undefined` after such a check. Tell this machine's own client (`local`), a
+ * device (`device`, and `role` of a `StreamCaller`) and a plugin by those fields and the values of `machine` and `plugin`.
+ * The two mean the same on every branch: `machine` is always the ID of the backend the call was made from, which the
+ * receiver checks against the envelope; a `StreamCaller`'s `plugin` is the plugin the call is made as, checked by this machine
+ * (by its token, or by Coda's own entry) when the last hop is this machine, relayed and not checkable by this machine when
+ * the last hop is another backend (`role: 'backend'`). So `s.plugin !== undefined` and `caller.machine !== undefined` say only
+ * that there is a value; the old branch of a plugin checked by this machine is `s.plugin !== undefined && !('device' in s) && !('local' in s)`,
+ * and a call relayed from another backend is `caller.machine !== undefined && caller.machine !== selfId`.
+ */
+export interface CallerOrigin {
+  machine?: string;
+  plugin?: string;
+  parent?: { kind: string; id: string };
+}
+
+/**
  * Who is before the page that made a doing call: Coda's own client on this machine, or a device, with its name if known.
  * A call forwarded to the backend that holds the record has no `local` but the `machine` it was made from (that one's ID),
- * a device kept as it is: so `{ machine }` or `{ machine, device, name? }`.
+ * a device kept as it is: so `{ machine }` or `{ machine, device, name? }`. Each form may also carry a `CallerOrigin`.
  */
-export type Caller = { local: true } | { device: string; name?: string } | { machine: string; device?: string; name?: string };
+export type Caller = ({ local: true } | { device: string; name?: string } | { machine: string; device?: string; name?: string }) & CallerOrigin;
 
 /** What a handler of a call is given beside its input. A handler of a query, and `resume`, have no `progress` nor `ask`. */
 export interface Context {
@@ -98,8 +123,10 @@ export interface Context {
    */
   call?: Coda['call'];
   /**
-   * A doing call's, made from a plugin's page: who is before that page, as Coda knows it, never as the page says. None
-   * for a call a module (`coda.call`), a command (`coda call`) or a flow makes.
+   * Who made the call, as Coda knows it when it fills this in, never as the page says: who is before the page that made
+   * it, and for a query or a call a plugin or a session makes, where it came from (see `CallerOrigin`). `machine` is
+   * checked by the receiver against the envelope; `plugin`, `parent` and the page's opener are relayed by the originating
+   * backend and cannot be checked by the receiver. Only the direct caller, not the chain of parents.
    */
   caller?: Caller;
 }
@@ -110,7 +137,7 @@ export type Handler = (input: Json, ctx: Context) => Json | Promise<Json>;
  * Who asks a service or a stream: this machine's own client or tools, a device, another backend of the space (the last hop,
  * of one sent on), or a plugin (by its token, or from its page; a stream's only).
  */
-export type StreamCaller = { local: true } | { device: string; role: 'client' | 'backend'; name?: string } | { plugin: string };
+export type StreamCaller = ({ local: true } | { device: string; role: 'client' | 'backend'; name?: string } | { plugin: string }) & CallerOrigin;
 /** What a handler of a service (`coda.serve`) is given beside its request. */
 export interface ServeContext {
   caller: StreamCaller;

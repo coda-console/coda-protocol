@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coda.pub/schemas/protocol/v1/definition.json",
   "title": "协议定义",
-  "description": "一个协议的名字、记录格式与操作。名字是「命名空间/名字@大版本」；spec、status 与每个操作的输入、结果都是 JSON Schema（draft 2020-12），只引用定义自身的 $defs。操作要么立刻返回结果（result），要么返回运行引用（run: true）；只读的立即结果可标 safe: true，可改状态但重发做同一件事的立即结果可标 idempotent: true。操作可写 timeout 给出默认期限。可写 streams 声明记录流；可写 events 声明协议的事件；可写 permissions 把操作、流、事件与记录的读取分成权限组，供插件在清单里按组申请。写了 events 的定义可以不写 spec、status、operations（没有记录的协议；它不能有非空的 operations、streams，也不能有 read 为真的组）；没写 events 时三者必填。",
+  "description": "一个协议的名字、记录格式与操作。名字是「命名空间/名字@大版本」；spec、status 与每个操作的输入、结果都是 JSON Schema（draft 2020-12），只引用定义自身的 $defs。操作要么立刻返回结果（result），要么返回运行引用（run: true）；只读的立即结果可标 safe: true，可改状态但重发做同一件事的立即结果可标 idempotent: true。操作可写 timeout 给出默认期限。可写 streams 声明记录流；可写 events 声明协议的事件；可写 permissions 把操作、流、事件与记录的读取分成权限组，供插件在清单里按组申请。写了 events 的定义可以不写 spec、status、operations（没有记录的协议；它不能有非空的 operations、streams，也不能有 read 为真的组）；没写 events 时三者必填。可写 resource 声明种类在资源列表里的展示（见 resource）。",
   "type": "object",
   "properties": {
     "name": {"$ref": "#/$defs/name"},
@@ -33,8 +33,9 @@
       "propertyNames": {"$ref": "#/$defs/eventName"},
       "additionalProperties": {"$ref": "#/$defs/event"}
     },
+    "resource": {"$ref": "#/$defs/resource"},
     "permissions": {
-      "description": "权限组：组名 → 一组对插件开放的能力。插件在清单的 uses（必需）或 optionalUses（可选）里按组申请，没申请的调用被宿主拒绝；可选权限缺席时不阻止插件运行，可用性判定与鉴权由 Coda 宿主负责。每个操作、每条流、每个事件最多属于一组，组里列的操作、流与事件都存在，每组至少管一样东西（有操作、有流、有事件，或 read 为真），有 events 的组不能再有 operations、streams、read 这几个键；没写 spec、status 的协议不能有非空的 operations、streams，也不能有 read 为真的组；这些由 definitionProblem 查。不在任何组里的操作、流和事件不对插件开放，只有 Coda 自己和它的客户端调；不写 permissions 就是整个协议都不分组",
+      "description": "权限组：组名 → 一组对插件开放的能力。插件在清单的 uses（必需）或 optionalUses（可选）里按组申请，没申请的调用被宿主拒绝；可选权限缺席时不阻止插件运行，可用性判定与鉴权由 Coda 宿主负责。每个操作、每条流、每个事件最多属于一组，组里列的操作、流与事件都存在，每组至少管一样东西（有操作、有流、有事件，或 read 为真），有 events 的组不能再有 operations、streams、read、sessions 这几个键；sessions 为真的组必须至少有一个操作或一条流（只有 read 不够）；没写 spec、status 的协议不能有非空的 operations、streams，也不能有 read 为真的组；这些由 definitionProblem 查。不在任何组里的操作、流和事件不对插件开放，只有 Coda 自己和它的客户端调；不写 permissions 就是整个协议都不分组",
       "type": "object",
       "maxProperties": 50,
       "propertyNames": {"$ref": "#/$defs/operationName"},
@@ -79,16 +80,27 @@
     },
     "title": {"description": "给人看的名字", "type": "string", "maxLength": 100, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
     "description": {"description": "一句话说明", "type": "string", "maxLength": 1000, "pattern": "^(?=.*\\S)[^\\u0000\\r\\n]*$"},
+    "resource": {
+      "description": "展示声明：写了它的种类成为可列出、可引用的资源。列表里每条按 columns 的顺序显示，第一列是名字；所在机器那一列由宿主自己加，不用写；列名取该字段 schema 的 title，没有就用字段名；只展示这些列与 spec 里带 description 的字段。columns 的每一项都必须是 spec.properties 里声明的字段，且是标量（schema 的 type 是 string、number、integer 或 boolean 之一；type 是数组时去掉 \"null\" 后只剩一种标量也算；有 enum 而无 type 不算）；没写 spec 的定义不能写 resource，这些由 definitionProblem 查。不写就和没有这个声明一样",
+      "type": "object",
+      "properties": {
+        "columns": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 64}, "description": "列：spec 的顶层字段名，按显示顺序，第一列是名字；不重复"},
+        "symbol": {"type": "string", "minLength": 1, "maxLength": 64, "description": "客户端画的 SF Symbol 名"}
+      },
+      "required": ["columns"],
+      "additionalProperties": false
+    },
     "permissionGroup": {
-      "description": "一个权限组：title 是给用户看的一句话，说这组让插件能做什么；trial 标这组是试行的；operations 是归这组管的操作；streams 是归这组管的流；events 是归这组管的事件，插件在 uses 或 optionalUses 里写了这组就是订了组里全部事件，有 events 的组只放事件（不能再写 operations、streams、read 这几个键）；read 管不管读这个协议的记录（get、list、watch）；写记录只许实现方，不分给插件",
+      "description": "一个权限组：title 是给用户看的一句话，说这组让插件能做什么；trial 标这组是试行的；operations 是归这组管的操作；streams 是归这组管的流；events 是归这组管的事件，插件在 uses 或 optionalUses 里写了这组就是订了组里全部事件，有 events 的组只放事件（不能再写 operations、streams、read、sessions 这几个键）；read 管不管读这个协议的记录（get、list、watch）；sessions 为 true 表示这组里的操作与流开放给会话（会话经工具调用），不只是开放给插件，这样的组须至少有一个操作或一条流；写记录只许实现方，不分给插件",
       "type": "object",
       "properties": {
         "title": {"$ref": "#/$defs/title"},
         "trial": {"type": "boolean", "description": "是否试行：只影响展示，不影响能否调用"},
         "operations": {"type": "array", "maxItems": 50, "uniqueItems": true, "items": {"$ref": "#/$defs/operationName"}, "description": "归这组管的操作名，不重复"},
         "streams": {"type": "array", "maxItems": 50, "uniqueItems": true, "items": {"$ref": "#/$defs/operationName"}, "description": "归这组管的流名，不重复"},
-        "events": {"type": "array", "minItems": 1, "maxItems": 50, "uniqueItems": true, "items": {"$ref": "#/$defs/eventName"}, "description": "归这组管的事件名，不重复；有 events 的组不能再有 operations、streams、read 这几个键"},
-        "read": {"type": "boolean", "description": "管不管读这个协议的记录（get、list、watch）"}
+        "events": {"type": "array", "minItems": 1, "maxItems": 50, "uniqueItems": true, "items": {"$ref": "#/$defs/eventName"}, "description": "归这组管的事件名，不重复；有 events 的组不能再有 operations、streams、read、sessions 这几个键"},
+        "read": {"type": "boolean", "description": "管不管读这个协议的记录（get、list、watch）"},
+        "sessions": {"type": "boolean", "description": "为 true 表示这组里的操作与流开放给会话（会话经工具调用），不只是开放给插件；须至少有一个操作或一条流（只有 read 不够），有 events 的组不能写这个键"}
       },
       "required": ["title"],
       "additionalProperties": false
