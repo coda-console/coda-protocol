@@ -704,3 +704,46 @@ test('a manifest\'s uses maps versioned protocol names to non-empty lists of dis
     assert.match(manifestProblem({ id: 'my-plugin', uses }), /uses/, JSON.stringify(uses));
   assert.equal(manifestProblem({ id: 'my-plugin', contributes: { uses: ['whatever'] } }), null);
 });
+
+test('resource: columns are scalar top-level fields of spec', () => {
+  const spec = {
+    type: 'object',
+    properties: {
+      name: { type: 'string' }, port: { type: ['integer', 'null'] }, on: { type: 'boolean' }, ratio: { type: 'number', title: '比例' },
+      tags: { type: 'array' }, meta: { type: 'object' }, kind: { enum: ['a', 'b'] }, either: { type: ['string', 'number'] }, any: true,
+    },
+  };
+  const withResource = resource => ({ ...own, spec, resource });
+  for (const resource of [{ columns: ['name'] }, { columns: ['name', 'port', 'on', 'ratio'], symbol: 'server.rack' }, { columns: ['port'] }])
+    assert.equal(definitionProblem(withResource(resource)), null, JSON.stringify(resource));
+  assert.equal(definitionProblem({ ...own, spec }), null);
+  assert.equal(definitionProblem(withResource({ columns: ['nope'] })), '协议定义.resource.columns[0]：spec 里没有字段「nope」');
+  assert.equal(definitionProblem(withResource({ columns: ['name', 'nope'] })), '协议定义.resource.columns[1]：spec 里没有字段「nope」');
+  for (const column of ['tags', 'meta', 'kind', 'either', 'any'])
+    assert.match(definitionProblem(withResource({ columns: ['name', column] })), new RegExp(`^协议定义\\.resource\\.columns\\[1\\]：字段「${column}」不是标量`), column);
+  assert.match(definitionProblem({ ...own, spec: true, resource: { columns: ['name'] } }), /^协议定义\.resource\.columns\[0\]：spec 里没有字段/);
+  assert.match(definitionProblem({ name: 'my-plugin/pulls@1', events: { 'a.b': { payload: true } }, resource: { columns: ['name'] } }), /^协议定义\.resource：没有记录的协议/);
+  for (const resource of [{ columns: [] }, { columns: ['name', 'name'] }, { columns: Array.from({ length: 9 }, (_, i) => `f${i}`) }, { columns: [''] }, { columns: ['a'.repeat(65)] },
+    { columns: [1] }, {}, { columns: ['name'], symbol: '' }, { columns: ['name'], symbol: 'a'.repeat(65) }, { columns: ['name'], extra: true }, 'name', null])
+    assert.equal(typeof definitionProblem(withResource(resource)), 'string', JSON.stringify(resource));
+});
+
+test('permission group sessions: for groups with an operation or a stream, never with events', () => {
+  const ops = { start: { input: {}, run: true }, peek: { input: {}, result: {}, safe: true } };
+  const streams = { log: { input: {} } };
+  const events = { 'pull_request.opened': { payload: true } };
+  const def = permissions => ({ ...own, operations: ops, streams, permissions });
+  for (const permissions of [
+    { go: { title: '开始', operations: ['start'], sessions: true } },
+    { go: { title: '看日志', streams: ['log'], sessions: true } },
+    { go: { title: '看日志', streams: ['log'], read: true, sessions: true } },
+    { go: { title: '开始', operations: ['start'], sessions: false }, logs: { title: '看日志', streams: ['log'], sessions: false } },
+  ]) assert.equal(definitionProblem(def(permissions)), null, JSON.stringify(permissions));
+  for (const sessions of [true, false])
+    assert.match(definitionProblem({ ...own, events, permissions: { a: { title: 'A', events: ['pull_request.opened'], sessions } } }),
+      /^协议定义\.permissions\.a：有 events 的组只放事件/, String(sessions));
+  assert.match(definitionProblem(def({ a: { title: 'A', read: true, sessions: true } })), /^协议定义\.permissions\.a\.sessions：写了 sessions 的组至少要有一个操作或一条流/);
+  assert.match(definitionProblem(def({ a: { title: 'A', read: true, sessions: false } })), /^协议定义\.permissions\.a\.sessions：写了 sessions 的组至少要有一个操作或一条流/);
+  assert.match(definitionProblem(def({ a: { title: 'A', read: true, operations: [], streams: [], sessions: true } })), /^协议定义\.permissions\.a\.sessions：/);
+  assert.equal(typeof definitionProblem(def({ a: { title: 'A', operations: ['start'], sessions: 'yes' } })), 'string');
+});

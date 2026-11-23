@@ -76,7 +76,8 @@ protocolShortName('coda/run@1'); // 'coda-1run-21'
 | `operations` | 操作名 → `{ description?, input, result, safe?, idempotent?, timeout? }` 或 `{ description?, input, run: true, timeout? }`；没写 `events` 时必填，不定义操作写 `{}` |
 | `streams` | 流名 → `{ description?, input, shape?, frames?, subprotocol? }`，可选（见「记录流」） |
 | `events` | 事件名 → `{ description?, payload, starts?, ends? }`，可选（见「事件」） |
-| `permissions` | 权限组名 → `{ title, trial?, operations?, streams?, events?, read? }`，可选（见「权限组」） |
+| `resource` | 展示声明 `{ columns, symbol? }`，可选（见「资源展示」） |
+| `permissions` | 权限组名 → `{ title, trial?, operations?, streams?, events?, read?, sessions? }`，可选（见「权限组」） |
 
 `spec`、`status`、`input`、`result` 都是 JSON Schema draft 2020-12，只引用自己文档里的 `#/$defs/...`，不引用别的文件。`input` 必有。操作的输出二选一：
 
@@ -273,6 +274,23 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 }
 ```
 
+### 资源展示
+
+定义可以写 `resource`，声明这个种类在资源列表里怎么展示：
+
+```json
+"resource": {"columns": ["name", "region", "port"], "symbol": "server.rack"}
+```
+
+| 字段 | 含义 |
+| --- | --- |
+| `columns` | 必填，非空、不重复、至多 8 项的字符串数组，每项是 `spec` 的顶层字段名（1–64 个字符） |
+| `symbol` | 可选，客户端画的 SF Symbol 名，1–64 个字符 |
+
+不许有别的键。写了 `resource` 的种类成为可列出、可引用的资源：列表里每条按 `columns` 的顺序显示，第一列是名字；所在机器那一列由宿主自己加，不用写；列名取该字段 schema 的 `title`，没有就用字段名；只展示这些列与 `spec` 里带 `description` 的字段。不写就和没有这个声明一样。
+
+`definitionProblem` 还查：每一列都必须是 `spec.properties` 里声明的字段，且该字段是标量：它的 schema 的 `type` 是 `string`、`number`、`integer` 或 `boolean` 之一（`type` 是数组时，去掉 `"null"` 后只剩一种标量也算；有 `enum` 而无 `type` 不算）。没写 `spec` 的定义（只有 `events` 的协议）不能写 `resource`。报错写明 `<位置>.resource.columns[i]` 与原因。
+
 ### 权限组
 
 一切对插件开放的能力都以协议提供，权限挂在协议上：定义用 `permissions` 把自己的操作、流、事件与记录的读取分成组，插件在清单的 `uses`（必需）或 `optionalUses`（可选）里声明用到哪些组，没声明的调用被宿主拒绝。组名的写法同操作名（小写字母开头，只用小写字母、数字和「-」，至多 64 个字符）。每组：
@@ -285,8 +303,9 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 | `streams` | 可选，不重复的流名数组，归这组管的流 |
 | `events` | 可选，至少一项、不重复的事件名数组，归这组管的事件；插件在 `uses` 或 `optionalUses` 里写了这组，就是订了组里全部事件 |
 | `read` | 可选，布尔，管不管读这个协议的记录（get、list、watch）。写记录只许实现方，不分给插件 |
+| `sessions` | 可选，布尔，为 true 表示这组里的操作与流开放给会话（会话经工具调用），不只是开放给插件 |
 
-不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作、每条流、每个事件最多属于一组；组里列的操作都在 `operations` 里，列的流都在 `streams` 里，列的事件都在 `events` 里；每组至少管一样东西（有操作、有流、有事件，或 `read` 为 true）；有 `events` 的组只放事件：`events` 至少一项，且不能再出现 `operations`、`streams`、`read` 这几个键，写成 `[]` 或 `false` 也不行。**不在任何组里的操作、流和事件不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
+不许有别的键。写了 `permissions` 的定义还要满足（`definitionProblem` 查）：每个操作、每条流、每个事件最多属于一组；组里列的操作都在 `operations` 里，列的流都在 `streams` 里，列的事件都在 `events` 里；每组至少管一样东西（有操作、有流、有事件，或 `read` 为 true）；有 `events` 的组只放事件：`events` 至少一项，且不能再出现 `operations`、`streams`、`read`、`sessions` 这几个键，写成 `[]` 或 `false` 也不行；写了 `sessions` 的组（不论 true 还是 false）必须至少有一个操作或一条流，只有 `read` 不够。**不在任何组里的操作、流和事件不对插件开放**，只有 Coda 自己和它的客户端调；不写 `permissions` 的定义照旧合法，那时整个协议都不对插件开放。
 
 ```json
 "permissions": {

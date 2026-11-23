@@ -78,7 +78,7 @@ function schemaProblem(schema, where) {
 
 // Permission groups, when written: every group names real operations, streams and events and covers something, every
 // operation, stream and event sits in at most one group. One that is in no group is not open to plugins. A group with events
-// holds only events: subscribing to the group is subscribing to all of them.
+// holds only events: subscribing to the group is subscribing to all of them. A group that writes sessions holds an operation or a stream.
 function permissionsProblem({ operations = {}, streams = {}, events = {}, permissions }, where) {
   if (permissions === undefined) return null;
   const owner = { operations: new Map(), streams: new Map(), events: new Map() };
@@ -92,8 +92,10 @@ function permissionsProblem({ operations = {}, streams = {}, events = {}, permis
         owner[key].set(name, group);
       }
     }
-    if (entry.events !== undefined && ['operations', 'streams', 'read'].some(key => Object.hasOwn(entry, key)))
-      return `${where}.permissions.${group}：有 events 的组只放事件，不能再写 operations、streams、read`;
+    if (entry.events !== undefined && ['operations', 'streams', 'read', 'sessions'].some(key => Object.hasOwn(entry, key)))
+      return `${where}.permissions.${group}：有 events 的组只放事件，不能再写 operations、streams、read、sessions`;
+    if (Object.hasOwn(entry, 'sessions') && !entry.operations?.length && !entry.streams?.length)
+      return `${where}.permissions.${group}.sessions：写了 sessions 的组至少要有一个操作或一条流，只有 read 不够`;
     if (!entry.operations?.length && !entry.streams?.length && !entry.events?.length && entry.read !== true)
       return `${where}.permissions.${group}：至少管一样东西：写 operations、streams 或 events，或 read 为 true`;
   }
@@ -128,6 +130,25 @@ function recordsProblem(definition, where) {
   return reading ? `${where}.permissions.${reading[0]}.read：${without}读记录的权限，要它须同时写 spec 和 status` : null;
 }
 
+// `resource.columns`: each is a scalar top-level field of `spec` (a string, number, integer or boolean; `null` beside one is fine).
+const SCALAR_TYPES = ['string', 'number', 'integer', 'boolean'];
+function isScalarSchema(schema) {
+  if (schema === null || typeof schema !== 'object') return false;
+  const types = (Array.isArray(schema.type) ? schema.type : [schema.type]).filter(type => type !== 'null');
+  return types.length === 1 && SCALAR_TYPES.includes(types[0]);
+}
+
+function resourceProblem({ spec, resource }, where) {
+  if (resource === undefined) return null;
+  if (spec === undefined) return `${where}.resource：没有记录的协议（没写 spec）不能写 resource`;
+  const properties = spec?.properties ?? {};
+  for (const [index, column] of resource.columns.entries()) {
+    if (!Object.hasOwn(properties, column)) return `${where}.resource.columns[${index}]：spec 里没有字段「${column}」`;
+    if (!isScalarSchema(properties[column])) return `${where}.resource.columns[${index}]：字段「${column}」不是标量，须是 string、number、integer 或 boolean`;
+  }
+  return null;
+}
+
 // `namespace`: the plugin ID a manifest owns definitions under; omitted for core definitions and standalone checks.
 export function definitionProblem(definition, { namespace = null, where = '协议定义' } = {}) {
   if (!definitionCheck(definition))
@@ -143,6 +164,8 @@ export function definitionProblem(definition, { namespace = null, where = '协�
   if (recording) return recording;
   const grouping = permissionsProblem(definition, where);
   if (grouping) return grouping;
+  const resource = resourceProblem(definition, where);
+  if (resource) return resource;
   const parts = protocolHasRecords(definition) ? [['spec', definition.spec], ['status', definition.status]] : [];
   for (const [operation, value] of Object.entries(definition.operations ?? {})) {
     parts.push([`operations.${operation}.input`, value.input]);
