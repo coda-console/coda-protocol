@@ -86,9 +86,11 @@ export interface CallerOrigin {
 }
 
 /**
- * Who is before the page that made a doing call: Coda's own client on this machine, or a device, with its name if known.
- * A call forwarded to the backend that holds the record has no `local` but the `machine` it was made from (that one's ID),
- * a device kept as it is: so `{ machine }` or `{ machine, device, name? }`. Each form may also carry a `CallerOrigin`.
+ * Who made a doing call or a query. When a page's opener is before it, `local: true` (Coda's own client on this machine) or
+ * `device` (with its `name` if known). A call forwarded from another backend has no `local` but the `machine` it was made from
+ * (that one's ID), a device kept as it is: so `{ machine }` or `{ machine, device, name? }`. A bare `{ machine }` may be a page
+ * opened by that machine's own client or any other call from that machine, so these fields alone do not tell whether a page
+ * made the call. Each form may also carry a `CallerOrigin`.
  */
 export type Caller = ({ local: true } | { device: string; name?: string } | { machine: string; device?: string; name?: string }) & CallerOrigin;
 
