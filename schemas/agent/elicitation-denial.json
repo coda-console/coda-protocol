@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/elicitation-denial.json",
+  "type": "object",
+  "description": "表单结果须为对象",
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "description": "_meta 须为对象",
+      "properties": {
+        "coda": {
+          "type": "object",
+          "description": "_meta.coda 须为对象",
+          "properties": {
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "description": "reason 须为非空字符串，只出现在 action 为 decline 的表单结果里；普通 decline 不带它"
+            }
+          }
+        }
+      }
+    }
+  },
+  "if": {
+    "required": ["_meta"],
+    "properties": {"_meta": {"type": "object", "required": ["coda"], "properties": {"coda": {"type": "object", "required": ["reason"]}}}}
+  },
+  "then": {
+    "required": ["action"],
+    "properties": {"action": {"const": "decline", "description": "action 须为 decline：_meta.coda.reason 只出现在 decline 的表单结果里"}}
+  }
+}

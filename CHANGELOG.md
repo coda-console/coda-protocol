@@ -5,8 +5,8 @@
 ## 6.26.0 — 2026-11-24
 
 - 这是在 6.25.0 之上的次版本。依据 README「版本」一节：流程方言与 Agent 接入协议是内部面，只加可选属性与约定，升次版本；`stable/` 不动，清单 schema 没改。6.25.0 下合法的流程仍合法。
-- 流程属性 `coda:questionDenial`（字符串）：写了它，运行期间，持有这个运行或它的子运行里没结束的 agent 任务的会话向用户提问时，宿主当场拒绝，把这段文字回给 Agent；不写就不拦。权限审批、链接表单、密钥卡、请用户操作桌面、指给用户的流程任务都不拦。与 `coda:title` 等字符串属性一样，写了就须为 1–2000 个字符，空串与全空白读流程时报错（不想拦就不写）。README 的流程方言补这条。
-- Agent 接入协议：宿主因流程声明（`coda:questionDenial`）拦下轮内的 `elicitation/create` 表单时，回 `action: decline` 且必须带 `_meta.coda.reason`；Agent 插件见到 reason 就把这段文字原样交给模型。没带 reason 的 `decline` 语义不变，仍是用户拒绝；轮次限制无条件，拦截只适用于轮内 form，轮次之外的表单照旧回 `cancel`。`docs/agent-protocol.md` 补 `_meta.coda.reason`。
+- 流程属性 `coda:questionDenial`（字符串）：写了它，运行期间，持有这个运行或它的子运行里没结束的 agent 任务的会话向用户提问时，宿主当场拒绝，把这段文字回给 Agent；不写就不拦。权限审批、链接表单、密钥卡、请用户操作桌面、指给用户的流程任务都不拦。父子运行都声明时：从会话所持任务所在的运行开始往上找，用离它最近的一段；子运行没声明，就沿用祖先的声明。写了就须非空白，1–2000 个字符（以 `workflow/values.json` 里的定义为准），空串与全空白读流程时报错（不想拦就不写）。README 的流程方言补这条。
+- Agent 接入协议：宿主因流程声明（`coda:questionDenial`）拦下轮内的 `elicitation/create` 表单时，回 `action: decline` 且必须带 `_meta.coda.reason`；Agent 插件见到 reason 就把这段文字原样交给模型。没带 reason 的 `decline` 语义不变，仍是用户拒绝；轮次限制无条件，拦截只适用于轮内 form，轮次之外的表单照旧回 `cancel`。`docs/agent-protocol.md` 补 `_meta.coda.reason`，新增 `schemas/agent/elicitation-denial.json`（`reason` 须为非空字符串，只出现在 `decline` 的表单结果里，不带 reason 的普通 `decline` 仍合法），登记在文中的 schema 索引表，`agentValueProblem('elicitation-denial.json', result)` 可校验。
 
 ## 6.25.0 — 2026-11-24
 
