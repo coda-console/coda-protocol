@@ -31,6 +31,7 @@ ACP 的消息、内容块、会话指令和能力由 ACP SDK 校验，这里只�
 | `session/prompt` 答复的 `usage` | [prompt-usage.json](../schemas/agent/prompt-usage.json) |
 | 配置选项的 `_meta.coda.default` | [default.json](../schemas/agent/default.json)（传入 `_meta.coda` 对象） |
 | 模型、模式、配置项及其选项的 `_meta.coda.shortName` | [display.json](../schemas/agent/display.json)（传入 `_meta.coda` 对象） |
+| `elicitation/create` 表单结果的 `_meta.coda.reason`（宿主拦下表单时） | [elicitation-denial.json](../schemas/agent/elicitation-denial.json)（传入整个结果对象，如 `{"action":"decline","_meta":…}`） |
 
 `@coda-console/protocol/agent` 导出 `agentMessageProblem(method, params)`、`agentResultProblem(method, result)`、
 `agentCapabilitiesProblem(meta, party = 'agent')` 和 `agentValueProblem(ref, value, where)`，合法返回 `null`，
@@ -67,7 +68,7 @@ Coda 是 ACP 的客户端。每个会话的 Agent 进程由一个会话托管进
 | `_coda/session/compact` | Coda → Agent | [压缩上下文](#压缩上下文)：请 Agent 压缩这个会话的上下文；只对声明支持的 Agent 发，两轮之间也发 |
 | `session/set_config_option`、`session/set_mode`、`session/set_model` | Coda → Agent | 模型、推理强度与模式 |
 | `session/update` | Agent → Coda | 回复、思考、工具调用（可带它的[审核](#工具调用的审核)）、计划、用量（可带给流程的[数据](#用量里的数据)）、可用命令、会话信息；只收本会话与它的子会话的 |
-| `session/request_permission`、`elicitation/create`（`mode: form` 或 `mode: url`） | Agent → Coda | 审批与提问，作为卡片交给用户；只在一轮里受理（见[规则](#规则)第 3 条） |
+| `session/request_permission`、`elicitation/create`（`mode: form` 或 `mode: url`） | Agent → Coda | 审批与提问，作为卡片交给用户；只在一轮里受理（轮次限制无条件，见[规则](#规则)第 3 条）；拦截只适用于轮内 `mode: form` 表单：若被流程声明拦下（`coda:questionDenial`），不展示卡片，当场回 `decline` 并带 `_meta.coda.reason`（见下文「宿主当场拒绝表单」） |
 | `_coda/unrecognized` | Agent → Coda | [没适配的东西](#没适配的东西)：入口报上游发来、它没按登记处理的输出，以及模型能用、它没登记的原生工具；用户因此没看到的在会话里记一条说明，都计入遥测 |
 | `_coda/remote/code`、`_coda/remote` | Agent → Coda、Coda → Agent | [远端入口](#远端入口)：Agent 要绑定码；Coda 转交远端来的请求 |
 | `$/cancel_request` | Agent → Coda | 撤回它发出、还没得到回答的审批或提问：卡片失效，Coda 回 `cancelled`（表单回 `cancel`），之后用户的回答不再转交 |
@@ -79,6 +80,7 @@ ACP 只允许在一轮（`session/prompt`）进行时交互。Agent 在两轮之
 - **表单**：`requestedSchema` 是标准 JSON Schema，Coda 按它展示并校验回答；单选、多选用
   `enum` 或 `oneOf`/`anyOf` 的 `{const, title}`，不认私有键。
 - **链接**（`mode: url`）：带 `url` 与 `elicitationId`，没有要填的字段；Coda 展示链接，用户打开、办完后确认，回 `{action}`（`accept`、`decline` 或 `cancel`）。
+- **宿主当场拒绝表单**：流程可以声明运行期间拦下会话向用户的提问（流程属性 `coda:questionDenial`，见 README 的流程方言）。被拦的 `elicitation/create` 表单，Coda 不展示卡片，回 `{action: "decline"}`，且**必须**在结果的 `_meta.coda.reason` 里带一段文字（拦它的流程写的）：`{"action":"decline","_meta":{"coda":{"reason":"……"}}}`。Agent 插件见到 `_meta.coda.reason` 就把这段文字原样交给模型（作为这次提问的结果），不改写、不丢弃；`reason` 须为非空字符串，只出现在 `action: "decline"` 的结果里（[elicitation-denial.json](../schemas/agent/elicitation-denial.json)）；没有 `_meta.coda.reason` 的 `decline` 仍合法，语义不变，仍是用户拒绝。轮次之外的表单照旧回 `cancel`（见上文），不在此例。审批、链接（`mode: url`）不被这样拦。
 - **模型的分组**：`category: model` 的配置项可以按来源分组，用 ACP 选择型配置项的分组写法：`options` 是一组 `{ group, name, options }`，
   如 Agent 自己的模型一组、它接的每个模型服务一组（模型服务（Coda 的 docs/plugins.md「模型服务」））。Coda 记下每个模型所在组的 `name`，两端选模型时按组分段、
   以组名为段标题，组内与输入框上只写模型的 `name`；不分组的照旧列成一串。模型 ID 在各组之间不重复，设模型照旧按 ID。

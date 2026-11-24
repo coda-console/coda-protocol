@@ -161,6 +161,15 @@ test('compact display names are optional metadata beside defaults and never chan
   for (const value of [null, [], 1]) assert.notEqual(valueProblem('display.json', value), null);
 });
 
+test('a host-denied form result carries _meta.coda.reason only on decline, as a non-empty string', () => {
+  const check = value => valueProblem('elicitation-denial.json', value);
+  for (const value of [{ action: 'decline', _meta: { coda: { reason: '这个流程由上层主控' } } }, { action: 'decline' }, { action: 'accept', content: {} }, { action: 'decline', _meta: { coda: {} } }])
+    assert.equal(check(value), null);
+  assert.equal(check({ action: 'decline', _meta: { coda: { reason: '' } } }), '值._meta.coda.reason：reason 须为非空字符串，只出现在 action 为 decline 的表单结果里；普通 decline 不带它');
+  for (const reason of [null, 1, {}]) assert.notEqual(check({ action: 'decline', _meta: { coda: { reason } } }), null);
+  for (const action of ['accept', 'cancel', undefined]) assert.notEqual(check({ ...(action && { action }), _meta: { coda: { reason: 'x' } } }), null);
+});
+
 test('failure categories match agentFailure, including quota retryAfterMs that is deliberately ignored', () => {
   const check = value => valueProblem('failure.json', value);
   for (const value of [null, [], 'x', 2]) assert.equal(check(value), '值：执行失败须为对象');
