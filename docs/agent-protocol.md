@@ -67,7 +67,7 @@ Coda 是 ACP 的客户端。每个会话的 Agent 进程由一个会话托管进
 | `_coda/session/compact` | Coda → Agent | [压缩上下文](#压缩上下文)：请 Agent 压缩这个会话的上下文；只对声明支持的 Agent 发，两轮之间也发 |
 | `session/set_config_option`、`session/set_mode`、`session/set_model` | Coda → Agent | 模型、推理强度与模式 |
 | `session/update` | Agent → Coda | 回复、思考、工具调用（可带它的[审核](#工具调用的审核)）、计划、用量（可带给流程的[数据](#用量里的数据)）、可用命令、会话信息；只收本会话与它的子会话的 |
-| `session/request_permission`、`elicitation/create`（`mode: form` 或 `mode: url`） | Agent → Coda | 审批与提问，作为卡片交给用户；只在一轮里受理（见[规则](#规则)第 3 条）；轮内的 `mode: form` 表单若被流程声明拦下（`coda:questionDenial`），不展示卡片，当场回 `decline` 并带 `_meta.coda.reason`（见下文「宿主当场拒绝表单」） |
+| `session/request_permission`、`elicitation/create`（`mode: form` 或 `mode: url`） | Agent → Coda | 审批与提问，作为卡片交给用户；只在一轮里受理（轮次限制无条件，见[规则](#规则)第 3 条）；拦截只适用于轮内 `mode: form` 表单：若被流程声明拦下（`coda:questionDenial`），不展示卡片，当场回 `decline` 并带 `_meta.coda.reason`（见下文「宿主当场拒绝表单」） |
 | `_coda/unrecognized` | Agent → Coda | [没适配的东西](#没适配的东西)：入口报上游发来、它没按登记处理的输出，以及模型能用、它没登记的原生工具；用户因此没看到的在会话里记一条说明，都计入遥测 |
 | `_coda/remote/code`、`_coda/remote` | Agent → Coda、Coda → Agent | [远端入口](#远端入口)：Agent 要绑定码；Coda 转交远端来的请求 |
 | `$/cancel_request` | Agent → Coda | 撤回它发出、还没得到回答的审批或提问：卡片失效，Coda 回 `cancelled`（表单回 `cancel`），之后用户的回答不再转交 |

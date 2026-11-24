@@ -170,7 +170,7 @@ test('a card approving a setting on several machines: check-setting\'s machines 
   assert.equal(await workflowProblem(flow(machines.replace(' default="=check.selected"', '')), 'w'), null);
   assert.equal(await workflowProblem(flow(machines, 'machines, nope'), 'w'), 'ask 的 coda:choice apply：fields 里的 nope 不是这个任务的输入字段');
   assert.equal(await workflowProblem(flow(machines.replace(' options="=check.machines"', '')), 'w'), 'ask 的 coda:field machines：须写 options');
-  assert.equal(await workflowProblem(flow(machines, 'machines', ''), 'w'), 'ask：有输入字段（text、secret 或 coda:fields）的任务要写 coda:assignee="user"，交给发起会话的上层（choices 字段也是输入字段）');
+  assert.equal(await workflowProblem(flow(machines, 'machines', ''), 'w'), 'ask：有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee="user"（choices 字段也是输入字段）');
 });
 
 test('the names workflows share are the dialect\'s: the events Coda sends, and the actions with their parameters', () => {

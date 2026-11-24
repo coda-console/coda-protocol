@@ -5,11 +5,8 @@
 ## 6.26.0 — 2026-11-24
 
 - 这是在 6.25.0 之上的次版本。依据 README「版本」一节：流程方言与 Agent 接入协议是内部面，只加可选属性与约定，升次版本；`stable/` 不动，清单 schema 没改。6.25.0 下合法的流程仍合法。
-- 流程属性 `coda:questionDenial`（字符串）：写了它，运行期间，持有这个运行或它的子运行里没结束的 agent 任务的会话向用户提问时，宿主当场拒绝，把这段文字回给 Agent；不写就不拦。权限审批、链接表单、密钥卡、请用户操作桌面、`coda:assignee="user"` 的流程任务都不拦。与 `coda:title` 等字符串属性一样，写了就须为 1–2000 个字符，空串与全空白读流程时报错（不想拦就不写）。
-- `coda:assignee="user"` 的任务（含有输入字段的任务）的交付规则写明：宿主先交给发起运行的会话的上层会话，上层能处理就自己答，处理不了再往上交，到顶才是用户；发起会话没有上层就直接交给用户；能力（capability）里的用户任务同理。取值名 `user` 不变，不新增属性，6.25.0 下合法的流程不变。
-- 「有输入字段的任务只交给用户」这条报错的文案改为「……的任务要写 coda:assignee="user"，交给发起会话的上层（choices 字段也是输入字段）」：这类任务仍须显式写 `user`，只去掉「只交给用户」的旧说法。
-- Agent 接入协议：宿主因流程声明（`coda:questionDenial`）拦下 `elicitation/create` 表单时，回 `action: decline` 且必须带 `_meta.coda.reason`；Agent 插件见到 reason 就把这段文字原样交给模型。没带 reason 的 `decline` 语义不变，仍是用户拒绝；轮次之外的表单照旧回 `cancel`。
-- 文档：README 的流程方言补 `coda:questionDenial` 与交给上层会话的规则，`docs/agent-protocol.md` 补 `_meta.coda.reason`。
+- 流程属性 `coda:questionDenial`（字符串）：写了它，运行期间，持有这个运行或它的子运行里没结束的 agent 任务的会话向用户提问时，宿主当场拒绝，把这段文字回给 Agent；不写就不拦。权限审批、链接表单、密钥卡、请用户操作桌面、指给用户的流程任务都不拦。与 `coda:title` 等字符串属性一样，写了就须为 1–2000 个字符，空串与全空白读流程时报错（不想拦就不写）。README 的流程方言补这条。
+- Agent 接入协议：宿主因流程声明（`coda:questionDenial`）拦下轮内的 `elicitation/create` 表单时，回 `action: decline` 且必须带 `_meta.coda.reason`；Agent 插件见到 reason 就把这段文字原样交给模型。没带 reason 的 `decline` 语义不变，仍是用户拒绝；轮次限制无条件，拦截只适用于轮内 form，轮次之外的表单照旧回 `cancel`。`docs/agent-protocol.md` 补 `_meta.coda.reason`。
 
 ## 6.25.0 — 2026-11-24
 

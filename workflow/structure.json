@@ -465,7 +465,7 @@
       ]
     },
     {
-      "description": "有输入字段（text、secret 或 coda:fields）的任务要写 coda:assignee=\"user\"，交给发起会话的上层（choices 字段也是输入字段）",
+      "description": "有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee=\"user\"（choices 字段也是输入字段）",
       "schema": {
         "required": [
           "assignee"
@@ -488,7 +488,7 @@
       }
     },
     {
-      "description": "coda:wake=\"false\" 只写在交给 Agent 的任务上（coda:assignee 不是 \"user\"、也没有输入字段）",
+      "description": "coda:wake=\"false\" 只写在交给 Agent 的任务上：交给用户的（coda:assignee=\"user\"、有输入字段的）本来就不叫醒 Agent",
       "schema": {
         "properties": {
           "assignee": {
