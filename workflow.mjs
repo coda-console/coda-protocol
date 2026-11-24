@@ -117,9 +117,9 @@ const SIZE_LIMIT = 1_000_000;
 const DESCRIPTOR = structuredClone(moddle);
 // moddle's Boolean/Integer coercion accepts `no` as false and `1.5` as 1. Keep these attributes as text until their
 // complete spelling is known; valid ones are restored to the descriptor's types before returning the parsed workflow,
-// and the schemas say no to the rest. A field's, and coda:mergedOnly: a misspelling there would quietly run unmerged
-// commits.
-const SCALARS = [['Field', 'coda:Field'], ['ProcessProperties', 'bpmn:Process', ['mergedOnly']]].map(([name, on, only]) => ({ name, on,
+// and the schemas say no to the rest. A field's, coda:mergedOnly and coda:onBehalf: a misspelling there would quietly run unmerged
+// commits or leave a question to the user's session.
+const SCALARS = [['Field', 'coda:Field'], ['ProcessProperties', 'bpmn:Process', ['mergedOnly']], ['UserTaskProperties', 'bpmn:UserTask', ['onBehalf']]].map(([name, on, only]) => ({ name, on,
   properties: DESCRIPTOR.types.find(type => type.name === name).properties.filter(p => ['Boolean', 'Integer'].includes(p.type) && (!only || only.includes(p.name))) }));
 const PARSER_DESCRIPTOR = structuredClone(DESCRIPTOR);
 for (const { name, properties } of SCALARS) for (const property of PARSER_DESCRIPTOR.types.find(type => type.name === name).properties)

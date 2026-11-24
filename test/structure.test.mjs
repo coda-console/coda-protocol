@@ -42,6 +42,8 @@ const wrong = [
   [one(`<userTask id="n">${ext('<coda:field type="text" id="x" label="X"/>')}</userTask>`), 'n：有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee="user"（choices 字段也是输入字段）'],
   [one(`<userTask id="n">${ext('<coda:field type="choices" id="x" label="X" options="=inputs.machines"/>')}</userTask>`), 'n：有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee="user"（choices 字段也是输入字段）'],
   [one('<userTask id="n" coda:assignee="user" coda:wake="false"/>'), 'n：coda:wake="false" 只写在交给 Agent 的任务上：交给用户的（coda:assignee="user"、有输入字段的）本来就不叫醒 Agent'],
+  [one('<userTask id="n" coda:onBehalf="true"/>'), 'n：coda:onBehalf="true" 只写在交给用户的任务上（coda:assignee="user"）：交给 Agent 的任务不经上层会话代答'],
+  [one('<userTask id="n" coda:assignee="agent" coda:onBehalf="true"/>'), 'n：coda:onBehalf="true" 只写在交给用户的任务上（coda:assignee="user"）：交给 Agent 的任务不经上层会话代答'],
   [one(job('n', '<standardLoopCharacteristics/>')), 'p/n：不支持标准循环（standardLoopCharacteristics）：重复做一件事写成连回去的连线加网关，按集合或次数做多份写多实例'],
   [one('<userTask id="n"/>', `<subProcess id="sub" triggeredByEvent="true">${loop('<loopCardinality>1</loopCardinality>')}</subProcess>`), 'p/sub：多实例只写在任务、子流程与 callActivity 上'],
   [one(job('n', loop(''))), 'p/n：多实例要写做几份：coda:inputCollection（按集合，每份一个元素）或 loopCardinality（次数）'],

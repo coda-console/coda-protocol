@@ -16,6 +16,10 @@ Coda 与插件之间的约定，Coda 和插件都引用它，独立演进：
 
 流程方言的 **挂点**是流程之间互相找到的方式：被调用的流程在自己的 extensionElements 里写 `<coda:join hook name? detail? default? order?/>` 加入一个挂点（`hook` 是小写字母开头的名字，一个流程每个挂点只加入一次），`name`、`detail` 是它作为勾选项时的名字与说明，`default` 是否默认勾上（只写 true 或 false：挂点的列表在任何运行之外读出），`order` 是整数，小的在前；`inputs` 是它要从卡片拿的自己的文字参数（`coda:input`，type 为 string，逗号或空格分隔，最多 4 个，读流程时检查），`joinInputNames(join)` 读出这些名字。宿主用动作 `hook-joiners` 列出一个挂点的加入者（勾选项形状，带上各自的 `inputs`，可直接给 `coda:optionList`），用 `run-workflows` 的 `hook`（必写）调用它们，`only` 只调用勾中的几个。挂点名是普通字符串，传哪些参数、怎么选由声明它的宿主写在自己的说明里。流程属性 `coda:mergedOnly` 说它是否只运行已合并进默认分支的提交，不写为 false（任何提交都能跑）。
 
+流程方言的 **拦下提问**由流程属性 `coda:questionDenial` 声明（字符串）：写了它，这个运行进行期间，持有这个运行或它的子运行里没结束的 agent 任务的会话，向用户提问时，宿主当场拒绝，把这段文字回给 Agent（表单回 `decline`，文字放在 `_meta.coda.reason`，见 [Agent 接入协议](docs/agent-protocol.md)）；不写就不拦。它与 `coda:title` 等字符串属性一样：写了就须为 1–2000 个字符，空串或全空白读流程时报错，不想拦就别写。权限审批、链接表单、密钥卡、请用户操作桌面、指给用户的流程任务，都不拦。
+
+流程方言的 **任务交给上层会话**：发起运行的会话如果有上层会话，宿主把指给用户的任务（`coda:assignee="user"`；有输入字段的任务也须显式写 `coda:assignee="user"`，不写读流程时报错）先交给上层会话，再一层层往上，直到没有上层才交给用户。默认上层会话只能继续往上交，不能自己答；任务上写 `coda:onBehalf="true"`，上层会话就可以代用户直接答。`coda:onBehalf` 是布尔（只认 `true`、`false`，其他写法读流程时报错），只对 `coda:assignee="user"` 的任务有意义：写在不是 `coda:assignee="user"` 的任务上并写成 `true`，读流程时报错（写 `false` 等于没写，不报错）。
+
 流程方言的 **勾选项**写在答复（外层的 `coda:choice`）里：`coda:option` 是一项，`coda:optionList` 的 `value` 是一个表达式，任务打开时读出一组勾选项（列表或它的 JSON），在它写的位置展开，两者按写的顺序排。`<coda:options>` 不是它的写法（那个名字是答复自己的勾选项集合）。定义里每个 `coda:optionList` 算一项；打开后的整组由 `workflow/options.json` 定义：每项是 `{ id, name, detail?, default?, inputs? }`（`default` 为布尔值，没有 `shown`），最多 12 项，id 不重复；`inputs` 是勾上这一项时卡片上出现的文字输入，每个 `{ id, label }`，一项最多 4 个、id 不重复，几项带同一个 id 时卡上只出一个。`optionsProblem(options, where)` 检查一个答复打开后的整组（静态项已求值、各组已展开），合法时返回 `null`，否则返回「位置：说明」；表达式求值与展开仍由 Coda 完成。
 
 流程方言的 **卡片字段**由 `workflow/fields.json` 定义：九种字段各能写哪些属性、必填项、文字长度与单行限制、路径与网址、视图参数、输入框与密钥选项、多选的选项表、一组客户端操作；`values.json` 的 `Field` 引用它，`Fields` 声明读出 JSON 字段列表的表达式，`UserTask.children` 限定最多 12 个静态字段、id 不重复，以及全部字段已知时答复的 `fields` 只能引用输入字段（含按住出现的答复）。

@@ -516,6 +516,32 @@
       }
     },
     {
+      "description": "coda:onBehalf=\"true\" 只写在交给用户的任务上（coda:assignee=\"user\"）：交给 Agent 的任务不经上层会话代答",
+      "schema": {
+        "required": [
+          "assignee"
+        ],
+        "properties": {
+          "assignee": {
+            "const": "user"
+          }
+        }
+      },
+      "on": [
+        "bpmn:UserTask"
+      ],
+      "when": {
+        "required": [
+          "onBehalf"
+        ],
+        "properties": {
+          "onBehalf": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
       "description": "不支持标准循环（standardLoopCharacteristics）：重复做一件事写成连回去的连线加网关，按集合或次数做多份写多实例",
       "schema": {
         "properties": {

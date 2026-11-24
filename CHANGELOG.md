@@ -2,6 +2,14 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.26.0 — 2026-11-24
+
+- 这是在 6.25.0 之上的次版本。依据 README「版本」一节：流程方言与 Agent 接入协议是内部面，只加可选属性与约定，升次版本；`stable/` 不动，清单 schema 没改。6.25.0 下合法的流程仍合法。
+- 流程属性 `coda:questionDenial`（字符串）：写了它，运行期间，持有这个运行或它的子运行里没结束的 agent 任务的会话向用户提问时，宿主当场拒绝，把这段文字回给 Agent；不写就不拦。权限审批、链接表单、密钥卡、请用户操作桌面、指给用户的流程任务都不拦。与 `coda:title` 等字符串属性一样，写了就须为 1–2000 个字符，空串与全空白读流程时报错（不想拦就不写）。
+- 人工任务属性 `coda:onBehalf`（布尔，只认 `true`、`false`，其他写法读流程时报错）：发起运行的会话有上层会话时，宿主把指给用户的任务先交给上层会话，再一层层往上，直到没有上层才交给用户；默认上层会话只能继续往上交，写 `coda:onBehalf="true"` 则上层会话可代用户直接答。只对 `coda:assignee="user"` 的任务有意义：写在别的任务上并写成 `true`，读流程时报错（结构规则，与 `coda:wake` 的规则同类）；写 `false` 等于没写。
+- Agent 接入协议：宿主因流程声明（`coda:questionDenial`）拦下 `elicitation/create` 表单时，回 `action: decline` 且必须带 `_meta.coda.reason`；Agent 插件见到 reason 就把这段文字原样交给模型。没带 reason 的 `decline` 语义不变，仍是用户拒绝；轮次之外的表单照旧回 `cancel`。
+- 文档：README 的流程方言补 `coda:questionDenial`、`coda:onBehalf` 与交给上层会话的规则，`docs/agent-protocol.md` 补 `_meta.coda.reason`。
+
 ## 6.25.0 — 2026-11-24
 
 - 这是在 6.24.0 之上的次版本。依据 README「版本」一节：协议定义是内部面，只加可选的键和类型字段，升次版本；`stable/` 不动，清单 schema 没改。三处都是只增：6.24.0 下合法的定义仍合法。
