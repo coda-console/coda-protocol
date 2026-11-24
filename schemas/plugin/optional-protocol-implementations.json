@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/plugin/v2/optional-protocol-implementations.json",
+  "title": "contributes.optionalProtocolImplementations：插件可选实现的协议",
+  "description": "插件可选实现哪些协议，写协议名「命名空间/名字@大版本」的数组，至多 100 项，不重复，只收文本、不收 { kind, commands }。这些协议本机没有时，插件照常运行，只是这一项不生效；协议在不在、这一项生不生效由 Coda 宿主判定，这里只管清单形状。同一个协议不能同时写在 protocolImplementations 里，这条跨键规则由整份清单的校验（manifestProblem）查。",
+  "type": "array",
+  "maxItems": 100,
+  "uniqueItems": true,
+  "items": {"$ref": "https://coda.pub/schemas/protocol/v1/definition.json#/$defs/name"}
+}

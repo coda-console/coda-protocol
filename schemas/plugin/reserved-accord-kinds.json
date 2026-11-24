@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/plugin/v2/reserved-accord-kinds.json",
+  "title": "contributes.reservedAccordKinds：只归本插件的 Accord 签名记录种类",
+  "description": "插件声明哪几种 Accord 签名记录（AIP-01）的种类只归自己，写「命名空间/名字」的数组，至多 32 项，不重复；命名空间必须带，名字与命名空间都是小写字母、数字和「-」，各至多 64 个字符。只有本插件能直接发布、撤回、读这些种类；谁被拒绝由 Coda 宿主判定，这里只管清单形状。命名空间须是本插件的 ID，这条跨键规则由整份清单的校验（manifestProblem）查。",
+  "type": "array",
+  "maxItems": 32,
+  "uniqueItems": true,
+  "items": {
+    "type": "string",
+    "pattern": "^[a-z0-9-]{1,64}/[a-z0-9-]{1,64}$"
+  }
+}

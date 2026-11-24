@@ -358,6 +358,12 @@ const body = writeFrames(frames, { heartbeatMs: 15000 });
 
 同一个协议在数组里只能出现一次，写成文本还是对象都算。
 
+`contributes.optionalProtocolImplementations` 是插件可选实现的协议列表：协议名的数组，至多 100 项、不重复，只收文本，不收 `{ kind, commands }`。这些协议本机没有时，插件照常运行，只是这一项不生效；同一个协议不能既写在这里又写在 `protocolImplementations` 里（文本项、对象项的 `kind` 都算）。
+
+`contributes.reservedAccordKinds` 声明哪几种 Accord 签名记录（AIP-01）的种类只归本插件：「命名空间/名字」的数组，至多 32 项、不重复，每项须匹配 `^[a-z0-9-]{1,64}/[a-z0-9-]{1,64}$`（比 Accord 的种类规则少了可选的命名空间：必须带），命名空间须等于插件 ID（没写 `id` 时用 `name`）。只有本插件能直接发布、撤回、读这些种类。
+
+这两个键协议包只校验形状与上面两条跨键规则；协议在不在、这一项生不生效、谁被拒绝由 Coda 宿主判定。
+
 `contributes.records` 声明哪些种类的记录由命令给出，每种一项，至多 20 项：
 
 ```json

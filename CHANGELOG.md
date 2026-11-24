@@ -2,6 +2,14 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.27.0 — 2026-11-24
+
+- 这是在 6.26.0 之上的次版本。依据 README「版本」一节：新增可选的清单键升次版本；这两个键暂不进稳定面，`stable/` 不动，旧清单不受影响（没写这两个键的清单照旧合法）。
+- `contributes` 加两个可选键，各有一份 schema：`optionalProtocolImplementations`（`schemas/plugin/optional-protocol-implementations.json`）是可选实现的协议名数组，每项同 `protocolImplementations` 的文本项，不收 `{ kind, commands }`，至多 100 项、不重复；协议本机没有时插件照常运行、这一项不生效。`reservedAccordKinds`（`schemas/plugin/reserved-accord-kinds.json`）是只归本插件的 Accord 签名记录种类数组，每项匹配 `^[a-z0-9-]{1,64}/[a-z0-9-]{1,64}$`（命名空间必带），至多 32 项、不重复；只有本插件能直接发布、撤回、读这些种类。
+- 两条跨键规则，由 `validate.mjs` 的 `manifestProblem` 在整份清单的 schema 通过后用代码查（没有新增 schema 关键字，两个键的 schema 文件单独用时只校验形状）：`optionalProtocolImplementations` 的每项不能已在 `protocolImplementations` 里（文本项或对象项的 `kind` 都算）；`reservedAccordKinds` 每项的命名空间须等于清单的 `id`（没写 `id` 用 `name`）。报错说明是哪个键、哪一项。`TYPES` 随之多这两个键。
+- `./types`（`plugin.d.mts`）新增导出 `ManifestContributions`，只含这两个可选键；清单的其余键还没有类型。
+- 协议包只校验形状；协议在不在、这一项生不生效、谁被拒绝由 Coda 宿主判定。
+
 ## 6.26.0 — 2026-11-24
 
 - 这是在 6.25.0 之上的次版本。依据 README「版本」一节：流程方言与 Agent 接入协议是内部面，只加可选属性与约定，升次版本；`stable/` 不动，清单 schema 没改。6.25.0 下合法的流程仍合法。
