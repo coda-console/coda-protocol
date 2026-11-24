@@ -684,7 +684,7 @@
       "source": "backend/test/workflows/task-fields.test.mjs",
       "file": "t",
       "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:coda=\"https://coda.pub/schema/bpmn/1.0\" id=\"defs\" targetNamespace=\"https://coda.pub/test\">\n<process id=\"flow\" name=\"卡片\" isExecutable=\"true\"><startEvent id=\"start\" /><sequenceFlow id=\"f1\" sourceRef=\"start\" targetRef=\"ask\"></sequenceFlow><userTask id=\"ask\" name=\"问\" ><extensionElements><coda:field id=\"a\" type=\"text\" label=\"A\" /></extensionElements></userTask><sequenceFlow id=\"f2\" sourceRef=\"ask\" targetRef=\"end\"></sequenceFlow><endEvent id=\"end\" /></process>\n</definitions>",
-      "pattern": "/有输入字段（text、secret 或 coda:fields）的任务只交给用户/"
+      "pattern": "/有输入字段（text、secret 或 coda:fields）的任务要写 coda:assignee=/"
     },
     {
       "source": "backend/test/workflows/workflows.test.mjs",

@@ -23,11 +23,12 @@ test('a workflow written in the dialect is read: Coda\'s attributes and elements
     </serviceTask>
     <userTask id="approve" coda:assignee="user">
       <extensionElements><coda:choice id="merge" name="合并" primary="true"><coda:option id="deploy" name="部署" /></coda:choice><coda:choice id="stop" name="暂不合并" note="required" /></extensionElements>
-    </userTask><sequenceFlow id="d" sourceRef="approve" targetRef="brief"/><userTask id="brief" coda:wake="false" />`, ' coda:mergedOnly="true" coda:title="部署"');
+    </userTask><sequenceFlow id="d" sourceRef="approve" targetRef="brief"/><userTask id="brief" coda:wake="false" />`, ' coda:mergedOnly="true" coda:title="部署" coda:questionDenial="这个流程由上层会话主控，别向用户提问，自己决定"');
   const { root, problem } = await readWorkflow(source, 'deploy');
   assert.equal(problem, undefined);
   const [process] = root.rootElements;
   assert.deepEqual([process.mergedOnly, process.flowElements.find(e => e.id === 'build').timeout, process.flowElements.find(e => e.id === 'brief').wake], [true, 10, 'false']);
+  assert.equal(process.questionDenial, '这个流程由上层会话主控，别向用户提问，自己决定');
   assert.equal(await workflowProblem(source, 'deploy'), null);
 });
 
@@ -169,7 +170,7 @@ test('a card approving a setting on several machines: check-setting\'s machines 
   assert.equal(await workflowProblem(flow(machines.replace(' default="=check.selected"', '')), 'w'), null);
   assert.equal(await workflowProblem(flow(machines, 'machines, nope'), 'w'), 'ask 的 coda:choice apply：fields 里的 nope 不是这个任务的输入字段');
   assert.equal(await workflowProblem(flow(machines.replace(' options="=check.machines"', '')), 'w'), 'ask 的 coda:field machines：须写 options');
-  assert.equal(await workflowProblem(flow(machines, 'machines', ''), 'w'), 'ask：有输入字段（text、secret 或 coda:fields）的任务只交给用户，写 coda:assignee="user"（choices 字段也是输入字段）');
+  assert.equal(await workflowProblem(flow(machines, 'machines', ''), 'w'), 'ask：有输入字段（text、secret 或 coda:fields）的任务要写 coda:assignee="user"，交给发起会话的上层（choices 字段也是输入字段）');
 });
 
 test('the names workflows share are the dialect\'s: the events Coda sends, and the actions with their parameters', () => {
@@ -184,6 +185,9 @@ test('a coda: value its schema does not take is said where it is: an attribute, 
   const cases = [
     [workflow('', ` coda:title="${'长'.repeat(201)}"`), /^p：coda:title 须为 1–200 个字符$/],
     [workflow('', ' coda:agents=",,"'), /^p：coda:agents 写 Agent 的 ID/],
+    [workflow('', ' coda:questionDenial=""'), /^p：coda:questionDenial 须为 1–2000 个字符/],
+    [workflow('', ' coda:questionDenial="  "'), /^p：coda:questionDenial 须为 1–2000 个字符/],
+    [workflow('', ` coda:questionDenial="${'长'.repeat(2001)}"`), /^p：coda:questionDenial 须为 1–2000 个字符/],
     // Whether an event starts it is decided before any run: a setting of the plugin's is all there is to read.
     ...['sometimes', '=inputs.autoRun', '=session.autoRun', '=review.verdict', '=vars.review.autoRun and inputs.go', '=not(vars.review.autoRun)'].map(value =>
       [workflow('', ` coda:autoRun="${value}"`), /^p：coda:autoRun 须为 true、false 或 =vars\.<插件>\.<设置>/]),

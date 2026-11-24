@@ -10,7 +10,7 @@
       "name": "ProcessProperties",
       "isAbstract": true,
       "extends": ["bpmn:Process"],
-      "description": "流程本身：concurrency 并发、key 未结束运行的业务键、title 运行在卡片上的名字（同 GitHub 的 run-name）、dispatch 能否手动发起、inline Agent 用 workflow_run 发起时等它结束再回答、subagents 为 false 时会话 Agent 的原生子 Agent 不能发起、agents 生命周期流程跟随哪些 Agent 的会话（ID，逗号或空格分隔，不写是全部）、autoRun 事件（如 PR）来时会话与目录都没设「自动运行」的，按它决定起不起运行：true、false 或 =vars.<插件>.<设置>（不写为起）、mergedOnly 只运行已合并进默认分支的提交（不写为 false：任何提交都能跑）",
+      "description": "流程本身：concurrency 并发、key 未结束运行的业务键、title 运行在卡片上的名字（同 GitHub 的 run-name）、dispatch 能否手动发起、inline Agent 用 workflow_run 发起时等它结束再回答、subagents 为 false 时会话 Agent 的原生子 Agent 不能发起、agents 生命周期流程跟随哪些 Agent 的会话（ID，逗号或空格分隔，不写是全部）、autoRun 事件（如 PR）来时会话与目录都没设「自动运行」的，按它决定起不起运行：true、false 或 =vars.<插件>.<设置>（不写为起）、mergedOnly 只运行已合并进默认分支的提交（不写为 false：任何提交都能跑）、questionDenial 运行期间持有这个运行（或它的子运行）里没结束的 agent 任务的会话向用户提问时，宿主当场拒绝并把这段文字回给 Agent（有值才启用；权限审批、链接表单、密钥卡、请用户操作桌面与`coda:assignee=\"user\"` 的流程任务不拦）",
       "properties": [
         {"name": "concurrency", "isAttr": true, "type": "String"},
         {"name": "key", "isAttr": true, "type": "String"},
@@ -19,7 +19,8 @@
         {"name": "inline", "isAttr": true, "type": "Boolean"},
         {"name": "subagents", "isAttr": true, "type": "Boolean"},
         {"name": "agents", "isAttr": true, "type": "String"},
-        {"name": "autoRun", "isAttr": true, "type": "String"}, {"name": "mergedOnly", "isAttr": true, "type": "Boolean"}
+        {"name": "autoRun", "isAttr": true, "type": "String"}, {"name": "mergedOnly", "isAttr": true, "type": "Boolean"},
+        {"name": "questionDenial", "isAttr": true, "type": "String"}
       ]
     },
     {
