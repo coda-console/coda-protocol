@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
+import Ajv from 'ajv/dist/2020.js';
 import { contributionProblem, manifestProblem, pointProblem, SCHEMAS, TYPES, valueProblem } from '../validate.mjs';
 
 // What Coda checks of a manifest: the general keys by the manifest's schema, then each other key whose schema is kept here
@@ -395,5 +396,19 @@ test('optionalProtocolImplementations and reservedAccordKinds: shape, and the tw
     ['optionalProtocolImplementations', ['Remote/machine@1']], ['optionalProtocolImplementations', ['p/n@1', 'p/n@1']],
     ['optionalProtocolImplementations', Array.from({ length: 101 }, (_, i) => `p/n${i}@1`)], ['optionalProtocolImplementations', 'p/n@1']])
     assert.match(check({ [key]: bad }), new RegExp(key), JSON.stringify(bad).slice(0, 60));
-  assert.equal(check({ reservedAccordKinds: ['my-plugin/a', 'my-plugin/a'] }), 'contributes.reservedAccordKinds：不能重复：my-plugin/a');
+  // a repeat is refused by uniqueItems, said with the schema's own description
+  assert.equal(check({ reservedAccordKinds: ['my-plugin/a', 'my-plugin/a'] }), `contributes.reservedAccordKinds：${SCHEMAS['reserved-accord-kinds.json'].description}`);
+  assert.equal(check({ optionalProtocolImplementations: ['p/n@1', 'p/n@1'] }), `contributes.optionalProtocolImplementations：${SCHEMAS['optional-protocol-implementations.json'].description}`);
+});
+
+test('optionalProtocolImplementations and reservedAccordKinds refuse a repeat in a plain Ajv, with no Coda keyword', () => {
+  const definition = JSON.parse(readFileSync(new URL('../schemas/protocol/v1/definition.json', import.meta.url), 'utf8'));
+  const ajv = new Ajv({ strict: false });
+  ajv.addSchema(definition);
+  for (const [file, good, repeated] of [['optional-protocol-implementations.json', ['p/n@1', 'p/n@2'], ['p/n@1', 'p/n@1']],
+    ['reserved-accord-kinds.json', ['mine/k', 'mine/j'], ['mine/k', 'mine/k']]]) {
+    const validate = ajv.compile(SCHEMAS[file]);
+    assert.equal(validate(good), true, file);
+    assert.equal(validate(repeated), false, file);
+  }
 });
