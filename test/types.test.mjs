@@ -16,9 +16,16 @@ test('the public types of a plugin are all declared', () => {
     'Contribution', 'ViewInstance']) assert.ok(declared.includes(name), `${name} 没有导出`);
 });
 
+test('ManifestContributions types the two optional manifest keys, both optional', () => {
+  assert.ok(declared.includes('ManifestContributions'));
+  const body = /export interface ManifestContributions \{([^}]*)\}/.exec(source)?.[1];
+  assert.match(body, /\boptionalProtocolImplementations\?: string\[\];/);
+  assert.match(body, /\breservedAccordKinds\?: string\[\];/);
+});
+
 test('nothing of a test host is declared or named', () => {
   for (const name of ['TestHost', 'TestPlugin', 'TestCallOptions', 'ProtocolImplementation', 'createTestHost', 'TEST_OWNER'])
-    assert.ok(!declared.includes(name) && !source.includes(name), `${name} 不属于协议包`);
+    assert.ok(!declared.includes(name) && !new RegExp(`\\b${name}\\b`).test(source), `${name} 不属于协议包`);
   assert.doesNotMatch(source, /test host|plugin-test-host/i);
 });
 

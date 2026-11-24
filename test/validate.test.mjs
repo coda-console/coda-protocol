@@ -111,7 +111,7 @@ test('executors is no type of Coda\'s: no schema checks it', () => {
 
 test('the manifest\'s schema names only the general types; those of Coda\'s points are kept beside them, by file', () => {
   assert.deepEqual(TYPES, ['configuration', 'services', 'setup', 'environment', 'path', 'views',
-    'protocols', 'protocolImplementations', 'records']);
+    'protocols', 'protocolImplementations', 'optionalProtocolImplementations', 'reservedAccordKinds', 'records']);
   for (const type of TYPES) assert.ok(SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref.endsWith('.json'), type);
   assert.deepEqual(Object.keys(SCHEMAS).filter(file => !TYPES.some(type => SCHEMAS['plugin.json'].properties.contributes.properties[type].$ref === file)).sort(),
     ['agents.json', 'capabilities.json', 'commands.json', 'common.json', 'composer-modes.json',
@@ -368,4 +368,32 @@ test('a manifest\'s optionalUses has the same shape as uses', () => {
     Object.fromEntries(Array.from({ length: 101 }, (_, i) => [`p/n${i}@1`, ['read']]))])
     assert.match(manifestProblem({ id: 'my-plugin', optionalUses }), /optionalUses/, JSON.stringify(optionalUses).slice(0, 80));
   assert.equal(manifestProblem({ id: 'my-plugin', optionalUses: { 'coda/friend@1': Array.from({ length: 50 }, (_, i) => `g${i}`) } }), null);
+});
+
+test('optionalProtocolImplementations and reservedAccordKinds: shape, and the two rules across keys', () => {
+  const check = (contributes, id = 'my-plugin') => manifestProblem({ id, contributes });
+  assert.equal(check({ protocolImplementations: ['coda/run@1'], optionalProtocolImplementations: ['remote-exec/machine@1'], reservedAccordKinds: ['my-plugin/friend', 'my-plugin/x-1'] }), null);
+  assert.equal(check({ optionalProtocolImplementations: [], reservedAccordKinds: [] }), null);
+  assert.equal(manifestProblem({ name: 'my-plugin', contributes: { reservedAccordKinds: ['my-plugin/friend'] } }), null);
+  assert.equal(check({ optionalProtocolImplementations: Array.from({ length: 100 }, (_, i) => `p/n${i}@1`), reservedAccordKinds: Array.from({ length: 32 }, (_, i) => `my-plugin/k${i}`) }), null);
+  // alone, each is checked for its shape only: the rules across keys belong to the whole manifest
+  assert.equal(valueProblem('reserved-accord-kinds.json', ['my-plugin/friend'], 'reservedAccordKinds'), null);
+  assert.equal(valueProblem('optional-protocol-implementations.json', ['remote-exec/machine@1'], 'optionalProtocolImplementations'), null);
+  // the same protocol in both, as a text or as the kind of an object
+  assert.equal(check({ protocolImplementations: ['remote-exec/machine@1'], optionalProtocolImplementations: ['remote-exec/machine@1'] }),
+    'contributes.optionalProtocolImplementations[0]：已写在 protocolImplementations 里，不能再写：remote-exec/machine@1');
+  assert.equal(check({ protocolImplementations: ['coda/run@1', { kind: 'remote-exec/machine@1', commands: { go: 'run.sh' } }], optionalProtocolImplementations: ['coda/session@1', 'remote-exec/machine@1'] }),
+    'contributes.optionalProtocolImplementations[1]：已写在 protocolImplementations 里，不能再写：remote-exec/machine@1');
+  // a namespace other than the plugin's own
+  assert.equal(check({ reservedAccordKinds: ['my-plugin/a', 'other/b'] }), 'contributes.reservedAccordKinds[1]：命名空间须是本插件的 ID「my-plugin」：other/b');
+  assert.match(check({ reservedAccordKinds: ['my-plugin/a'] }, 'other'), /reservedAccordKinds\[0\]：命名空间须是本插件的 ID「other」/);
+  // wrong shapes, one each
+  for (const [key, bad] of [['reservedAccordKinds', ['my-plugin']], ['reservedAccordKinds', ['My-plugin/a']], ['reservedAccordKinds', ['my-plugin/A']],
+    ['reservedAccordKinds', [`my-plugin/${'a'.repeat(65)}`]], ['reservedAccordKinds', ['my-plugin/a', 'my-plugin/a']],
+    ['reservedAccordKinds', Array.from({ length: 33 }, (_, i) => `my-plugin/k${i}`)], ['reservedAccordKinds', [1]], ['reservedAccordKinds', 'my-plugin/a'],
+    ['optionalProtocolImplementations', [{ kind: 'remote-exec/machine@1', commands: { go: 'run.sh' } }]], ['optionalProtocolImplementations', ['remote-exec/machine']],
+    ['optionalProtocolImplementations', ['Remote/machine@1']], ['optionalProtocolImplementations', ['p/n@1', 'p/n@1']],
+    ['optionalProtocolImplementations', Array.from({ length: 101 }, (_, i) => `p/n${i}@1`)], ['optionalProtocolImplementations', 'p/n@1']])
+    assert.match(check({ [key]: bad }), new RegExp(key), JSON.stringify(bad).slice(0, 60));
+  assert.equal(check({ reservedAccordKinds: ['my-plugin/a', 'my-plugin/a'] }), 'contributes.reservedAccordKinds：不能重复：my-plugin/a');
 });

@@ -423,3 +423,14 @@ export interface ViewInstance {
   onContext(fn: (context: ViewInstance['context']) => void): Disposable;
   onClose(fn: () => void): Disposable;
 }
+
+/**
+ * The keys of the manifest's `contributes` that are typed here: only these two so far, the rest of the manifest has no type
+ * here yet. Their shape is checked by `schemas/plugin/`; whether a protocol is on this machine and who is refused is the host's.
+ */
+export interface ManifestContributions {
+  /** Protocols the plugin implements if they are on this machine (`namespace/name@major`); with one absent the plugin still runs, only that implementation does not take effect. */
+  optionalProtocolImplementations?: string[];
+  /** Accord signature record kinds (`namespace/name`, the namespace the plugin's own ID) that only this plugin may publish, revoke or read. */
+  reservedAccordKinds?: string[];
+}

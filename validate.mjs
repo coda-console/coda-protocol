@@ -2,7 +2,10 @@
 // JSON Schema of its own. The manifest's schema names only the general ones (schemas/plugin/,
 // `https://coda.pub/schemas/plugin/v2/…`); every other key is one Coda's registry of contribution points declares, with a
 // schema of its provider's (those of Coda's own still kept here, by file). Checking one is checking it against those
-// schemas, nothing else: a field joins a type by joining its schema, never by a rule here. Coda checks a plugin with this
+// schemas, nothing else: a field joins a type by joining its schema, never by a rule here, but for two
+// rules across a manifest's keys: after the schema, `manifestProblem` checks that a protocol is not both implemented and optionally
+// implemented, and that a reserved Accord kind is in the plugin's own namespace, its ID; checked against plugin.json alone, a
+// manifest is checked for its shape only. Coda checks a plugin with this
 // module when it reads one, and coda-plugins' contract check does where a plugin is written.
 // What JSON Schema cannot say of one value alone it says with five keywords, each meaning one thing wherever it is written,
 // as Kubernetes extends its OpenAPI with `x-kubernetes-*`:
@@ -311,7 +314,20 @@ export function explain(errors, base = '', schemas = [], { style = 'keyword', re
 // A manifest checked against its schema, the files it names in `dir` when given. Returns null, or what is wrong.
 export function manifestProblem(manifest, dir = null) {
   const validate = validator('plugin.json');
-  return validate.call({ dir }, manifest) ? null : explain(validate.errors, '', [PROTOCOL_DEFINITION]);
+  return validate.call({ dir }, manifest) ? crossKeyProblem(manifest) : explain(validate.errors, '', [PROTOCOL_DEFINITION]);
+}
+// What the manifest's schema cannot say of one key alone, as its keys stand to each other; the shapes are right by now.
+// An optional implementation is none that is implemented already (a text, or the `kind` of an object); a reserved Accord kind
+// is in the plugin's own namespace, the plugin's `id` (its `name` when it has none).
+function crossKeyProblem({ id, name, contributes }) {
+  const { protocolImplementations = [], optionalProtocolImplementations = [], reservedAccordKinds = [] } = contributes ?? {};
+  const implemented = new Set(protocolImplementations.map(item => typeof item === 'string' ? item : item.kind));
+  const twice = optionalProtocolImplementations.findIndex(kind => implemented.has(kind));
+  if (twice !== -1) return `contributes.optionalProtocolImplementations[${twice}]：已写在 protocolImplementations 里，不能再写：${optionalProtocolImplementations[twice]}`;
+  const owner = id ?? name;
+  const other = reservedAccordKinds.findIndex(kind => kind.split('/')[0] !== owner);
+  if (other === -1) return null;
+  return `contributes.reservedAccordKinds[${other}]：${owner === undefined ? '须先写插件的 id 或 name' : `命名空间须是本插件的 ID「${owner}」`}：${reservedAccordKinds[other]}`;
 }
 // A value checked against one of the schemas (`ref`: a file, with a fragment, as `composer-modes.json#/$defs/parameters`),
 // as a plugin gives it while it runs: null, or what is wrong, at `where`.
