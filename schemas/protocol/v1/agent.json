@@ -81,9 +81,11 @@
           "settings": {"type": "object", "additionalProperties": true},
           "checkout": {"type": "object", "additionalProperties": true},
           "parentTitle": {"type": "string"},
-          "parentUnattended": {"type": "boolean"}
+          "parentUnattended": {"type": "boolean"},
+          "parentApproval": {"enum": ["safe", "manual", "auto", "full"]}
         },
-        "required": ["projectId", "threadId", "title", "text", "parentTitle", "parentUnattended"],
+        "required": ["projectId", "threadId", "title", "text", "parentTitle"],
+        "anyOf": [{"required": ["parentUnattended"]}, {"required": ["parentApproval"]}],
         "additionalProperties": false
       }
     }

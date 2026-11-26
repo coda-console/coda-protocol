@@ -469,7 +469,7 @@ status：
 
 `models[].efforts` 是 `[{ id, name?, shortName? }]`；`models[].options` 是 `{ id, name?, shortName?, type: "boolean"|"select", choices? }`，`select` 带 `choices`，`boolean` 不带。status 是空对象。
 
-操作 `spawn`（`run: true`）：在这台机器上用这个 Agent 开一个子会话，返回运行引用。输入是 `{ projectId, threadId, title, text, settings?, checkout?, parentTitle, parentUnattended }`：子会话所在的项目与工作树（`checkout`）、Agent 的设置（`settings`，如模型与推理强度）、标题与第一条任务（`text`）；`threadId` 是调用方给的子会话 ID，重试找到的是同一个；`parentTitle` 是发起方在这里显示的名字，`parentUnattended` 说发起方是否无人值守。子会话为谁工作由调用信封的 `parent` 说，不写在输入里；`parent` 不是会话、是登记过的调用方记录时，开的是顶层会话，不是子会话。
+操作 `spawn`（`run: true`）：在这台机器上用这个 Agent 开一个子会话，返回运行引用。输入是 `{ projectId, threadId, title, text, settings?, checkout?, parentTitle, parentUnattended?, parentApproval? }`：子会话所在的项目与工作树（`checkout`）、Agent 的设置（`settings`，如模型与推理强度）、标题与第一条任务（`text`）；`threadId` 是调用方给的子会话 ID，重试找到的是同一个；`parentTitle` 是发起方在这里显示的名字，`parentUnattended`（旧字段，已废弃）说发起方是否无人值守；`parentApproval`（`safe`、`manual`、`auto`、`full`）说发起方的权限档位，省略 `settings` 里的模式时，子会话据此选不高于它的最高档（规则见 [Agent 接入协议](agent-protocol.md#权限档位)）。两个至少写一个。同时传 `parentApproval` 与 `parentUnattended` 时以 `parentApproval` 为准；只传 `parentUnattended` 时，`true` 当作 `auto`，`false` 当作 `manual`，旧调用方照旧可用。子会话为谁工作由调用信封的 `parent` 说，不写在输入里；`parent` 不是会话、是登记过的调用方记录时，开的是顶层会话，不是子会话。
 
 ```json
 {

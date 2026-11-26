@@ -18,14 +18,17 @@
       },
       "command": {"$ref": "common.json#/$defs/command"},
       "modes": {
-        "description": "审批档位的说法：title 不超过 10 字，unset 不超过 20 字，note 不超过 100 字，auto、full 各不超过 200 字",
+        "description": "审批档位的说法：title 不超过 10 字，unset 不超过 20 字，note 不超过 100 字。manual、auto、full 各是该档对应的 ACP 模式 ID（不超过 200 字），写 null 表示 Agent 没有这一档、不可选；API Level 21 起（engines.coda ≥ 21）三个键须写齐，更早的清单可以不写。safe 是只读、规划等安全模式的 ACP 模式 ID 列表，不写同空列表。档位从低到高是 safe < manual < auto < full，同一个模式 ID 只能放在一档里（API Level ≥ 21，或写了 manual、safe、default、null 的 auto/full 等新版特性的清单才检查；只用旧版 auto、full 字符串的旧清单保持兼容）；没登记在这四处的其余模式按 auto 算。default 是 ACP 没报当前模式（currentModeId 为空串）时这个 Agent 默认相当于哪一档，null 或不写表示不知道",
         "type": "object",
         "properties": {
           "title": {"$ref": "common.json#/$defs/line10"},
           "unset": {"$ref": "common.json#/$defs/line20"},
           "note": {"$ref": "common.json#/$defs/line100"},
-          "auto": {"$ref": "common.json#/$defs/line200"},
-          "full": {"$ref": "common.json#/$defs/line200"}
+          "manual": {"$ref": "#/$defs/modeIdOrNull"},
+          "auto": {"$ref": "#/$defs/modeIdOrNull"},
+          "full": {"$ref": "#/$defs/modeIdOrNull"},
+          "safe": {"type": "array", "items": {"$ref": "common.json#/$defs/line200"}, "uniqueItems": true},
+          "default": {"enum": ["safe", "manual", "auto", "full", null]}
         },
         "additionalProperties": false
       },
@@ -41,6 +44,10 @@
   },
   "x-unique-by": ["id"],
   "$defs": {
+    "modeIdOrNull": {
+      "description": "一档对应的 ACP 模式 ID，null 表示没有这一档",
+      "anyOf": [{"$ref": "common.json#/$defs/line200"}, {"type": "null"}]
+    },
     "icon": {
       "description": "插件目录里的 PDF，不超过 32 KiB",
       "allOf": [{"$ref": "common.json#/$defs/line1000"}],

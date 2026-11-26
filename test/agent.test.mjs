@@ -324,6 +324,14 @@ test('documentation wire examples remain valid for the extension parts', () => {
   for (const [file, schema] of Object.entries(AGENT_SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/agent/v1/${file}`);
 });
 
+test('the documentation states the four approval tiers and how a delegation picks one', () => {
+  const doc = readFileSync(new URL('../docs/agent-protocol.md', import.meta.url), 'utf8');
+  const section = doc.slice(doc.indexOf('## 权限档位'), doc.indexOf('## 配置探测'));
+  for (const text of ['`safe < manual < auto < full`', '`modes.default`', '`null`', 'engines.coda', '按 `auto` 算', '保守按 `manual`', '`safe` 列表的第一个', '拒绝派出', '拒绝启动'])
+    assert.ok(section.includes(text), text);
+  assert.ok(readFileSync(new URL('../docs/protocol.md', import.meta.url), 'utf8').includes('`parentApproval`'));
+});
+
 test('pinned Coda and plugin-check fixtures agree on shape, independently of session state', () => {
   const corpus = JSON.parse(readFileSync(new URL('./fixtures/agent-messages.json', import.meta.url), 'utf8'));
   for (const { source, part, ref, value, problem } of corpus.cases) {

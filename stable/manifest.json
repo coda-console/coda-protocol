@@ -1,5 +1,5 @@
 {
-  "revision": 3,
+  "revision": 6,
   "entries": [
     {
       "path": "name"
@@ -69,6 +69,15 @@
     },
     {
       "path": "contributes.agents[].modes.full"
+    },
+    {
+      "path": "contributes.agents[].modes.manual"
+    },
+    {
+      "path": "contributes.agents[].modes.safe[]"
+    },
+    {
+      "path": "contributes.agents[].modes.default"
     },
     {
       "path": "contributes.agents[].icon.dark"

@@ -229,10 +229,13 @@ test('agent records name the plugin of their program, and spawn takes a child\'s
   assert.equal(status({}), true);
 
   const input = { projectId: 'p1', threadId: 't1', title: '修 bug', text: '先读 README', parentTitle: '主会话', parentUnattended: false };
-  for (const value of [input, { ...input, settings: { model: 'gpt-5', effort: 'high' }, checkout: { branch: 'main' } }])
+  const { parentUnattended, ...bare } = input;
+  for (const value of [input, { ...input, settings: { model: 'gpt-5', effort: 'high' }, checkout: { branch: 'main' } },
+    { ...input, parentApproval: 'manual' }, ...['safe', 'manual', 'auto', 'full'].map(parentApproval => ({ ...bare, parentApproval }))])
     assert.equal(spawn.input(value), true, JSON.stringify(value));
   const without = key => Object.fromEntries(Object.entries(input).filter(([name]) => name !== key));
-  for (const value of [{}, ...Object.keys(input).map(without), { ...input, agent: 'codex' }, { ...input, parentUnattended: 'no' },
+  for (const value of [{}, bare, ...Object.keys(input).filter(key => key !== 'parentUnattended').map(without), { ...input, agent: 'codex' }, { ...input, parentUnattended: 'no' },
+    { ...input, parentApproval: 'root' }, { ...input, parentApproval: null }, { ...bare, parentApproval: 'ask' },
     { ...input, settings: 'gpt-5' }, { ...input, checkout: [] }, { ...input, threadId: 1 }])
     assert.equal(spawn.input(value), false, JSON.stringify(value));
 });
