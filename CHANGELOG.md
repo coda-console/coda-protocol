@@ -2,6 +2,14 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.28.0 — 2026-11-27
+
+- 这是在 6.27.0 之上的次版本。依据 README「版本」一节：Agent 清单的 `modes` 只加可选键并放宽 `auto`、`full`，升次版本；旧清单一律照旧合法（`test/fixtures/stable/` 的 Pi 样本与不写 `modes` 的清单都不变）。`stable/manifest.json` 的 revision 从 3 升到 6（每登记一条加一），新登记 `modes.manual`、`modes.safe[]`、`modes.default` 三条路径。
+- `schemas/plugin/agents.json`：`contributes.agents[].modes` 新增 `manual`（人工审批档的 ACP 模式 ID）、`safe`（只读、规划等安全模式的 ID 数组，不重复，不写同空数组）、`default`（ACP 没报当前模式、`currentModeId` 为空串时，这个 Agent 默认相当于哪一档：`safe`、`manual`、`auto`、`full` 或 `null`）；`auto`、`full` 放宽为模式 ID 或 `null`（新增 `$defs/modeIdOrNull`），`null` 表示没有这一档、不可选。
+- `validate.mjs` 的 `contributionProblem` 校验 `agents` 时多查两条：一，同一个模式 ID 不能放进多个档位（`manual`、`auto`、`full` 与 `safe` 之间）；二，`engines.coda` ≥ 21 的清单里每个 Agent 须写 `modes`，并显式写齐 `manual`、`auto`、`full`（值可为 `null`），没写 `engines.coda` 或小于 21 的清单不受此限。导出不变。同一模式 ID 不跨档的检查只对 `engines.coda` ≥ 21 或写了新键（`manual`、`safe`、`default`，或 `auto`、`full` 为 `null`）的清单生效；更早且没用新键的清单仍可让 `auto` 与 `full` 用同一个 ID。`contributionProblem` 只对内置的 `agents.json` 加这两条，传别的 schema 照旧只按它校验。
+- `schemas/protocol/v1/agent.json`：`coda/agent@1` 的 `spawn` 输入新增可选 `parentApproval`（`safe`、`manual`、`auto`、`full`）；`parentUnattended` 不再必填，改为与 `parentApproval` 至少写一个；两个都传以 `parentApproval` 为准，只传 `parentUnattended`（旧字段，已废弃）时 `true` 当作 `auto`、`false` 当作 `manual`。只传 `parentUnattended` 的旧调用方照旧合法。
+- 文档：`docs/agent-protocol.md` 新增「权限档位」一节，写明四档偏序 `safe < manual < auto < full`、没登记的模式按 `auto` 算、`null` 与 API Level 21 的写齐要求、父会话的定级顺序（当前模式、`modes.default`、保守按 `manual`）和委派省略 `mode` 时的选档规则；`docs/protocol.md` 同步 `spawn` 的 `parentApproval`。
+
 ## 6.27.0 — 2026-11-24
 
 - 这是在 6.26.0 之上的次版本。依据 README「版本」一节：新增可选的清单键升次版本；这两个键暂不进稳定面，`stable/` 不动，旧清单不受影响（没写这两个键的清单照旧合法）。

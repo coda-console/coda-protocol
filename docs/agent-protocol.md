@@ -106,6 +106,24 @@ ACP 只允许在一轮（`session/prompt`）进行时交互。Agent 在两轮之
   Coda 记下每个 Agent 最近一次握手报的值，随后端遥测上报（Coda 遥测服务（Coda 的 docs/../telemetry/README.md「后端上报」）），用于复盘 Agent 版本带来的兼容问题；
   只取版本号式的字符（字母、数字与 `.+()-_` 空格，至多 64 个），其他写法不记。不报不影响会话。
 
+## 权限档位
+
+Agent 的审批模式（ACP 的 mode）按权限高低归到四档，偏序是 `safe < manual < auto < full`。Agent 插件在清单 `contributes.agents[].modes`（[agents.json](../schemas/plugin/agents.json)）里登记：
+
+| 键 | 含义 |
+| --- | --- |
+| `manual` | 人工审批档的 ACP 模式 ID |
+| `auto` | 自动审批档的 ACP 模式 ID |
+| `full` | 完全放行档的 ACP 模式 ID |
+| `safe` | 只读、规划等安全模式的 ACP 模式 ID 列表（如 `plan`、`ask`、`dontAsk`），不写同空列表，不重复 |
+| `default` | ACP 没报当前模式（`currentModeId` 为空串）时，这个 Agent 默认相当于哪一档：`safe`、`manual`、`auto`、`full` 或 `null` |
+
+- `manual`、`auto`、`full` 都可以写 `null`（或不写），表示 Agent 没有这一档、不可选。API Level 21 起（`engines.coda` ≥ 21）Agent 插件须写 `modes` 并显式写齐这三个键，没有的一档写 `null`；更早的清单不受此限。
+- 同一个模式 ID 只能属于一档：`manual`、`auto`、`full` 与 `safe` 里的 ID 两两不能相同。这条对 API Level ≥ 21 的清单，或写了新版档位特性（`manual`、`safe`、`default`，或 `auto`/`full` 为 `null`）的清单检查；只用旧版 `auto`/`full` 字符串的旧清单按稳定面保持兼容，不查。没登记在这四处的其余模式 ID 按 `auto` 算。
+- **父会话的档位**：委派时先定父会话的档位。优先取运行中 ACP 实际报告的当前模式；它为空就读 `modes.default`；仍为空则保守按 `manual`。
+- **委派选档**：委派（`spawn`、`new_session` 等）省略 `mode` 时，向下取不高于父会话档位的最高已登记档位：`full` 父依次试 `full`、`auto`、`manual`；`auto` 父试 `auto`、`manual`；`manual` 父只试 `manual`；`safe` 父取 `safe` 列表的第一个，不会自动落到 `safe`（从更高档往下止步于 `manual`）。没有可用档位时拒绝派出。
+- 首轮 `session/prompt` 之前设档（`session/set_mode`）失败，拒绝启动这个会话，不带着未知档位开跑。
+
 ## 配置探测
 
 Coda 读 Agent 的模型与模式目录时，不必建一个真实的原生会话：对声明了该能力的 Agent，改请它开一个只在当前连接里有效的虚拟会话。

@@ -69,6 +69,80 @@ test('an agent no longer declares a lifecycle', () => {
     assert.equal(checked({ contributes: { agents: [{ ...agent, lifecycle }] } }), 'contributes.agents[0] 里有不认识的键：lifecycle');
 });
 
+test('an agent\'s modes say a mode ID or null for manual, auto and full, a list for safe, and the default tier', () => {
+  const agent = { id: 'a', displayName: 'A', icon: { light: 'icon.pdf' }, command: 'run' };
+  const of = modes => checked({ contributes: { agents: [{ ...agent, modes }] } });
+  for (const modes of [{}, { title: '模式', unset: '默认', note: 'n' }, { manual: 'default', auto: 'acceptEdits', full: 'bypass' },
+    { manual: null, auto: null, full: null }, { manual: 'm', auto: null, full: 'f', safe: ['plan', 'ask', 'dontAsk'] }, { safe: [] }])
+    assert.equal(of(modes), null, JSON.stringify(modes));
+  for (const value of ['safe', 'manual', 'auto', 'full', null]) assert.equal(of({ default: value }), null, String(value));
+  for (const value of ['read-only', '', 'Auto', 1, false, [], {}]) assert.match(of({ default: value }), /^contributes\.agents\[0\]\.modes\.default/, JSON.stringify(value));
+  for (const tier of ['manual', 'auto', 'full'])
+    for (const value of ['', ' ', 1, false, [], {}, 'x'.repeat(201), 'a\nb']) assert.match(of({ [tier]: value }), new RegExp(`^contributes\\.agents\\[0\\]\\.modes\\.${tier}`), `${tier} ${JSON.stringify(value)}`);
+  for (const safe of ['plan', {}, [1], [''], ['plan', 'plan'], [null]]) assert.match(of({ safe }), /^contributes\.agents\[0\]\.modes\.safe/, JSON.stringify(safe));
+  assert.match(of({ extra: 'x' }), /里有不认识的键：extra/);
+});
+
+test('an agent puts a mode ID in one tier only', () => {
+  const agent = { id: 'a', displayName: 'A', icon: { light: 'icon.pdf' }, command: 'run' };
+  const of = (modes, rest = {}) => checked({ ...rest, contributes: { agents: [{ ...agent, modes }] } });
+  for (const [modes, said] of [[{ manual: 'm', auto: 'm' }, 'manual 和 auto'], [{ auto: 'x', full: 'x', safe: [] }, 'auto 和 full'], [{ manual: 'x', full: 'x' }, 'manual 和 full'],
+    [{ auto: 'plan', safe: ['ask', 'plan'] }, 'auto 和 safe'], [{ manual: 'plan', safe: ['plan'] }, 'manual 和 safe'], [{ full: 'plan', safe: ['plan'] }, 'full 和 safe']])
+    assert.match(of(modes), new RegExp(`^contributes\\.agents\\[0\\]\\.modes：模式 ID「\\w+」不能同时放在 ${said}`), JSON.stringify(modes));
+  assert.match(of({ safe: ['plan', 'plan'] }), /modes\.safe/);
+  // null leaves no ID to clash: all three may be null, and a tier left out of the list is no clash either.
+  for (const modes of [{ manual: null, auto: null, full: null }, { manual: 'a', auto: 'b', full: 'c', safe: ['d'] }]) assert.equal(of(modes), null);
+  // The same holds for every agent of the list once the manifest is of Level 21, or writes a newer key.
+  const second = { ...agent, id: 'b', modes: { auto: 'x', full: 'x', safe: [] } };
+  assert.match(checked({ engines: { coda: 20 }, contributes: { agents: [agent, second] } }), /^contributes\.agents\[1\]\.modes：/);
+  for (const modes of [{ auto: 'x', full: 'x', manual: 'y' }, { auto: 'x', full: 'x', safe: [] }, { auto: 'x', full: 'x', default: 'auto' },
+    { auto: 'x', full: 'x', manual: null }, { auto: 'x', full: 'x', safe: ['x'] }, { auto: 'x', full: null, manual: 'x' }])
+    assert.match(of(modes, { engines: { coda: 20 } }), /^contributes\.agents\[0\]\.modes：/, JSON.stringify(modes));
+  // An older manifest using none of the newer keys keeps its auto and full sharing one ID.
+  for (const coda of [undefined, 1, 20]) assert.equal(checked({ ...(coda === undefined ? {} : { engines: { coda } }), contributes: { agents: [{ ...agent, modes: { auto: 'shared', full: 'shared' } }] } }), null, String(coda));
+});
+
+test('from API Level 21 an agent writes modes with manual, auto and full, each an ID or null', () => {
+  const agent = { id: 'a', displayName: 'A', icon: { light: 'icon.pdf' }, command: 'run' };
+  const full = { manual: 'default', auto: 'acceptEdits', full: 'bypass' };
+  const of = (agents, coda) => checked({ ...(coda === undefined ? {} : { engines: { coda } }), contributes: { agents } });
+  for (const coda of [21, 22, 100]) {
+    assert.equal(of([{ ...agent, modes: full }], coda), null);
+    assert.equal(of([{ ...agent, modes: { manual: null, auto: null, full: null } }], coda), null);
+    assert.equal(of([{ ...agent, modes: { ...full, safe: ['plan'], default: 'safe', title: '模式' } }], coda), null);
+    assert.equal(of([], coda), null);
+    assert.match(of([agent], coda), /^contributes\.agents\[0\] 缺 modes：/);
+    assert.match(of([{ ...agent, modes: {} }], coda), /^contributes\.agents\[0\]\.modes 缺 manual：/);
+    for (const tier of Object.keys(full)) {
+      const { [tier]: left, ...rest } = full;
+      assert.match(of([{ ...agent, modes: rest }], coda), new RegExp(`^contributes\\.agents\\[0\\]\\.modes 缺 ${tier}：`));
+    }
+    // One agent short of the three keys is enough, wherever it stands in the list.
+    assert.match(of([{ ...agent, modes: full }, { ...agent, id: 'b' }], coda), /^contributes\.agents\[1\] 缺 modes：/);
+  }
+  // Older manifests, and those saying nothing of their level, keep being right without them.
+  for (const coda of [undefined, 1, 20]) for (const modes of [undefined, {}, { title: '模式' }, { auto: 'a' }, { manual: null }])
+    assert.equal(of([modes === undefined ? agent : { ...agent, modes }], coda), null, `${coda} ${JSON.stringify(modes)}`);
+});
+
+test('contributionProblem keeps to the schema it is given: only the built-in agents schema gets the agents rules, and no other schema throws', () => {
+  assert.equal(contributionProblem({ type: 'object' }, { engines: { coda: 21 }, contributes: { agents: {} } }, 'agents'), null);
+  assert.match(contributionProblem({ type: 'array' }, { contributes: { agents: {} } }, 'agents'), /^contributes\.agents 须为数组/);
+  assert.equal(contributionProblem({ type: 'array' }, { engines: { coda: 21 }, contributes: { agents: [{}] } }, 'agents'), null);
+});
+
+test('the built-in agents schema is known by its $id as by identity, and applies to the agents key only', () => {
+  const agent = { id: 'a', displayName: 'A', icon: { light: 'icon.pdf' }, command: 'run' };
+  const reread = JSON.parse(readFileSync(new URL('../schemas/plugin/agents.json', import.meta.url), 'utf8'));
+  assert.notEqual(reread, SCHEMAS['agents.json']);
+  const manifest = { engines: { coda: 21 }, contributes: { agents: [agent] } };
+  assert.match(contributionProblem(reread, manifest, 'agents'), /^contributes\.agents\[0\] 缺 modes：/);
+  assert.match(contributionProblem(structuredClone(SCHEMAS['agents.json']), { contributes: { agents: [{ ...agent, modes: { manual: 'x', auto: 'x' } }] } }, 'agents'), /modes：模式 ID「x」/);
+  // The same schema for another key reads nothing of `contributes.agents`.
+  assert.equal(contributionProblem(SCHEMAS['agents.json'], { engines: { coda: 21 }, contributes: { other: [agent] } }, 'other'), null);
+  assert.equal(contributionProblem(SCHEMAS['agents.json'], { contributes: { other: [agent] } }, 'other'), null);
+});
+
 test('endpoints is no type of Coda\'s any more: no schema checks it', () => {
   assert.equal(Object.hasOwn(SCHEMAS, 'endpoints.json'), false);
   assert.equal(checked({ contributes: { endpoints: [{ id: 'check', command: 'run' }] } }), null);

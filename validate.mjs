@@ -349,7 +349,29 @@ export function pointProblem(schema, value, where, dir = null) {
 export function contributionProblem(schema, manifest, key, dir = null) {
   const point = declared(schema);
   return point.validate.call({ dir }, manifest.contributes[key], { instancePath: `/contributes/${escape(key)}`, parentData: manifest.contributes,
-    parentDataProperty: key, rootData: manifest, dynamicAnchors: {} }) ? null : explain(point.validate.errors, '', [point.schema]);
+    parentDataProperty: key, rootData: manifest, dynamicAnchors: {} }) ? (key === 'agents' && (schema === SCHEMAS['agents.json'] || schema?.$id === SCHEMAS['agents.json'].$id) && Array.isArray(manifest.contributes?.agents) ? agentsProblem(manifest) : null) : explain(point.validate.errors, '', [point.schema]);
+}
+// What the agents schema cannot say of its values as they stand to each other, the shapes being right by now: from API Level 21
+// (`engines.coda`) an agent writes `modes` with `manual`, `auto` and `full` all there, each an ID or null; and a mode ID sits in
+// one tier only (`manual`, `auto`, `full`, or the list `safe`) — for a manifest of API Level 21 or one that writes a newer
+// `modes` key (`manual`, `safe`, `default`, or a null `auto` or `full`); an older one may still give `auto` and `full` one ID.
+function agentsProblem({ engines, contributes }) {
+  const strict = engines?.coda >= 21;
+  for (const [i, { modes }] of contributes.agents.entries()) {
+    const at = `contributes.agents[${i}]`;
+    if (modes === undefined) { if (strict) return `${at} 缺 modes：engines.coda 为 21 起，Agent 须写 modes，并写齐 manual、auto、full`; continue; }
+    const missing = ['manual', 'auto', 'full'].find(tier => !Object.hasOwn(modes, tier));
+    if (strict && missing) return `${at}.modes 缺 ${missing}：engines.coda 为 21 起须写齐 manual、auto、full，没有这一档就写 null`;
+    const newer = ['manual', 'safe', 'default'].some(key => Object.hasOwn(modes, key)) || modes.auto === null || modes.full === null;
+    if (!strict && !newer) continue;
+    const tiers = new Map();
+    for (const [tier, id] of [['manual', modes.manual], ['auto', modes.auto], ['full', modes.full], ...(modes.safe ?? []).map(id => ['safe', id])]) {
+      if (id === null || id === undefined) continue;
+      if (tiers.has(id)) return `${at}.modes：模式 ID「${id}」不能同时放在 ${tiers.get(id)} 和 ${tier}，一个模式只属于一档`;
+      tiers.set(id, tier);
+    }
+  }
+  return null;
 }
 
 // The serialized size of a value in UTF-8 bytes, `{ ok: true, bytes }`, or why it has none, `{ ok: false, error }`: what
