@@ -1,6 +1,6 @@
 {
   "name": "@coda-console/protocol",
-  "version": "6.28.0",
+  "version": "6.29.0",
   "description": "Coda 的协议：插件清单的类型（JSON Schema）、通用校验器、协议定义与调用信封、流程方言与 Agent 接入协议",
   "type": "module",
   "license": "MIT",
@@ -22,6 +22,9 @@
     "resource-protocol.mjs",
     "frames.mjs",
     "blob.mjs",
+    "accord.mjs",
+    "accord.d.mts",
+    "vectors",
     "plugin.d.mts",
     "CHANGELOG.md",
     "stable"
@@ -37,6 +40,11 @@
     "./protocol": "./protocol.mjs",
     "./frames": "./frames.mjs",
     "./blob": "./blob.mjs",
+    "./accord": {
+      "types": "./accord.d.mts",
+      "default": "./accord.mjs"
+    },
+    "./vectors/accord.json": "./vectors/accord.json",
     "./types": "./plugin.d.mts",
     "./stable/*": "./stable/*"
   },

@@ -2,6 +2,13 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.29.0 — 2026-11-27
+
+- 这是在 6.28.0 之上的次版本。依据 README「版本」一节：新增导出与测试向量升次版本；`stable/manifest.json`、`stable/view.json` 不动，清单 schema 没改，旧用法一律照旧。
+- 新增 `@coda-console/protocol/accord`（`accord.mjs`，类型 `accord.d.mts`）：Accord 公钥 `author` 怎样给人看的单一实现，供 Coda（Swift、后端、WebView 标准库）与各插件共用，不再各写一份。零依赖，只用标准 JS，不 import `node:*`、不用 `Buffer`，Node 与浏览器原生 ESM 都能直接加载。导出 `isAuthor`、`parseAuthor`、`shortAuthor`、`nicknameOf`、`tailOf`、`accordIdentity`、`identityTitle`、`disambiguateTails`、`identityTitles`、`identiconPattern`；算法与现行 Coda、`friends`、`friend-chat` 逐位一致：昵称按每 7 位一组至多读 36 组，尾号是公钥的 78 位十进制，同昵称撞号逐位向左加位消歧，头像是 5×5 水平轴对称的几何纹。
+- 新增跨语言共用测试向量 `vectors/accord.json`，包内导出为 `@coda-console/protocol/vectors/accord.json`：昵称与尾号（含 `AccordChecks.swift` 的全部向量）、撞号消歧（含真实公钥构造的碰撞）、头像网格。契约见 `docs/protocol.md` 的「Accord 身份的显示」。
+- `package.json` 的 `files` 与 `exports` 加入这三项；`test/accord.test.mjs` 守住全部导出、向量、边界入参，以及 `accord.mjs` 不含 `node:` 导入与 `Buffer`。
+
 ## 6.28.0 — 2026-11-27
 
 - 这是在 6.27.0 之上的次版本。依据 README「版本」一节：Agent 清单的 `modes` 只加可选键并放宽 `auto`、`full`，升次版本；旧清单一律照旧合法（`test/fixtures/stable/` 的 Pi 样本与不写 `modes` 的清单都不变）。`stable/manifest.json` 的 revision 从 3 升到 6（每登记一条加一），新登记 `modes.manual`、`modes.safe[]`、`modes.default` 三条路径。
