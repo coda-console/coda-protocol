@@ -1,0 +1,548 @@
+{
+  "identities": [
+    {
+      "hex": "24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab",
+      "author": "ed25519:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab",
+      "short": "24005142",
+      "name": "sakura",
+      "tail": "016283823373196459620642706821646928142256768952056557996360219804530892538283",
+      "tag": "8283",
+      "title": "sakura #8283"
+    },
+    {
+      "hex": "390819ab193264c993264c993264c993264c993264c993264c993264c993270f",
+      "author": "ed25519:390819ab193264c993264c993264c993264c993264c993264c993264c993270f",
+      "short": "390819ab",
+      "name": "coda",
+      "tail": "025796144302227499116560651570427453346426747217764480651352477067654213084943",
+      "tag": "4943",
+      "title": "coda #4943"
+    },
+    {
+      "hex": "0438180a1fed5ab56ad5ab56ad5ab56ad5ab56ad5ab56ad5ab56ad5ab56affff",
+      "author": "ed25519:0438180a1fed5ab56ad5ab56ad5ab56ad5ab56ad5ab56ad5ab56ad5ab56affff",
+      "short": "0438180a",
+      "name": "coda2",
+      "tail": "001908360744834767670932787230931174860391892938896223435717190565378994667519",
+      "tag": "7519",
+      "title": "coda2 #7519"
+    },
+    {
+      "hex": "b1ff20abe86c0000000000000000000000000000000000000000000000000000",
+      "author": "ed25519:b1ff20abe86c0000000000000000000000000000000000000000000000000000",
+      "short": "b1ff20ab",
+      "name": "kh",
+      "tail": "080510145691267496417075659893654907346422871117988330772834389711103878758400",
+      "tag": "8400",
+      "title": "kh #8400"
+    },
+    {
+      "hex": "9d56c050a142850a142850a142850a142850a142850a142850a142850a142710",
+      "author": "ed25519:9d56c050a142850a142850a142850a142850a142850a142850a142850a142710",
+      "short": "9d56c050",
+      "name": "07",
+      "tail": "071166393384220724757113098518208155870811606365958828344208064729141635983120",
+      "tag": "3120",
+      "title": "07 #3120"
+    },
+    {
+      "hex": "9b5c04eb10204081020408102040810204081020408102040810204081021234",
+      "author": "ed25519:9b5c04eb10204081020408102040810204081020408102040810204081021234",
+      "short": "9b5c04eb",
+      "name": "z9a0",
+      "tail": "070271075404637019855828276758999161743191196202072788924145437593309148222004",
+      "tag": "2004",
+      "title": "z9a0 #2004"
+    },
+    {
+      "hex": "3203ffffffffffffffffffffffffffffffffffffffffffffffffffffffff002a",
+      "author": "ed25519:3203ffffffffffffffffffffffffffffffffffffffffffffffffffffffff002a",
+      "short": "3203ffff",
+      "name": "za",
+      "tail": "022622709817422432955984541199512328676655103815595425139789045801350703546410",
+      "tag": "6410",
+      "title": "za #6410"
+    },
+    {
+      "hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "author": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+      "short": "00000000",
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "tail": "000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "tag": "0000",
+      "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa #0000"
+    },
+    {
+      "hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "author": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "short": "ffffffff",
+      "name": "",
+      "tail": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "tag": "9935",
+      "title": "ffffffff"
+    },
+    {
+      "hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "author": "ed25519:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "short": "00010203",
+      "name": "aaggyqkgdobq2synhd",
+      "tail": "000001780731860627700044960722568376592200742329637303199754547598369979440671",
+      "tag": "0671",
+      "title": "aaggyqkgdobq2synhd #0671"
+    },
+    {
+      "hex": "66c8aec217cac5fa9829e4e314c2dfe6f3b3710cbf2c4b4df462c333565b4e27",
+      "author": "ed25519:66c8aec217cac5fa9829e4e314c2dfe6f3b3710cbf2c4b4df462c333565b4e27",
+      "short": "66c8aec2",
+      "name": "zyv",
+      "tail": "046490486105048442293641588531420323991210115029903945753585556465004131864103",
+      "tag": "4103",
+      "title": "zyv #4103"
+    },
+    {
+      "hex": "2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734",
+      "author": "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734",
+      "short": "2e4b9cc2",
+      "name": "xs",
+      "tail": "020939986474356556387344986264546814587009115178813918053369159061515022604084",
+      "tag": "4084",
+      "title": "xs #4084"
+    },
+    {
+      "hex": "01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "author": "ed25519:01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "short": "01ffffff",
+      "name": "",
+      "tail": "000904625697166532776746648320380374280103671755200316906558262375061821325311",
+      "tag": "5311",
+      "title": "01ffffff"
+    }
+  ],
+  "invalidAuthors": [
+    "",
+    "ed25519:",
+    "ed25519:abc",
+    "24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab",
+    "ed25519:24005142202C7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF01AB",
+    " ed25519:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab",
+    "ed25519:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab0",
+    "ed25519:4005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab",
+    "ed25519:gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+    "ed448:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab"
+  ],
+  "disambiguate": [
+    {
+      "name": "four digits stay four when nothing collides",
+      "minDigits": 4,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "12345678"
+        },
+        {
+          "stem": "a",
+          "tail": "87654321"
+        },
+        {
+          "stem": "b",
+          "tail": "0000"
+        }
+      ],
+      "suffixes": [
+        "5678",
+        "4321",
+        "0000"
+      ]
+    },
+    {
+      "name": "a shared last four goes to five",
+      "minDigits": 4,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "9904084"
+        },
+        {
+          "stem": "a",
+          "tail": "9914084"
+        }
+      ],
+      "suffixes": [
+        "04084",
+        "14084"
+      ]
+    },
+    {
+      "name": "layers of sharing go to five, six and seven",
+      "minDigits": 4,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "5551234"
+        },
+        {
+          "stem": "a",
+          "tail": "5541234"
+        },
+        {
+          "stem": "a",
+          "tail": "5441234"
+        },
+        {
+          "stem": "a",
+          "tail": "4441234"
+        }
+      ],
+      "suffixes": [
+        "51234",
+        "541234",
+        "5441234",
+        "4441234"
+      ]
+    },
+    {
+      "name": "another stem does not lengthen it",
+      "minDigits": 4,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "9904084"
+        },
+        {
+          "stem": "b",
+          "tail": "9914084"
+        },
+        {
+          "stem": "",
+          "tail": "1114084"
+        },
+        {
+          "stem": "",
+          "tail": "2224084"
+        }
+      ],
+      "suffixes": [
+        "4084",
+        "4084",
+        "4084",
+        "4084"
+      ]
+    },
+    {
+      "name": "the same whole tail never loops",
+      "minDigits": 4,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "1234567"
+        },
+        {
+          "stem": "a",
+          "tail": "1234567"
+        },
+        {
+          "stem": "a",
+          "tail": "7234567"
+        }
+      ],
+      "suffixes": [
+        "1234567",
+        "1234567",
+        "7234567"
+      ]
+    },
+    {
+      "name": "a smaller minimum",
+      "minDigits": 2,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "12345"
+        },
+        {
+          "stem": "a",
+          "tail": "67845"
+        },
+        {
+          "stem": "b",
+          "tail": "999"
+        }
+      ],
+      "suffixes": [
+        "345",
+        "845",
+        "99"
+      ]
+    },
+    {
+      "name": "a larger minimum",
+      "minDigits": 6,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "123456789"
+        },
+        {
+          "stem": "a",
+          "tail": "223456789"
+        }
+      ],
+      "suffixes": [
+        "123456789",
+        "223456789"
+      ]
+    },
+    {
+      "name": "a minimum of one",
+      "minDigits": 1,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "10"
+        },
+        {
+          "stem": "a",
+          "tail": "20"
+        },
+        {
+          "stem": "a",
+          "tail": "30"
+        }
+      ],
+      "suffixes": [
+        "10",
+        "20",
+        "30"
+      ]
+    },
+    {
+      "name": "a tail shorter than the minimum is whole",
+      "minDigits": 4,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "12"
+        },
+        {
+          "stem": "a",
+          "tail": "012"
+        }
+      ],
+      "suffixes": [
+        "12",
+        "012"
+      ]
+    },
+    {
+      "name": "tails of different lengths",
+      "minDigits": 4,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": "123"
+        },
+        {
+          "stem": "a",
+          "tail": "0123"
+        },
+        {
+          "stem": "a",
+          "tail": "00123"
+        }
+      ],
+      "suffixes": [
+        "123",
+        "0123",
+        "00123"
+      ]
+    },
+    {
+      "name": "what is no decimal tail gives nothing",
+      "minDigits": 4,
+      "entries": [
+        {
+          "stem": "a",
+          "tail": ""
+        },
+        {
+          "stem": "a",
+          "tail": "12a4"
+        },
+        {
+          "stem": "a",
+          "tail": "-123"
+        },
+        {
+          "stem": "a",
+          "tail": 5
+        },
+        {
+          "stem": "a"
+        },
+        {
+          "stem": "a",
+          "tail": "1234"
+        }
+      ],
+      "suffixes": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1234"
+      ]
+    }
+  ],
+  "identityTitles": [
+    {
+      "name": "real keys of one nickname colliding on their last digits",
+      "minDigits": 4,
+      "authors": [
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89fbe44",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e8a11dd4",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e8aed974",
+        "ed25519:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab",
+        "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734",
+        "ed25519:xyz",
+        "nope",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734"
+      ],
+      "titles": {
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734": "xs #2604084",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89fbe44": "xs #14084",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e8a11dd4": "xs #704084",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e8aed974": "xs #3604084",
+        "ed25519:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab": "sakura #8283",
+        "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff": "ffffffff"
+      }
+    },
+    {
+      "name": "a smaller minimum",
+      "minDigits": 2,
+      "authors": [
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89fbe44",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e8a11dd4",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e8aed974",
+        "ed25519:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab",
+        "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734",
+        "ed25519:xyz",
+        "nope",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734"
+      ],
+      "titles": {
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89f9734": "xs #2604084",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e89fbe44": "xs #14084",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e8a11dd4": "xs #704084",
+        "ed25519:2e4b9cc2428beb7bff6a56c14d7304e472a23e890e91ef0a6b0b0380e8aed974": "xs #3604084",
+        "ed25519:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab": "sakura #83",
+        "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff": "ffffffff"
+      }
+    }
+  ],
+  "identicons": [
+    {
+      "kind": "author",
+      "input": "ed25519:0000000000000000000000000000000000000000000000000000000000000000",
+      "rows": [
+        "10001",
+        "10001",
+        "11111",
+        "01010",
+        "10101"
+      ]
+    },
+    {
+      "kind": "author",
+      "input": "ed25519:24005142202c7fffffffffffffffffffffffffffffffffffffffffffffff01ab",
+      "rows": [
+        "00000",
+        "00000",
+        "01010",
+        "11111",
+        "11011"
+      ]
+    },
+    {
+      "kind": "author",
+      "input": "ed25519:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "rows": [
+        "10101",
+        "01010",
+        "00100",
+        "00000",
+        "10101"
+      ]
+    },
+    {
+      "kind": "author",
+      "input": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "rows": [
+        "10001",
+        "00000",
+        "10101",
+        "01110",
+        "10101"
+      ]
+    },
+    {
+      "kind": "text",
+      "input": "coda",
+      "rows": [
+        "10001",
+        "00100",
+        "10101",
+        "11111",
+        "01010"
+      ]
+    },
+    {
+      "kind": "text",
+      "input": "",
+      "rows": [
+        "10101",
+        "00100",
+        "01110",
+        "10101",
+        "10001"
+      ]
+    },
+    {
+      "kind": "text",
+      "input": "ed25519:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "rows": [
+        "10101",
+        "11011",
+        "11111",
+        "11011",
+        "10001"
+      ]
+    },
+    {
+      "kind": "text",
+      "input": "ed25519:abc",
+      "rows": [
+        "00000",
+        "10101",
+        "01110",
+        "00000",
+        "10001"
+      ]
+    },
+    {
+      "kind": "text",
+      "input": "好友 😀",
+      "rows": [
+        "10001",
+        "00100",
+        "10101",
+        "10101",
+        "11111"
+      ]
+    }
+  ]
+}

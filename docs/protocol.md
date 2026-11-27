@@ -800,6 +800,37 @@ status：
 }
 ```
 
+## Accord 身份的显示
+
+`@coda-console/protocol/accord`（`accord.mjs`，类型在 `accord.d.mts`）是 Accord 公钥 `author`（`ed25519:<64 位小写十六进制>`）怎样给人看的唯一实现：Coda 的 Swift 客户端与后端、各插件都与它逐位一致，不各写一份。纯函数，零依赖，只用标准 JS（`Uint8Array`、`BigInt`），不 import 任何 `node:*` 模块、不用 `Buffer`，Node 与浏览器（WKWebView）的原生 ESM 都能直接加载。`test/accord.test.mjs` 守着这一点。
+
+| 函数 | 约定 |
+| --- | --- |
+| `isAuthor(value)` | 是不是合法的 `author` |
+| `parseAuthor(author)` | 合法给 32 字节 `Uint8Array`，否则 `null` |
+| `shortAuthor(author)` | 合法给 `ed25519:` 后的前 8 位十六进制，否则 `''` |
+| `nicknameOf(input)` | 公钥拼出的昵称；`input` 是 32 字节 `Uint8Array` 或 `author`。非 32 字节的 `Uint8Array` 抛 `TypeError`；非合法 `author` 或别的值给 `''`；拼不出 2 个字符给 `''` |
+| `tailOf(input)` | 公钥按大端无符号整数写成的十进制，左补 `0` 到 78 位；输入规则同 `nicknameOf` |
+| `accordIdentity(author)` | `{ author, key, short, name, tail, tag }`，`tag` 是 `tail` 的末 4 位；非法给 `null` |
+| `identityTitle(author, fallback = '')` | 有昵称给 `name #tag`，没有昵称给 `short`，非法给 `fallback` |
+| `disambiguateTails(entries, { minDigits = 4 })` | `entries` 是 `{ stem, tail }` 的数组或可迭代对象，返回等长的尾号后缀数组；`minDigits` 不是正整数抛 `RangeError` |
+| `identityTitles(authors, { minDigits = 4 })` | 一组 `author`（可迭代，去重，只收合法的）到标题的 `Map`；有昵称的按昵称为主干消歧，没有昵称的给 `short` |
+| `identiconPattern(input)` | 5×5 水平轴对称的布尔网格（`grid[r][c] === grid[r][4 - c]`），亮格 8 到 18 个；`input` 是 `Uint8Array`（按字节）、合法 `author`（按公钥）或别的文字（按字符码，空值当空串） |
+
+**昵称**：公钥从第 0 字节最高位起每 7 位一组，至多读 36 组（最后 4 比特不读）。组的值 `v` 小于 78 是字母 `a` 起的第 `v % 26` 个，小于 88 是数字 `v - 78`；88 到 127 在昵称已有 2 个以上字符时结束，否则跳过这一组。读完后不足 2 个字符就没有昵称。
+
+**撞号消歧**（`disambiguateTails`）：每项的后缀至少 `minDigits` 位；同一个非空 `stem` 下，与另一个**尾号不同**的项比较，两者从最右位向左的公共后缀有 `same` 位，这一项就至少取 `same + 1` 位（不超过它自己的位数）；完整尾号相同的项是同一个人，不互相加位，不会死循环。`tail` 不是非空的纯数字、或 `stem` 为空时不参与比较；`tail` 不是纯数字的项给 `''`。
+
+**头像网格**：种子取字节的 FNV-1a，再用 mulberry32 取数，每次取数按 `draw >>> (行 * 3 + 列)` 读左 3 列并镜像，亮格数不在 8 到 18 就接着取下一个数。
+
+共用测试向量 `vectors/accord.json` 随包导出（`@coda-console/protocol/vectors/accord.json`），Swift 的 `AccordChecks.swift`、后端与插件的测试直接引用它对齐，键如下：
+
+- `identities`：每项 `{ hex, author, short, name, tail, tag, title }`，含全 0、全 `ff`、拼不出昵称与昵称到 36 个字符等边界；
+- `invalidAuthors`：都不是合法 `author` 的字符串；
+- `disambiguate`：每项 `{ name, minDigits, entries, suffixes }`；
+- `identityTitles`：每项 `{ name, minDigits, authors, titles }`，用真实的 32 字节公钥构造同昵称、末 4 位十进制相同的撞号；`titles` 的键按 `Map` 的顺序；
+- `identicons`：每项 `{ kind, input, rows }`，`rows` 是 5 行 0/1 字符串（1 是亮格），`kind` 为 `author` 或 `text`（非公钥的回退输入）。
+
 ## 版本
 
 - 协议名里的大版本是协议自己的版本，和 npm 包版本、插件清单的 v2 独立。

@@ -96,6 +96,17 @@ parseBlobPath('content/' + 'f'.repeat(64)); // { kind: 'content', sha256: 'ffff�
 ```
 
 ```js
+import { identityTitles, nicknameOf, tailOf, accordIdentity, identiconPattern } from '@coda-console/protocol/accord';
+
+// Accord 公钥（author，`ed25519:<64 位小写十六进制>`）怎样给人看：昵称、78 位十进制尾号、撞号消歧后的标题、5×5 头像网格。
+// 零依赖，只用标准 JS（Uint8Array、BigInt），不 import 任何 node: 模块、不用 Buffer，Node 与浏览器原生 ESM 都能直接跑。
+// 跨语言共用测试向量在 `@coda-console/protocol/vectors/accord.json`，Swift 与各插件拿它对齐。
+accordIdentity(author); // { author, key, short, name, tail, tag }，author 不合法给 null
+identityTitles(authors); // Map<author, 'sakura #8283'>：同昵称撞了末 4 位就向左加位（'xs #14084'）；解不出昵称的给 8 位十六进制
+identiconPattern(author); // 5×5 水平轴对称的布尔网格，亮格 8 到 18 个；也收 32 字节公钥
+```
+
+```js
 import { workflowProblem, readWorkflow, fieldProblem, fieldsProblem, optionsProblem, joinInputNames, CODA_FIELDS, CODA_OPTIONS } from '@coda-console/protocol/workflow';
 
 // 一份流程（名字不带 .bpmn，用在说明里）：方言里都有就返回 null，否则是一句说明。
