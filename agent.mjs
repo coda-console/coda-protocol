@@ -13,6 +13,13 @@ export const AGENT_SCHEMAS = Object.fromEntries(readdirSync(dir).filter(file => 
 const schemas = Object.values(AGENT_SCHEMAS), ajv = newAjv({ ownProperties: true });
 valueKeywords(ajv, {});
 ajv.addFormat('date-parse', value => Number.isFinite(Date.parse(value)));
+// RFC 3339 date-time, strict: a real calendar day and a zone, unlike the lenient `date-parse`.
+ajv.addFormat('date-time', value => {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})[Tt]([01]\d|2[0-3]):[0-5]\d:([0-5]\d|60)(?:\.\d+)?(?:[Zz]|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.exec(value);
+  if (parts === null) return false;
+  const day = new Date(Date.UTC(+parts[1], +parts[2] - 1, +parts[3]));
+  return day.getUTCMonth() === +parts[2] - 1 && day.getUTCDate() === +parts[3];
+});
 // Entries of one model are merged by adding the four core counts; each sum must stay a safe integer.
 const CORE_COUNTS = ['inputTokens', 'outputTokens', 'cachedReadTokens', 'cachedWriteTokens'];
 ajv.addKeyword({

@@ -57,6 +57,47 @@ test('unrecognized reports need session, kind, name and lost; malformed ones are
   for (const kind of ['output', 'tool']) for (const lost of [true, false]) assert.equal(check({ ...report, kind, lost, detail: '', future: 1 }), null);
 });
 
+test('quota notifications carry the account window readings; every other shape is rejected whole', () => {
+  const window = { id: 'five_hour', label: '5 小时', usedFraction: 0.42, resetsAt: '2026-11-28T10:00:00Z' };
+  const quota = { sessionId: 's1', resourceType: 'limits', accountId: 'a'.repeat(32), windows: [window] };
+  const check = value => agentMessageProblem('_coda/quota', value, '额度');
+  assert.equal(AGENT_METHODS['_coda/quota'].kind, 'notification');
+  assert.equal(AGENT_METHODS['_coda/quota'].direction, 'agent-to-client');
+  assert.equal(check(quota), null);
+  assert.equal(check({ ...quota, windows: [window, { id: 'seven_day', label: '7 天', usedFraction: 1, resetsAt: '2026-12-01T00:00:00.5Z' }, { ...window, id: 'zero', usedFraction: 0 }] }), null);
+  for (const value of [undefined, null, false, 1, 'x', []]) assert.equal(check(value), '额度：params 须为对象，且只带 sessionId、resourceType、accountId、windows');
+  for (const key of ['sessionId', 'resourceType', 'accountId', 'windows']) assert.ok(check(without(quota, key)), key);
+  assert.equal(check(without(quota, 'sessionId')), '额度.sessionId：缺 sessionId');
+  assert.equal(check({ ...quota, extra: 1 }), '额度：params 须为对象，且只带 sessionId、resourceType、accountId、windows');
+  // Strings: 1..max UTF-16 characters, no NUL; sessionId follows the other messages (200).
+  for (const [key, max] of Object.entries({ sessionId: 200, resourceType: 256, accountId: 128 })) {
+    assert.equal(check({ ...quota, [key]: 'x'.repeat(max) }), null, key);
+    for (const value of ['x'.repeat(max + 1), '😀'.repeat(Math.floor(max / 2)) + 'x']) assert.ok(check({ ...quota, [key]: value }), key);
+    for (const value of ['', null, 1, {}]) assert.ok(check({ ...quota, [key]: value }), key);
+  }
+  for (const key of ['resourceType', 'accountId']) assert.ok(check({ ...quota, [key]: 'a\u0000b' }), key);
+  const at = value => check({ ...quota, windows: [value] });
+  for (const key of ['id', 'label']) {
+    assert.equal(at({ ...window, [key]: 'x'.repeat(64) }), null);
+    for (const value of ['x'.repeat(65), '', 'a\u0000b', null, 1]) assert.ok(at({ ...window, [key]: value }), key);
+  }
+  for (const key of Object.keys(window)) assert.ok(at(without(window, key)), `window ${key}`);
+  assert.ok(at({ ...window, extra: 1 }));
+  for (const value of [null, 'x', 1, []]) assert.ok(at(value));
+  for (const usedFraction of [-0.1, 1.1, 2, -1, '0.5', null, NaN, Infinity, -Infinity]) assert.equal(at({ ...window, usedFraction }), '额度.windows[0].usedFraction：usedFraction 须为 0 到 1 的数', String(usedFraction));
+  for (const usedFraction of [0, 1, 0.5, 1e-9]) assert.equal(at({ ...window, usedFraction }), null);
+  for (const resetsAt of ['not a time', '', null, 123, {}, [], '2026-11-28', 'October 12, 2026', '2026-13-01T00:00:00Z', '2026-02-30T00:00:00Z', '2026-11-28T25:00:00Z', '2026-11-28T10:00:00', '2026-11-28 10:00:00Z', '2026-11-28T18:00:00+08:00', '2026-11-28T10:00:00z', '2026-11-28T10:00:00.1234567890Z', '2026-11-28T10:00:00.Z'])
+    assert.equal(at({ ...window, resetsAt }), '额度.windows[0].resetsAt：resetsAt 须为 YYYY-MM-DDTHH:MM:SS，可带 1–9 位小数秒，以 Z 结尾，不接受时区偏移', String(resetsAt));
+  for (const resetsAt of ['2026-11-28T10:00:00Z', '2026-11-28T10:00:00.123Z', '2026-11-28T10:00:00.123456789Z', '2028-02-29T00:00:00Z']) assert.equal(at({ ...window, resetsAt }), null);
+  // 1..16 windows.
+  assert.equal(check({ ...quota, windows: [] }), '额度.windows：windows 须为 1 到 16 项的数组');
+  for (const windows of [undefined, null, {}, 'x']) assert.ok(check({ ...quota, windows }));
+  assert.equal(check({ ...quota, windows: Array.from({ length: 16 }, (_, i) => ({ ...window, id: `w${i}` })) }), null);
+  assert.equal(check({ ...quota, windows: Array.from({ length: 17 }, (_, i) => ({ ...window, id: `w${i}` })) }), '额度.windows：windows 须为 1 到 16 项的数组');
+  // Uniqueness of ids, the 16 KiB cap and finiteness beyond JSON are the host's checks, not the schema's.
+  assert.equal(check({ ...quota, windows: [window, window] }), null);
+});
+
 const messages = [
   ['_coda/wait/stop', { sessionId: 's1', waitId: 'w' }, {}],
   ['_coda/session/compact', { sessionId: 's1' }, { compacted: true, before: 100000, after: 20000 }],
@@ -65,7 +106,7 @@ const messages = [
   ['_session/steering', { sessionId: 's1', prompt: [{ type: 'text', text: '先别改测试，只看实现' }], _meta: { steering: { idleBehavior: 'promptRequired' } } }, { outcome: 'injected' }],
 ];
 test('the registry covers every request and notification; both sides validate without mutation', () => {
-  assert.deepEqual(Object.keys(AGENT_METHODS).sort(), ['_coda/wait', '_coda/unrecognized', ...messages.map(([method]) => method)].sort());
+  assert.deepEqual(Object.keys(AGENT_METHODS).sort(), ['_coda/wait', '_coda/unrecognized', '_coda/quota', ...messages.map(([method]) => method)].sort());
   for (const [method, params, result] of messages) {
     const before = structuredClone({ params, result });
     assert.equal(agentMessageProblem(method, params), null);
@@ -77,6 +118,7 @@ test('the registry covers every request and notification; both sides validate wi
   }
   assert.equal(agentResultProblem('_coda/wait', {}), '_coda/wait result：通知没有答复');
   assert.equal(agentResultProblem('_coda/unrecognized', {}), '_coda/unrecognized result：通知没有答复');
+  assert.equal(agentResultProblem('_coda/quota', {}), '_coda/quota result：通知没有答复');
   for (const method of ['session/prompt', '_coda/future', '__proto__', 'constructor', 'toString']) {
     assert.equal(agentMessageProblem(method, {}), `${method} params：没有这个 Coda 扩展方法`);
     assert.equal(agentResultProblem(method, {}), `${method} result：没有这个 Coda 扩展方法`);
@@ -322,6 +364,14 @@ test('documentation wire examples remain valid for the extension parts', () => {
   }
   assert.ok(checked >= 10);
   for (const [file, schema] of Object.entries(AGENT_SCHEMAS)) assert.equal(schema.$id, `https://coda.pub/schemas/agent/v1/${file}`);
+});
+
+test('the documentation states what the host checks and how a quota is trusted', () => {
+  const doc = readFileSync(new URL('../docs/agent-protocol.md', import.meta.url), 'utf8');
+  const section = doc.slice(doc.indexOf('## 账号额度'), doc.indexOf('## 远端入口'));
+  for (const text of ['`coda/agent-quota@1`', '窗口按局部更新', '没带的窗口保留原值', '16 KiB', '窗口 `id` 不能重复', '有限数', '账号身份未知时不发', '替代模型服务', '会话身份建立之前',
+    'Agent 注册来源', '不信任何自报', '不暂存，不补发', '丢弃', '可关联的标识，不是匿名的', '`usage`'])
+    assert.ok(section.includes(text), text);
 });
 
 test('the documentation states the four approval tiers and how a delegation picks one', () => {

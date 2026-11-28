@@ -1,7 +1,7 @@
 # Agent 接入协议
 
 Coda 用 [ACP](https://agentclientprotocol.com)（Agent Client Protocol）接 Agent，把[会话指令](#会话指令)交给 Agent（ACP 的 `systemPrompt`；不收它的由 Coda 在第一轮送入），
-可选支持[插话](#插话)（`_session/steering`），另收 Agent 活动报告（`_coda/wait`）、入口[没适配的东西](#没适配的东西)（`_coda/unrecognized`）、[执行失败事实](#执行失败)（ACP 错误数据里的 `_meta.coda.failure`）、[工具调用的审核](#工具调用的审核)（`_meta.coda.review`）和[每轮的用量](#每轮的用量)（`session/prompt` 答复的 `usage`）。本文是这份协议的唯一正文，写给要让一个 Agent（比如 Cursor 的）接入 Coda 的人：照它实现，
+可选支持[插话](#插话)（`_session/steering`），另收 Agent 活动报告（`_coda/wait`）、入口[没适配的东西](#没适配的东西)（`_coda/unrecognized`）、账号[额度](#账号额度)（`_coda/quota`）、[执行失败事实](#执行失败)（ACP 错误数据里的 `_meta.coda.failure`）、[工具调用的审核](#工具调用的审核)（`_meta.coda.review`）和[每轮的用量](#每轮的用量)（`session/prompt` 答复的 `usage`）。本文是这份协议的唯一正文，写给要让一个 Agent（比如 Cursor 的）接入 Coda 的人：照它实现，
 Coda 就知道这个 Agent 在一轮之外还在做什么，如实显示、不回收它的进程，把它处理这些东西时的输出、审批和提问放进正确的一轮，
 并在这次调用结清时把结果只交回一次。产品上这些规则的来由见会话行为契约（Coda 的 docs/session-contracts.md）与完成唤醒契约（Coda 的 docs/subagent-design.md「完成唤醒契约」）。
 
@@ -19,6 +19,7 @@ ACP 的消息、内容块、会话指令和能力由 ACP SDK 校验，这里只�
 | `_coda/wait` 通知参数 | [wait.json](../schemas/agent/wait.json) |
 | `_coda/wait/stop` 参数、答复 | [wait-stop.json](../schemas/agent/wait-stop.json) 的 `$defs/params`、`$defs/result` |
 | `_coda/unrecognized` 通知参数 | [unrecognized.json](../schemas/agent/unrecognized.json) |
+| `_coda/quota` 通知参数 | [quota.json](../schemas/agent/quota.json) |
 | `_coda/session/compact` 参数、答复 | [compact.json](../schemas/agent/compact.json) 的 `$defs/params`、`$defs/result` |
 | `_coda/remote/code` 参数、答复 | [remote-code.json](../schemas/agent/remote-code.json) 的 `$defs/params`、`$defs/result` |
 | `_coda/remote` 参数、答复 | [remote.json](../schemas/agent/remote.json) 的 `$defs/params`、`$defs/result` |
@@ -70,6 +71,7 @@ Coda 是 ACP 的客户端。每个会话的 Agent 进程由一个会话托管进
 | `session/update` | Agent → Coda | 回复、思考、工具调用（可带它的[审核](#工具调用的审核)）、计划、用量（可带给流程的[数据](#用量里的数据)）、可用命令、会话信息；只收本会话与它的子会话的 |
 | `session/request_permission`、`elicitation/create`（`mode: form` 或 `mode: url`） | Agent → Coda | 审批与提问，作为卡片交给用户；只在一轮里受理（轮次限制无条件，见[规则](#规则)第 3 条）；拦截只适用于轮内 `mode: form` 表单：若被流程声明拦下（`coda:questionDenial`），不展示卡片，当场回 `decline` 并带 `_meta.coda.reason`（见下文「宿主当场拒绝表单」） |
 | `_coda/unrecognized` | Agent → Coda | [没适配的东西](#没适配的东西)：入口报上游发来、它没按登记处理的输出，以及模型能用、它没登记的原生工具；用户因此没看到的在会话里记一条说明，都计入遥测 |
+| `_coda/quota` | Agent → Coda | [账号额度](#账号额度)：Agent 把账号的额度窗口读数报给 Coda，由 Coda 记到账号名下 |
 | `_coda/remote/code`、`_coda/remote` | Agent → Coda、Coda → Agent | [远端入口](#远端入口)：Agent 要绑定码；Coda 转交远端来的请求 |
 | `$/cancel_request` | Agent → Coda | 撤回它发出、还没得到回答的审批或提问：卡片失效，Coda 回 `cancelled`（表单回 `cancel`），之后用户的回答不再转交 |
 
@@ -522,6 +524,58 @@ Coda 封装的 Agent 会自己长出新能力：上游 Agent 升级、服务端�
 {"jsonrpc":"2.0","method":"_coda/unrecognized","params":{"sessionId":"s1","kind":"output","name":"item:agentMessage.delivery=async","lost":true,"detail":"Codex 发来一条异步送达的消息，入口没有转给 Coda"}}
 {"jsonrpc":"2.0","method":"_coda/unrecognized","params":{"sessionId":"s1","kind":"output","name":"notification:thread/fooChanged","lost":false}}
 {"jsonrpc":"2.0","method":"_coda/unrecognized","params":{"sessionId":"s1","kind":"tool","name":"tool:functions.request_user_input_async","lost":false}}
+```
+
+## 账号额度
+
+通知参数及字段上限见 [quota.json](../schemas/agent/quota.json)。
+
+额度属于账号，不属于某一轮：它可能在失败的轮次里更新，也可能在两轮之间更新。[每轮的用量](#每轮的用量)（`usage`）属于轮次，只报这一轮新用掉的 token；两者互不替代。
+`_coda/quota` 让 Agent 入口把上游报来的账号额度交给 Coda，由 Coda 写进它自己会同步的记录（`coda/agent-quota@1`），资源页直接读这条记录；记录的形状由 Coda 定义，不在本协议里。
+
+**通知**：Agent 发给 Coda（没有 `id`，不回复），和 `session/update`、`_coda/wait` 走同一个顺序。没有对应的能力声明。
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `sessionId` | 是 | 发这条通知的会话，至多 200 字 |
+| `resourceType` | 是 | 插件明写的、它自己 `coda/resource@1` 资源组的 key（Claude 填 `limits`）；1 到 256 个字符，不含 NUL，与资源组 key 的规矩相同。协议不替插件取默认值 |
+| `accountId` | 是 | 插件给的稳定账号标识，1 到 128 个字符，不含 NUL，不含明文（不是邮箱、用户名或令牌）。Coda 靠它跨机器把同一账号的记录合到一起。Claude 用规范化邮箱 SHA-256 的前 32 位十六进制。**它是可关联的标识，不是匿名的**：知道邮箱的人能算出同一个值，同一账号在不同机器上的值相同 |
+| `windows` | 是 | 额度窗口，1 到 16 项 |
+
+`windows` 的每一项都是对象，四个字段都必填，不许带别的键：
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 稳定的窗口 ID，如 `five_hour`，1 到 64 个字符，不含 NUL |
+| `label` | 给人看的标签，如「5 小时」，1 到 64 个字符，不含 NUL |
+| `usedFraction` | 已用的比例，0 到 1 的数（含两端） |
+| `resetsAt` | 这个窗口重置的时刻，UTC，须为 `YYYY-MM-DDTHH:MM:SS`，可带 1–9 位小数秒，以 `Z` 结尾，不接受时区偏移 |
+
+四个参数字段都必填，通知不许带别的键。schema 表达不了的约束由宿主校验：
+
+- 一条通知里窗口 `id` 不能重复；
+- 一条通知的 JSON 编码不超过 16 KiB；
+- `usedFraction` 必须是有限数。
+
+**语义：窗口按局部更新。** 宿主把带来的窗口合并进这个账号已有的读数，按 `id` 逐个覆盖；这次没带的窗口保留原值，不会因为没带就清掉。
+
+**何时发**
+
+- 每收到一条可归属的上游额度事件就发，不必自己去重，由宿主去重。
+- 账号身份未知时不发。
+- 这次查询走的是替代模型服务时不发：那时的额度不属于这个账号。
+- 会话身份建立之前的事件不发。
+
+**宿主怎么认**
+
+- 插件取自这个会话的 Agent 注册来源；通知里没有、也不信任何自报的插件、机器或空间。
+- 只认已建立的真实会话。[配置探测](#配置探测)期间和加载历史（`session/load`）期间收到的通知略过。
+- 不暂存，不补发：略过的通知不会在会话建立后再处理，Agent 也不用重发。
+- 校验不过的通知（缺字段、多余的键、取值越界、窗口 `id` 重复、超过 16 KiB 等）丢弃，不报错，不影响会话和轮次。
+
+```json
+{"jsonrpc":"2.0","method":"_coda/quota","params":{"sessionId":"s1","resourceType":"limits","accountId":"3f2b9c1e5a7d4f60b8c2e1a9d4c7f305","windows":[{"id":"five_hour","label":"5 小时","usedFraction":0.42,"resetsAt":"2026-11-28T10:00:00Z"}]}}
+{"jsonrpc":"2.0","method":"_coda/quota","params":{"sessionId":"s1","resourceType":"limits","accountId":"3f2b9c1e5a7d4f60b8c2e1a9d4c7f305","windows":[{"id":"five_hour","label":"5 小时","usedFraction":0.61,"resetsAt":"2026-11-28T10:00:00Z"},{"id":"seven_day","label":"7 天","usedFraction":0.18,"resetsAt":"2026-12-02T04:00:00Z"}]}}
 ```
 
 ## 远端入口

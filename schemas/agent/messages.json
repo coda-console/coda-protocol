@@ -17,6 +17,11 @@
       "direction": "agent-to-client",
       "params": "unrecognized.json"
     },
+    "_coda/quota": {
+      "kind": "notification",
+      "direction": "agent-to-client",
+      "params": "quota.json"
+    },
     "_coda/session/compact": {
       "kind": "request",
       "direction": "client-to-agent",
