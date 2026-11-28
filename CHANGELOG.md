@@ -2,6 +2,13 @@
 
 版本规矩见 README 的[「版本」一节](README.md#版本)。协议自己的大版本写在协议名里（如 `coda/run@1`），与 npm 包版本、插件清单的 v2 独立；更早的版本见 git 历史。
 
+## 6.30.0 — 2026-11-28
+
+- 这是在 6.29.0 之上的次版本。依据 README「版本」一节：Agent 接入协议是内部面，新增一条扩展通知升次版本；`stable/` 不动，清单 schema 没改，旧用法一律照旧。
+- 新增 Agent → Coda 通知 `_coda/quota`：Agent 会话收到账号额度变化时，把额度窗口报给 Coda，由 Coda 写进自己的记录（`coda/agent-quota@1`，记录形状属于 Coda，不在本协议里）。参数 `{ sessionId, resourceType, accountId, windows }` 四个都必填，不许带别的键，见新增的 `schemas/agent/quota.json`，已登记在 `schemas/agent/messages.json`：`resourceType` 是插件明写的 `coda/resource@1` 资源组 key（1–256 个字符，不含 NUL，协议不取默认值）；`accountId` 是插件给的稳定账号标识（1–128 个字符，不含 NUL，不含明文，可关联、不是匿名的）；`windows` 为 1–16 项 `{ id, label, usedFraction, resetsAt }`，`usedFraction` 在 [0, 1]，`resetsAt` 须为 `YYYY-MM-DDTHH:MM:SS`，可带 1–9 位小数秒，以 `Z` 结尾，不接受时区偏移。窗口 `id` 在一条通知里唯一、一条通知的 JSON 编码不超过 16 KiB、`usedFraction` 为有限数，这三条 schema 表达不了，由宿主校验。
+- `agent.mjs` 给 Agent schema 的校验器新增严格的 `date-time` 格式（真实日期与时刻，只此一处使用，旧的 `date-parse` 不变）。
+- 文档：`docs/agent-protocol.md` 新增「账号额度」一节，写明窗口按局部更新、何时发、宿主怎么认来源（插件取自会话的 Agent 注册来源，不信通知自报；探测与加载历史期间的通知略过，不暂存不补发；校验不过的丢弃，不影响会话和轮次）以及与每轮 `usage` 的区别。`agentMessageProblem('_coda/quota', params)` 可校验。
+
 ## 6.29.0 — 2026-11-27
 
 - 这是在 6.28.0 之上的次版本。依据 README「版本」一节：新增导出与测试向量升次版本；`stable/manifest.json`、`stable/view.json` 不动，清单 schema 没改，旧用法一律照旧。

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coda.pub/schemas/agent/v1/quota.json",
+  "type": "object",
+  "description": "params 须为对象，且只带 sessionId、resourceType、accountId、windows",
+  "$defs": {
+    "window": {
+      "type": "object",
+      "description": "windows 的每一项须为 { id, label, usedFraction, resetsAt }，四个都必填，不带别的键",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[^\\u0000]+$",
+          "x-length": 64,
+          "description": "id 须为 1 到 64 个字符、不含 NUL 的稳定窗口 ID"
+        },
+        "label": {
+          "type": "string",
+          "pattern": "^[^\\u0000]+$",
+          "x-length": 64,
+          "description": "label 须为 1 到 64 个字符、不含 NUL 的标签"
+        },
+        "usedFraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "usedFraction 须为 0 到 1 的数"
+        },
+        "resetsAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d{1,9})?Z$(?![\\s\\S])",
+          "description": "resetsAt 须为 YYYY-MM-DDTHH:MM:SS，可带 1–9 位小数秒，以 Z 结尾，不接受时区偏移"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "usedFraction",
+        "resetsAt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "sessionId": {
+      "allOf": [
+        {
+          "type": "string",
+          "description": "缺 sessionId",
+          "minLength": 1
+        },
+        {
+          "type": "string",
+          "description": "sessionId 须为不超过 200 字的文本",
+          "x-length": 200
+        }
+      ]
+    },
+    "resourceType": {
+      "type": "string",
+      "pattern": "^[^\\u0000]+$",
+      "x-length": 256,
+      "description": "resourceType 须为 1 到 256 个字符、不含 NUL 的资源类型 key"
+    },
+    "accountId": {
+      "type": "string",
+      "pattern": "^[^\\u0000]+$",
+      "x-length": 128,
+      "description": "accountId 须为 1 到 128 个字符、不含 NUL 的稳定账号标识"
+    },
+    "windows": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/window"
+      },
+      "description": "windows 须为 1 到 16 项的数组"
+    }
+  },
+  "required": [
+    "sessionId",
+    "resourceType",
+    "accountId",
+    "windows"
+  ],
+  "additionalProperties": false
+}
